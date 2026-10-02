@@ -12,6 +12,16 @@ agent_checkpoints.sqlite3*
 mediafiles/
 staticfiles/
 
+# Node / frontends
+node_modules/
+dist/
+build/
+.next/
+
+# Bases de datos locales
+*.db
+*.sqlite
+
 # Entorno
 .env
 .env.*

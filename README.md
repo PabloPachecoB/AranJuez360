@@ -1,13 +1,19 @@
-# Paseo Aranjuez 360
+# AranJuez360 · Paseo Aranjuez 360
 
-Plataforma (app + web) para gestionar el ecosistema de Paseo Aranjuez. Reto
-principal de la hackathon: **Paseo Points** (fidelización), con integración a
-oficinas y asistente IA.
+Plataforma del equipo para **Hackathon By Paseo 2026** (Paseo Aranjuez): app + web
+para gestionar el ecosistema del Paseo. Reto principal: **Paseo Points**
+(fidelización), con integración a oficinas y asistente IA.
+
+Documentos del equipo en [`docs/`](./docs): documento base de la hackathon
+([`BASE_PROYECTO_PASEO.md`](./docs/BASE_PROYECTO_PASEO.md)) y módulo PaseoYa
+([`PASEOYA_MODULO.md`](./docs/PASEOYA_MODULO.md)).
 
 ## Estructura
 
 ```
 app/              # app móvil (Expo / React Native): clientes y porteros
+web/              # web (React + Vite): admin, negocios y oficinas — pendiente
+docs/             # documentos del equipo y presentación
 backend/
   paseo_erp/      # proyecto Django (settings, urls, API v1)
   usuarios/       # usuarios y roles; alta de porteros
@@ -136,3 +142,7 @@ portería; compras = tickets aprobados en caja (no las ventas totales de cada ti
 - Gestión de cajeros por la empresa.
 - Oficinas: invitaciones QR y control de acceso.
 - Frontends: `/web` (React + Vite, admin y empresa) y `/app` (React Native).
+
+## Flujo de trabajo
+
+Cada persona trabaja en su propia rama y la une a `main` cuando su parte funciona.
