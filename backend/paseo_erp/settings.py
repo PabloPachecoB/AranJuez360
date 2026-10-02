@@ -170,7 +170,7 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Paseo Aranjuez 360 <no-responder@localhost>")
 
 # --- Enlaces de la plataforma ----------------------------------------------------
-WEB_PANEL_URL = env("WEB_PANEL_URL", default="http://localhost:5173")
+WEB_PANEL_URL = env("WEB_PANEL_URL", default="http://localhost:3000")
 # Esquema de la app: el QR/NFC de cada empresa abre {APP_DEEP_LINK}/puntos/<codigo>
 APP_DEEP_LINK = env("APP_DEEP_LINK", default="paseo360:/")
 

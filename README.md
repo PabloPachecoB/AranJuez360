@@ -12,7 +12,7 @@ Documentos del equipo en [`docs/`](./docs): documento base de la hackathon
 
 ```
 app/              # app móvil (Expo / React Native): clientes y porteros
-web/              # web (React + Vite): admin, negocios y oficinas — pendiente
+web/              # web (React + Vite): dashboard admin (negocios y oficinas: pendiente)
 docs/             # documentos del equipo y presentación
 backend/
   paseo_erp/      # proyecto Django (settings, urls, API v1)
@@ -23,6 +23,17 @@ backend/
   agente/         # asistente conversacional (LangGraph)
 ```
 
+## Arranque (web admin)
+
+```bash
+cd web
+npm install
+npx vite            # http://localhost:3000 (proxy de /api y /auth al backend)
+```
+
+El proxy apunta a `http://127.0.0.1:8001` (cámbialo con `VITE_BACKEND_URL`). Se usa
+el puerto 3000 porque Windows suele reservar el 5173 (rango de Hyper-V).
+
 ## Arranque (app)
 
 ```bash
@@ -32,7 +43,7 @@ cp .env.example .env     # EXPO_PUBLIC_API_BASE = IP de tu PC (no localhost)
 npx expo start           # escanea el QR con Expo Go
 ```
 
-El backend debe escuchar en la red local: `python manage.py runserver 0.0.0.0:8000`
+El backend debe escuchar en la red local: `python manage.py runserver 0.0.0.0:8001`
 (y agrega tu IP a `ALLOWED_HOSTS` en `backend/.env`). El acceso con huella funciona
 en Expo Go; el NFC requiere un development build.
 
@@ -45,7 +56,8 @@ pip install -r requirements.txt
 cp .env.example .env
 python manage.py migrate
 python manage.py cargar_demo        # datos de prueba (contraseña: Paseo2026!)
-python manage.py runserver
+python manage.py cargar_actividad_demo --dias 60   # visitas y compras ficticias para el dashboard
+python manage.py runserver 0.0.0.0:8001
 python manage.py test usuarios empresas fidelizacion reportes
 ```
 
