@@ -1,10 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
-import {
-  clientesMock,
-  pedidoItemsIniciales,
-  pedidosIniciales,
-  productosIniciales,
-} from "../mockData";
+import { clientesMock, pedidoItemsIniciales, productosIniciales } from "../mockData";
+import { usePedidos } from "../context/PedidosContext";
 import type { EstadoPedido, Pedido } from "../types";
 
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
@@ -56,7 +52,7 @@ function resumenItems(pedidoId: string) {
 }
 
 export function PedidosPage() {
-  const [pedidos, setPedidos] = useState<Pedido[]>(pedidosIniciales);
+  const { pedidos, setPedidos } = usePedidos();
   const [codigoIngresado, setCodigoIngresado] = useState("");
   const [mensajeValidacion, setMensajeValidacion] = useState<{ tipo: "ok" | "error"; texto: string } | null>(
     null
