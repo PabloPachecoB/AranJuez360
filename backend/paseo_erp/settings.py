@@ -44,6 +44,7 @@ LOCAL_APPS = [
     "usuarios",
     "empresas",
     "fidelizacion",
+    "pedidos",
     "reportes",
     "agente",
 ]
