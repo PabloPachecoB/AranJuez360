@@ -93,10 +93,6 @@ export function LoginPage() {
     setCargando(true);
     try {
       const usuario = await verificarCodigo(desafio, codigo);
-      if (usuario.rol !== "NEGOCIO") {
-        setError("Esta cuenta no administra un negocio. El panel es solo para locatarios.");
-        return;
-      }
       setUsuario(usuario);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Código inválido.");

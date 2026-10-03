@@ -49,6 +49,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Crea una query string omitiendo parámetros vacíos. */
+export function qs(params: Record<string, string | number | boolean | null | undefined>) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  });
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
 async function refrescarAccessToken(): Promise<boolean> {
   if (!refreshToken) return false;
   const res = await fetch(`${AUTH_BASE}/auth/token/refresh/`, {

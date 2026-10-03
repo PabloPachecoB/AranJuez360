@@ -1,5 +1,5 @@
 # Área de administración
 
-Esta carpeta queda reservada para el módulo de administración de PaseoYa.
-El panel admin existente está actualmente en `web/src` y se mantiene en su
-proyecto Vite separado mientras revisamos esta reorganización.
+Aquí vive el panel de administración integrado a PaseoYa. `AdminApp.jsx` usa la
+sesión compartida y muestra el dashboard, la gestión de usuarios y empresas, y
+el historial de clientes.

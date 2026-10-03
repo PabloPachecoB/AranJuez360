@@ -13,9 +13,11 @@ src/
   cliente/                # Área del usuario cliente
 ```
 
-El panel admin existente permanece por ahora en `web/src`, dentro de su
-proyecto Vite separado. Las carpetas `admin` y `cliente` de esta app quedan
-preparadas para integrar esas áreas en una siguiente etapa.
+El panel admin existente ya está integrado en esta app y usa la misma sesión
+compartida. El área de cliente tiene su entrada preparada para desarrollar sus
+pantallas. Después del segundo paso de autenticación, PaseoYa usa el rol
+devuelto por el backend: `ADMIN` abre administración, `NEGOCIO` abre el portal
+de negocio/empleado y `CLIENTE` abre el área de cliente.
 
 Para iniciar este frontend:
 
