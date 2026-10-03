@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import type { ListaApi, Monedero, Oferta } from "../api";
 import { nivelParaSaldo } from "../constants";
-import { CabeceraCliente, EstadoDatos, Superficie } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, EstadoDatos, Superficie } from "../components/ClienteUi";
 import { useClienteDatos } from "../hooks/useClienteDatos";
 import { formatoBolivianos, formatoFecha, formatoPuntos, lista } from "../utils";
 
@@ -37,13 +37,7 @@ export function ClienteInicioPage() {
         </section>
 
         <Superficie className="flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-label-md text-label-md font-bold uppercase text-on-surface-variant">Tu nivel</p>
-              <h2 className="mt-2 font-headline-lg text-headline-lg" style={{ color: nivel.actual.color }}>{nivel.actual.nombre}</h2>
-            </div>
-            <span className="material-symbols-outlined text-[34px]" style={{ color: nivel.actual.color }} aria-hidden="true">workspace_premium</span>
-          </div>
+          <EncabezadoPanel icono="workspace_premium" eyebrow="Tu nivel" titulo={nivel.actual.nombre} />
           <div className="mt-8">
             <div className="mb-2 flex justify-between gap-4 font-body-sm text-body-sm">
               <span>Multiplicador activo <strong>{nivel.actual.multiplicador}</strong></span>
@@ -61,10 +55,7 @@ export function ClienteInicioPage() {
 
       <div className="mt-7 grid gap-7 xl:grid-cols-[1.5fr_1fr]">
         <section>
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div><p className="font-label-md text-label-md font-bold uppercase text-secondary">En el Paseo</p><h2 className="mt-1 font-headline-md text-headline-md">Promociones vigentes</h2></div>
-            <Link to="/explorar" className="font-label-md text-label-md font-bold text-primary hover:underline">Ver todas</Link>
-          </div>
+          <EncabezadoPanel icono="local_offer" eyebrow="En el Paseo" titulo="Promociones vigentes" action={<Link to="/explorar" className="shrink-0 font-label-md text-label-md font-bold text-primary hover:underline">Ver todas</Link>} />
           <EstadoDatos cargando={ofertas.cargando} error={ofertas.error} vacio={!promociones.length} onRetry={ofertas.recargar}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {promociones.map((oferta) => (
@@ -85,7 +76,7 @@ export function ClienteInicioPage() {
         </section>
 
         <Superficie>
-          <p className="font-label-md text-label-md font-bold uppercase text-secondary">Tu próximo objetivo</p>
+          <EncabezadoPanel icono="flag" eyebrow="Paseo Points" titulo="Tu próximo objetivo" />
           {monedero.data?.siguiente ? (
             <>
               <h2 className="mt-2 font-headline-md text-headline-md">{monedero.data.siguiente.nombre}</h2>

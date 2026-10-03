@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { canjearRecompensa, type Cupon, type ListaApi, type Monedero, type Recompensa } from "../api";
 import { UMBRALES_RECOMPENSA } from "../constants";
-import { CabeceraCliente, EstadoDatos } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, EstadoDatos } from "../components/ClienteUi";
 import { useClienteDatos } from "../hooks/useClienteDatos";
 import { formatoFecha, formatoPuntos, lista } from "../utils";
 
@@ -47,7 +47,7 @@ export function ClienteRecompensasPage() {
             const costo = Number(item.costo_puntos);
             const disponible = puntos >= costo;
             return (
-              <article key={item.id} className="flex flex-col border border-outline-variant/50 bg-surface-container-lowest">
+              <article key={item.id} className="flex flex-col border border-outline-variant/50 border-t-4 border-t-primary bg-surface-container-lowest">
                 {item.imagen ? <img src={item.imagen} alt="" className="h-40 w-full object-cover" /> : <div className="grid h-32 place-items-center bg-surface-container-low"><span className="material-symbols-outlined text-[48px] text-secondary" aria-hidden="true">redeem</span></div>}
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-start justify-between gap-3"><span className="font-label-sm text-label-sm font-bold uppercase text-secondary">{item.categoria}</span><strong className="shrink-0 font-price-sm text-price-sm text-primary">{formatoPuntos(costo)} pts</strong></div>
@@ -81,10 +81,9 @@ export function ClienteCuponesPage() {
       <EstadoDatos cargando={cuponesApi.cargando} error={cuponesApi.error} vacio={!cupones.length} onRetry={cuponesApi.recargar}>
         <div className="grid gap-4 lg:grid-cols-2">
           {cupones.map((cupon) => (
-            <article key={cupon.id} className="grid gap-4 border border-outline-variant/50 bg-surface-container-lowest p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+            <article key={cupon.id} className="grid gap-4 border border-outline-variant/50 border-t-4 border-t-secondary bg-surface-container-lowest p-5 sm:grid-cols-[1fr_auto] sm:items-center">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${cupon.estado === "ACTIVO" ? "bg-secondary" : "bg-outline"}`} /><span className="font-label-sm text-label-sm font-bold uppercase text-secondary">{cupon.estado_nombre}</span></div>
-                <h2 className="mt-2 font-headline-sm text-headline-sm">{cupon.recompensa_nombre}</h2>
+                <EncabezadoPanel icono="confirmation_number" eyebrow={cupon.estado_nombre} titulo={cupon.recompensa_nombre} />
                 <p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">Canjeable en {cupon.empresa_nombre || "Paseo Aranjuez"}</p>
                 <p className="mt-3 font-body-sm text-body-sm text-on-surface-variant">Emitido el {formatoFecha(cupon.creado_en)} · {formatoPuntos(cupon.monedas)} pts</p>
                 <code className="mt-3 inline-block bg-surface-container-low px-3 py-2 font-mono text-sm font-bold tracking-widest text-on-surface">{cupon.codigo}</code>

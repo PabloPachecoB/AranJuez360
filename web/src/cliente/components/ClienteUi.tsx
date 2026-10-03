@@ -53,3 +53,32 @@ export function Superficie({ children, className = "" }: { children: ReactNode; 
   return <section className={`min-w-0 border border-outline-variant/50 bg-surface-container-lowest p-5 sm:p-6 ${className}`}>{children}</section>;
 }
 
+export function EncabezadoPanel({
+  icono,
+  eyebrow,
+  titulo,
+  action,
+  oscuro = false,
+}: {
+  icono: string;
+  eyebrow: string;
+  titulo: string;
+  action?: ReactNode;
+  oscuro?: boolean;
+}) {
+  return (
+    <header className={`mb-4 flex items-center justify-between gap-3 border-b pb-4 ${oscuro ? "border-white/20" : "border-outline-variant/40"}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center ${oscuro ? "bg-white/10 text-secondary-fixed-dim" : "bg-primary text-secondary-fixed-dim"}`}>
+          <span className="material-symbols-outlined" aria-hidden="true">{icono}</span>
+        </span>
+        <div className="min-w-0">
+          <p className={`font-label-sm text-label-sm font-bold uppercase ${oscuro ? "text-secondary-fixed-dim" : "text-secondary"}`}>{eyebrow}</p>
+          <h2 className={`mt-1 truncate font-headline-sm text-headline-sm ${oscuro ? "text-white" : "text-on-surface"}`}>{titulo}</h2>
+        </div>
+      </div>
+      {action}
+    </header>
+  );
+}
+

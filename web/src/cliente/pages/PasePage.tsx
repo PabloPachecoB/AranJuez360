@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { obtenerPaseQr, type PaseQr } from "../api";
-import { CabeceraCliente, EstadoDatos, Superficie } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, EstadoDatos, Superficie } from "../components/ClienteUi";
 
 export function ClientePasePage() {
   const [pase, setPase] = useState<PaseQr | null>(null);
@@ -65,7 +65,9 @@ export function ClientePasePage() {
       <EstadoDatos cargando={cargando} error={error} onRetry={() => { setCargando(true); void obtenerPaseQr().then((resultado) => { setPase(resultado); setError(null); }).catch((err: unknown) => setError(err instanceof Error ? err.message : "No se pudo generar el pase.")).finally(() => setCargando(false)); }}>
         {pase && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.75fr)]">
-            <Superficie className="flex flex-col items-center text-center">
+            <Superficie className="border-t-4 border-t-primary text-center">
+              <EncabezadoPanel icono="qr_code_2" eyebrow="Identificación" titulo="Pase personal" />
+              <div className="flex flex-col items-center">
               <div className="border border-outline-variant/40 bg-white p-5 sm:p-7">
                 <QRCodeSVG value={pase.token} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#091734" />
               </div>
@@ -73,13 +75,12 @@ export function ClientePasePage() {
               <button type="button" onClick={() => void activarPantallaCompleta()} className="mt-5 inline-flex min-h-11 items-center gap-2 bg-primary px-5 font-label-md text-label-md font-bold text-on-primary hover:bg-primary-container">
                 <span className="material-symbols-outlined" aria-hidden="true">fullscreen</span> Abrir para escaneo
               </button>
+              </div>
             </Superficie>
             <div className="flex flex-col gap-4">
               <Superficie>
-                <div className="flex items-start justify-between gap-3">
-                  <div><p className="font-label-md text-label-md font-bold uppercase text-on-surface-variant">Código de respaldo</p><p className="mt-2 font-body-sm text-body-sm text-on-surface-variant">Si no pueden leer el QR, copia o dicta este token mientras siga vigente.</p></div>
-                  <span className="material-symbols-outlined text-secondary" aria-hidden="true">pin</span>
-                </div>
+                <EncabezadoPanel icono="pin" eyebrow="Por si lo necesitas" titulo="Código de respaldo" />
+                <p className="font-body-sm text-body-sm text-on-surface-variant">Si no pueden leer el QR, copia o dicta este token mientras siga vigente.</p>
                 <code className="mt-5 block break-all border-l-2 border-secondary bg-surface-container-low p-3 font-mono text-sm leading-6 text-on-surface">{pase.token}</code>
                 <button type="button" onClick={() => void copiarCodigo()} className="mt-4 inline-flex min-h-10 items-center gap-2 font-label-md text-label-md font-bold text-primary hover:underline"><span className="material-symbols-outlined" aria-hidden="true">content_copy</span> Copiar código</button>
               </Superficie>

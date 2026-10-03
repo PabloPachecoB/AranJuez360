@@ -28,15 +28,26 @@ export function ClienteLayout() {
   return (
     <div className="cliente-theme min-h-screen bg-background font-sans text-on-surface md:grid md:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="border-b border-outline-variant/50 bg-surface-container-lowest md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between px-5 py-4 md:block md:px-6 md:pb-6 md:pt-7">
-          <Link to="/" className="font-headline-md text-headline-md text-primary">
-            Paseo<span className="text-secondary">Ya</span>
-            <span className="mt-0.5 block font-body-sm text-body-sm text-on-surface-variant">Mi espacio</span>
+        <div className="flex items-center justify-between px-5 py-4 md:px-6 md:pb-6 md:pt-7">
+          <Link to="/" className="flex min-w-0 items-center gap-3 text-primary">
+            <span
+              role="img"
+              aria-label="Logo de Paseo Aranjuez"
+              className="h-10 w-10 shrink-0 bg-primary"
+              style={{
+                maskImage: "url('/logo-paseo-aranjuez.svg')",
+                WebkitMaskImage: "url('/logo-paseo-aranjuez.svg')",
+                maskRepeat: "no-repeat",
+                WebkitMaskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskPosition: "center",
+                maskSize: "contain",
+                WebkitMaskSize: "contain",
+              }}
+            />
+            <span className="truncate font-headline-sm text-headline-sm font-bold">Paseo Aranjuez</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-secondary-fixed px-3 py-1 font-label-sm text-label-sm font-bold text-on-secondary-fixed md:mt-5 md:inline-flex">CLIENTE</span>
-            <button type="button" onClick={cerrarSesion} className="rounded-md px-2 py-1 font-label-sm text-label-sm font-bold text-primary md:hidden">Salir</button>
-          </div>
+          <button type="button" onClick={cerrarSesion} className="rounded-md px-2 py-1 font-label-sm text-label-sm font-bold text-primary md:hidden">Salir</button>
         </div>
 
         <nav aria-label="Navegación del cliente" className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:overflow-visible md:px-3">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ListaApi, Movimiento } from "../api";
-import { CabeceraCliente, EstadoDatos } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, EstadoDatos } from "../components/ClienteUi";
 import { useClienteDatos } from "../hooks/useClienteDatos";
 import { formatoFecha, formatoPuntos, lista } from "../utils";
 
@@ -22,7 +22,9 @@ export function ClienteMovimientosPage() {
         </select>
       </label>
       <EstadoDatos cargando={movimientosApi.cargando} error={movimientosApi.error} vacio={!movimientos.length} onRetry={movimientosApi.recargar}>
-        <div className="border-y border-outline-variant/50 bg-surface-container-lowest">
+        <div className="border border-t-4 border-t-primary border-outline-variant/50 bg-surface-container-lowest p-4 sm:p-5">
+          <EncabezadoPanel icono="receipt_long" eyebrow="Cuenta cliente" titulo="Actividad de puntos" />
+          <div>
           {movimientos.map((movimiento) => {
             const positivo = Number(movimiento.puntos) >= 0;
             return (
@@ -33,6 +35,7 @@ export function ClienteMovimientosPage() {
               </article>
             );
           })}
+          </div>
         </div>
       </EstadoDatos>
     </div>

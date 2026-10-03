@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../../auth/AuthContext";
 import type { Empresa, ListaApi } from "../api";
-import { CabeceraCliente, Superficie } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, Superficie } from "../components/ClienteUi";
 import { useClienteDatos } from "../hooks/useClienteDatos";
 import { lista } from "../utils";
 
@@ -42,8 +42,8 @@ export function ClientePerfilPage() {
     <div className="animate-cliente-in">
       <CabeceraCliente eyebrow="Tu cuenta PaseoYa" titulo="Mi perfil" descripcion="Mantén tus datos al día y recibe novedades que sí te interesan." />
       <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <Superficie>
-          <p className="font-label-md text-label-md font-bold uppercase text-secondary">Datos personales</p>
+        <Superficie className="border-t-4 border-t-primary">
+          <EncabezadoPanel icono="person" eyebrow="Tu cuenta" titulo="Datos personales" />
           <dl className="mt-5 divide-y divide-outline-variant/40">
             <div className="py-3"><dt className="font-label-sm text-label-sm text-on-surface-variant">Nombre</dt><dd className="mt-1 font-body-md text-body-md font-semibold">{nombre || usuario?.username || "—"}</dd></div>
             <div className="py-3"><dt className="font-label-sm text-label-sm text-on-surface-variant">Correo</dt><dd className="mt-1 break-all font-body-md text-body-md font-semibold">{usuario?.email || "—"}</dd></div>
@@ -52,9 +52,9 @@ export function ClientePerfilPage() {
           </dl>
         </Superficie>
 
-        <Superficie>
+        <Superficie className="border-t-4 border-t-secondary">
           <form onSubmit={guardar}>
-            <p className="font-label-md text-label-md font-bold uppercase text-secondary">Mis preferencias</p>
+            <EncabezadoPanel icono="tune" eyebrow="Personaliza tu experiencia" titulo="Mis preferencias" />
             <fieldset className="mt-5">
               <legend className="font-body-md text-body-md font-semibold">Tus marcas favoritas</legend>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -62,8 +62,8 @@ export function ClientePerfilPage() {
               </div>
               {!marcas.length && <p className="mt-3 font-body-sm text-body-sm text-on-surface-variant">No hay establecimientos disponibles para seleccionar.</p>}
             </fieldset>
-            {!usuario?.fecha_nacimiento && <label className="mt-5 flex max-w-xs flex-col gap-2 font-label-md text-label-md font-semibold">Fecha de cumpleaños<input type="date" value={preferencias.cumple} onChange={(event) => { setPreferencias((actual) => ({ ...actual, cumple: event.target.value })); setGuardado(false); }} className="h-11 border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-md text-body-md" /></label>}
-            <div className="mt-6 flex flex-wrap items-center gap-4"><button type="submit" className="min-h-11 bg-primary px-5 font-label-md text-label-md font-bold text-on-primary hover:bg-primary-container">Guardar preferencias</button>{guardado && <p role="status" className="font-body-sm text-body-sm font-semibold text-secondary">Preferencias guardadas en este dispositivo.</p>}</div>
+            {!usuario?.fecha_nacimiento && <label className="mt-5 flex max-w-xs flex-col gap-2 font-label-md text-label-md font-semibold">Fecha de cumpleaños<input type="date" value={preferencias.cumple} onChange={(event) => { setPreferencias((actual) => ({ ...actual, cumple: event.target.value })); setGuardado(false); }} className="h-11 border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-md text-body-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15" /></label>}
+            <div className="mt-6 flex flex-wrap items-center gap-4"><button type="submit" className="min-h-11 bg-primary px-5 font-label-md text-label-md font-bold text-on-primary transition-colors hover:bg-primary-container">Guardar preferencias</button>{guardado && <p role="status" className="border-l-4 border-secondary bg-secondary-fixed/60 px-3 py-2 font-body-sm text-body-sm font-semibold text-on-surface">Preferencias guardadas en este dispositivo.</p>}</div>
           </form>
         </Superficie>
       </div>

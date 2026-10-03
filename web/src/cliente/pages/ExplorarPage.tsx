@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Categoria, Empresa, ListaApi, Oferta } from "../api";
-import { CabeceraCliente, EstadoDatos } from "../components/ClienteUi";
+import { CabeceraCliente, EncabezadoPanel, EstadoDatos } from "../components/ClienteUi";
 import { useClienteDatos } from "../hooks/useClienteDatos";
 import { formatoBolivianos, formatoFecha, lista } from "../utils";
 
@@ -24,7 +24,7 @@ export function ClienteExplorarPage() {
       <CabeceraCliente eyebrow="Directorio y novedades" titulo="Explora el Paseo" descripcion="Encuentra tu próxima parada, revisa promociones y descubre nuevos locales." />
       <section className="mb-8 bg-primary px-5 py-6 text-white sm:px-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="font-label-sm text-label-sm font-bold uppercase text-secondary-fixed-dim">Ideas para hoy</p><h2 className="mt-1 font-headline-md text-headline-md">Promociones vigentes</h2></div>
+          <EncabezadoPanel oscuro icono="local_offer" eyebrow="Ideas para hoy" titulo="Promociones vigentes" />
           <span className="font-body-sm text-body-sm text-white/75">Actualizadas desde los negocios participantes</span>
         </div>
         <EstadoDatos cargando={ofertasApi.cargando} error={ofertasApi.error} vacio={!lista(ofertasApi.data).length} onRetry={ofertasApi.recargar}>
@@ -39,7 +39,7 @@ export function ClienteExplorarPage() {
         </EstadoDatos>
       </section>
 
-      <div className="mb-4"><p className="font-label-md text-label-md font-bold uppercase text-secondary">Encuentra tu local</p><h2 className="mt-1 font-headline-md text-headline-md">Directorio de establecimientos</h2></div>
+      <EncabezadoPanel icono="storefront" eyebrow="Encuentra tu local" titulo="Directorio de establecimientos" />
       <div className="mb-5 grid gap-3 md:grid-cols-[minmax(12rem,1.5fr)_minmax(10rem,1fr)_minmax(9rem,0.7fr)]">
         <label className="flex h-11 items-center gap-2 border border-outline-variant/60 bg-surface-container-lowest px-3"><span className="material-symbols-outlined text-on-surface-variant" aria-hidden="true">search</span><span className="sr-only">Buscar establecimientos</span><input value={buscar} onChange={(event) => setBuscar(event.target.value)} placeholder="Nombre del local" className="min-w-0 flex-1 bg-transparent font-body-md text-body-md outline-none" /></label>
         <label className="sr-only" htmlFor="cliente-categoria">Categoría</label><select id="cliente-categoria" value={categoria} onChange={(event) => setCategoria(event.target.value)} className="h-11 border border-outline-variant/60 bg-surface-container-lowest px-3 font-body-md text-body-md"><option value="">Todas las categorías</option>{lista(categoriasApi.data).map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</select>
