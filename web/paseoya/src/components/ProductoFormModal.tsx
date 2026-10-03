@@ -356,9 +356,9 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar }: Pr
                   </span>
                 ))}
               </div>
-              <div className="flex gap-space-xs">
+              <div className="flex flex-wrap gap-space-xs">
                 <input
-                  className={`${inputClase} py-2`}
+                  className={`${inputClase} py-2 flex-1 min-w-[7rem]`}
                   placeholder="Ej. Grande"
                   value={nuevoTamanio.nombre}
                   onChange={(e) => setNuevoTamanio((prev) => ({ ...prev, nombre: e.target.value }))}
@@ -368,7 +368,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar }: Pr
                   min={0}
                   step="0.5"
                   placeholder="+Bs"
-                  className={`${inputClase} py-2 w-24`}
+                  className={`${inputClase} py-2 w-20`}
                   value={nuevoTamanio.precio_extra}
                   onChange={(e) => setNuevoTamanio((prev) => ({ ...prev, precio_extra: e.target.value }))}
                 />
@@ -401,9 +401,9 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar }: Pr
                   </span>
                 ))}
               </div>
-              <div className="flex gap-space-xs">
+              <div className="flex flex-wrap gap-space-xs">
                 <input
-                  className={`${inputClase} py-2`}
+                  className={`${inputClase} py-2 flex-1 min-w-[7rem]`}
                   placeholder="Ej. Extra queso"
                   value={nuevoExtra.nombre}
                   onChange={(e) => setNuevoExtra((prev) => ({ ...prev, nombre: e.target.value }))}
@@ -413,7 +413,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar }: Pr
                   min={0}
                   step="0.5"
                   placeholder="+Bs"
-                  className={`${inputClase} py-2 w-24`}
+                  className={`${inputClase} py-2 w-20`}
                   value={nuevoExtra.precio_extra}
                   onChange={(e) => setNuevoExtra((prev) => ({ ...prev, precio_extra: e.target.value }))}
                 />
