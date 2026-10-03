@@ -5,6 +5,7 @@ import { SidebarProvider } from "./components/SidebarContext";
 import ClienteHistorial from "./pages/ClienteHistorial";
 import Dashboard from "./pages/Dashboard";
 import Empresas from "./pages/Empresas";
+import MapaEspacios from "./pages/MapaInteractivoPage";
 import Usuarios from "./pages/Usuarios";
 
 function Layout() {
@@ -30,6 +31,7 @@ export default function AdminApp() {
         <Route index element={<Dashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="empresas" element={<Empresas />} />
+        <Route path="mapa-espacios" element={<MapaEspacios />} />
         <Route path="clientes/:id" element={<ClienteHistorial />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
