@@ -1,10 +1,13 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.core.cache import cache
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from usuarios.models import Usuario
 
-from .models import Empresa, Producto
+from .models import Categoria, Empresa, InvitacionEmpresa, Producto
 
 
 class AltaEmpresaTests(APITestCase):
@@ -126,3 +129,90 @@ class OficinaTests(APITestCase):
 
     def test_oficina_no_atiende_caja(self):
         self.assertEqual(self.client.get("/api/v1/caja/solicitudes/").status_code, 403)
+
+
+class InvitacionEmpresaTests(APITestCase):
+    """Alta por invitación: solo quien recibe el correo del admin crea su cuenta."""
+
+    def setUp(self):
+        self.Usuario = Usuario
+        self.admin = Usuario.objects.create_user("adm", password="x", rol=Usuario.Rol.ADMIN)
+        self.cat = Categoria.objects.create(nombre="Salud")
+
+    def _invitar(self, **extra):
+        self.client.force_authenticate(self.admin)
+        datos = {"email": "Duena@Dental.com", "tipo": "OFICINA", "nombre_sugerido": "Dental Sonrisa",
+                 "categoria": self.cat.id, "mensaje": "Bienvenidos", **extra}
+        return self.client.post("/api/v1/admin/invitaciones-empresa/", datos, format="json")
+
+    def _token(self):
+        return InvitacionEmpresa.objects.latest("creado_en").token
+
+    def _aceptar(self, token, **extra):
+        self.client.force_authenticate(None)
+        datos = {"nombre_empresa": "Consultorio Dental Sonrisa", "first_name": "Rosa", "last_name": "Vargas",
+                 "password": "Sonrisa2026!", "password_confirmacion": "Sonrisa2026!", **extra}
+        return self.client.post(f"/api/v1/auth/invitacion-empresa/{token}/", datos, format="json")
+
+    def test_flujo_invitar_y_aceptar(self):
+        resp = self._invitar()
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data["email"], "duena@dental.com")
+        self.assertEqual(len(mail.outbox), 1)
+        token = self._token()
+        self.assertIn(f"/activar/{token}", mail.outbox[0].body)
+
+        info = self.client.get(f"/api/v1/auth/invitacion-empresa/{token}/").data
+        self.assertEqual(info["tipo"], "OFICINA")
+        self.assertEqual(info["nombre_sugerido"], "Dental Sonrisa")
+
+        ok = self._aceptar(token)
+        self.assertEqual(ok.status_code, 201, ok.data)
+        usuario = self.Usuario.objects.get(username="duena@dental.com")
+        self.assertEqual(usuario.rol, "OFICINA")
+        self.assertTrue(usuario.email_verificado)
+        self.assertTrue(usuario.check_password("Sonrisa2026!"))
+        self.assertEqual(usuario.empresa.nombre, "Consultorio Dental Sonrisa")
+        self.assertEqual(usuario.empresa.categoria, self.cat)
+        # El enlace no sirve dos veces.
+        self.assertIn("ya se usó", self._aceptar(token).data["detail"])
+
+    def test_contrasena_debil_y_distinta(self):
+        self._invitar()
+        token = self._token()
+        self.assertIn("password", self._aceptar(token, password="123", password_confirmacion="123").data)
+        self.assertIn("password_confirmacion", self._aceptar(token, password_confirmacion="otra").data)
+
+    def test_vencida_anulada_y_reenvio(self):
+        inv_id = self._invitar().data["id"]
+        token = self._token()
+        InvitacionEmpresa.objects.filter(pk=inv_id).update(expira_en=timezone.now() - timedelta(seconds=1))
+        self.assertIn("venció", self.client.get(f"/api/v1/auth/invitacion-empresa/{token}/").data["detail"])
+
+        self.client.force_authenticate(self.admin)
+        nueva = self.client.post(f"/api/v1/admin/invitaciones-empresa/{inv_id}/reenviar/")
+        self.assertEqual(nueva.status_code, 200)
+        self.assertNotEqual(self._token(), token)  # el enlace viejo deja de servir
+        self.assertEqual(self.client.get(f"/api/v1/auth/invitacion-empresa/{token}/").status_code, 400)
+
+        self.client.force_authenticate(self.admin)
+        self.client.post(f"/api/v1/admin/invitaciones-empresa/{inv_id}/anular/")
+        self.assertIn("no es válida", self._aceptar(self._token()).data["detail"])
+
+    def test_encargado_extra_se_une_a_empresa_existente(self):
+        empresa = Empresa.objects.create(nombre="Café X", email_contacto="cafe@x.com")
+        self._invitar(email="encargado@cafe.com", empresa=empresa.id, tipo="OFICINA")
+        ok = self._aceptar(self._token(), nombre_empresa="")
+        self.assertEqual(ok.status_code, 201, ok.data)
+        usuario = self.Usuario.objects.get(username="encargado@cafe.com")
+        self.assertEqual(usuario.empresa, empresa)
+        self.assertEqual(usuario.rol, "NEGOCIO")  # el tipo sale de la empresa, no de lo enviado
+        self.assertEqual(Empresa.objects.count(), 1)
+
+    def test_no_invita_correo_existente_y_solo_admin(self):
+        self.Usuario.objects.create_user("ya@x.com", email="ya@x.com", password="x", rol="CLIENTE")
+        self.assertEqual(self._invitar(email="ya@x.com").status_code, 400)
+        cliente = self.Usuario.objects.get(username="ya@x.com")
+        self.client.force_authenticate(cliente)
+        resp = self.client.post("/api/v1/admin/invitaciones-empresa/", {"email": "z@x.com"}, format="json")
+        self.assertEqual(resp.status_code, 403)

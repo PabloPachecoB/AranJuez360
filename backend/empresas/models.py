@@ -145,3 +145,49 @@ class FotoEmpresa(models.Model):
 
     def __str__(self):
         return f"Foto de {self.empresa}"
+
+
+def _nuevo_token_invitacion():
+    return secrets.token_urlsafe(32)
+
+
+class InvitacionEmpresa(models.Model):
+    """Invitación del admin del Paseo para que un negocio, emprendimiento u oficina
+    (o un encargado más de una empresa existente) cree su cuenta y llene su ficha.
+
+    Solo quien recibe la invitación por correo puede registrarse: no hay autorregistro.
+    """
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        ACEPTADA = "ACEPTADA", "Aceptada"
+        ANULADA = "ANULADA", "Anulada"
+
+    email = models.EmailField()
+    tipo = models.CharField(max_length=20, choices=Empresa.Tipo.choices, default=Empresa.Tipo.NEGOCIO)
+    nombre_sugerido = models.CharField(max_length=120, blank=True, help_text="Nombre de la empresa (lo puede corregir).")
+    categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
+    empresa = models.ForeignKey(
+        Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name="invitaciones_acceso",
+        help_text="Si se completa, invita a un encargado más de esta empresa (no crea una nueva).",
+    )
+    mensaje = models.CharField(max_length=300, blank=True)
+    token = models.CharField(max_length=64, unique=True, default=_nuevo_token_invitacion, editable=False)
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.PENDIENTE)
+    expira_en = models.DateTimeField()
+    creada_por = models.ForeignKey(
+        "usuarios.Usuario", on_delete=models.SET_NULL, null=True, related_name="invitaciones_empresa_enviadas",
+    )
+    aceptada_por = models.ForeignKey(
+        "usuarios.Usuario", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    aceptada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-creado_en"]
+        verbose_name = "invitación de empresa"
+        verbose_name_plural = "invitaciones de empresas"
+
+    def __str__(self):
+        return f"{self.email} ({self.get_tipo_display()}) [{self.estado}]"

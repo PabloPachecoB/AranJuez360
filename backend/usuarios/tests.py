@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.core import mail
 from django.core.cache import cache
+from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -154,3 +155,39 @@ class LoginDosPasosTests(APITestCase):
     def test_login_antiguo_sin_doble_factor_no_existe(self):
         resp = self.client.post("/auth/token/", {"username": "ana@correo.com", "password": "PaseoSeguro9"})
         self.assertEqual(resp.status_code, 404)
+
+
+class CorreoSinDemoTests(SimpleTestCase):
+    """El SMTP real no envía a los dominios inventados de las cuentas de demo."""
+
+    @override_settings(EMAIL_DEMO_REDIRIGIR="")
+    def test_omite_dominios_demo(self):
+        from unittest import mock
+
+        from django.core.mail import EmailMessage
+
+        from paseo_erp.correo import SmtpSinDemoBackend
+
+        backend = SmtpSinDemoBackend()
+        with mock.patch("django.core.mail.backends.smtp.EmailBackend.send_messages", return_value=1) as smtp:
+            solo_demo = EmailMessage("x", "y", to=["admin@paseo.bo"])
+            self.assertEqual(backend.send_messages([solo_demo]), 0)
+            smtp.assert_not_called()  # ni siquiera intenta conectarse
+
+            mixto = EmailMessage("x", "y", to=["admin@paseo.bo", "real@gmail.com"])
+            backend.send_messages([mixto])
+            enviado = smtp.call_args.args[0][0]
+            self.assertEqual(enviado.to, ["real@gmail.com"])
+
+    def test_redirige_demo_si_esta_configurado(self):
+        from unittest import mock
+
+        from django.core.mail import EmailMessage
+
+        from paseo_erp.correo import SmtpSinDemoBackend
+
+        with override_settings(EMAIL_DEMO_REDIRIGIR="yo@gmail.com"),                 mock.patch("django.core.mail.backends.smtp.EmailBackend.send_messages", return_value=1) as smtp:
+            SmtpSinDemoBackend().send_messages([EmailMessage("Tu código", "123", to=["admin@paseo.bo"])])
+        enviado = smtp.call_args.args[0][0]
+        self.assertEqual(enviado.to, ["yo@gmail.com"])
+        self.assertEqual(enviado.subject, "[Demo: admin@paseo.bo] Tu código")

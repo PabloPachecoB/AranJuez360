@@ -7,6 +7,8 @@ import ClienteHistorial from "./pages/ClienteHistorial";
 import Dashboard from "./pages/Dashboard";
 import Diversion from "./pages/Diversion";
 import Empresas from "./pages/Empresas";
+import Activar from "./pages/Activar";
+import Invitaciones from "./pages/Invitaciones";
 import Login from "./pages/Login";
 import Monedas from "./pages/Monedas";
 import Usuarios from "./pages/Usuarios";
@@ -21,6 +23,7 @@ function Layout() {
           <NavLink to="/" end>Inicio</NavLink>
           <NavLink to="/usuarios">Usuarios</NavLink>
           <NavLink to="/empresas">Empresas</NavLink>
+          <NavLink to="/invitaciones">Invitaciones</NavLink>
           <NavLink to="/monedas">Monedas</NavLink>
           <NavLink to="/diversion">Diversión</NavLink>
         </nav>
@@ -59,6 +62,10 @@ export default function App() {
   if (pathname.startsWith("/sitio/")) {
     return <Routes><Route path="/sitio/:id" element={<Sitio />} /></Routes>;
   }
+  // Enlace del correo de invitación: el invitado crea su cuenta (sin sesión).
+  if (pathname.startsWith("/activar/")) {
+    return <Routes><Route path="/activar/:token" element={<Activar />} /></Routes>;
+  }
   if (cargando) return <div className="empty">Cargando…</div>;
   if (!user) return <Login />;
   // Negocios, emprendimientos y oficinas tienen su propio mini-sistema.
@@ -71,6 +78,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="empresas" element={<Empresas />} />
+        <Route path="invitaciones" element={<Invitaciones />} />
         <Route path="monedas" element={<Monedas />} />
         <Route path="diversion" element={<Diversion />} />
         <Route path="clientes/:id" element={<ClienteHistorial />} />

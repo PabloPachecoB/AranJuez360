@@ -2,8 +2,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -11,8 +11,11 @@ from rest_framework.response import Response
 from usuarios.permissions import EsAdmin, EsEmpresa
 
 from . import services
-from .models import Categoria, Empresa, FotoEmpresa, Horario, Oferta, Producto
+from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
 from .serializers import (
+    AceptarInvitacionSerializer,
+    CrearInvitacionSerializer,
+    InvitacionEmpresaSerializer,
     FotoEmpresaSerializer,
     OfertaPublicaSerializer,
     CategoriaSerializer,
@@ -205,3 +208,68 @@ class CategoriaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CategoriaSerializer
     permission_classes = [AllowAny]
     pagination_class = None
+
+
+
+# --- Alta por invitación --------------------------------------------------------------
+
+def _invitacion(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except services.InvitacionError as exc:
+        raise ValidationError({"detail": str(exc)})
+
+
+class InvitacionesEmpresaAdminViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """El admin invita por correo a negocios, emprendimientos, oficinas o encargados."""
+
+    serializer_class = InvitacionEmpresaSerializer
+    permission_classes = [EsAdmin]
+
+    def get_queryset(self):
+        qs = InvitacionEmpresa.objects.select_related("categoria", "empresa", "aceptada_por")
+        estado = self.request.query_params.get("estado")
+        if estado:
+            qs = qs.filter(estado=estado.upper())
+        return qs
+
+    def create(self, request):
+        datos = CrearInvitacionSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        invitacion = _invitacion(services.invitar, request.user, **datos.validated_data)
+        return Response(InvitacionEmpresaSerializer(invitacion).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def reenviar(self, request, pk=None):
+        invitacion = _invitacion(services.reenviar_invitacion, self.get_object())
+        return Response(InvitacionEmpresaSerializer(invitacion).data)
+
+    @action(detail=True, methods=["post"])
+    def anular(self, request, pk=None):
+        invitacion = _invitacion(services.anular_invitacion, self.get_object())
+        return Response(InvitacionEmpresaSerializer(invitacion).data)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def invitacion_empresa(request, token):
+    """Enlace del correo. GET: datos de la invitación. POST: el invitado crea su cuenta."""
+    invitacion = _invitacion(services.invitacion_vigente, token)
+    if request.method == "GET":
+        return Response({
+            "email": invitacion.email,
+            "tipo": invitacion.tipo,
+            "tipo_nombre": invitacion.get_tipo_display(),
+            "nombre_sugerido": invitacion.nombre_sugerido,
+            "categoria_nombre": invitacion.categoria.nombre if invitacion.categoria else None,
+            "empresa_nombre": invitacion.empresa.nombre if invitacion.empresa else None,
+            "mensaje": invitacion.mensaje,
+            "expira_en": invitacion.expira_en,
+        })
+    datos = AceptarInvitacionSerializer(data=request.data, context={"invitacion": invitacion})
+    datos.is_valid(raise_exception=True)
+    d = datos.validated_data
+    usuario = _invitacion(
+        services.aceptar_invitacion, token, d.get("nombre_empresa", ""), d["first_name"], d["last_name"], d["password"]
+    )
+    return Response({"email": usuario.email, "empresa": usuario.empresa.nombre}, status=status.HTTP_201_CREATED)

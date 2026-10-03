@@ -69,8 +69,9 @@ def _enviar(usuario: Usuario, codigo: str, proposito: str):
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[usuario.email],
     )
-    if settings.DEBUG:
-        # En desarrollo también se muestra aquí: las cuentas de demo tienen correos que no existen.
+    es_demo = usuario.email.rsplit("@", 1)[-1].lower() in settings.EMAIL_DOMINIOS_DEMO
+    if settings.DEBUG or (es_demo and settings.CODIGOS_DEMO_EN_LOG):
+        # Las cuentas de demo tienen correos que no existen: su código se ve en la terminal / logs.
         print(f"\n===== CÓDIGO DE VERIFICACIÓN para {usuario.email}: {codigo} =====\n", flush=True)
 
 

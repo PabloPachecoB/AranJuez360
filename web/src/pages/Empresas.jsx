@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api, qs } from "../api";
 import { Estado, useApi } from "../components/ui";
 import { fecha, TIPOS } from "../format";
@@ -58,7 +59,11 @@ export default function Empresas() {
           <h1>Empresas</h1>
           <p>Negocios, emprendimientos y oficinas del Paseo</p>
         </div>
-        <button className="btn" onClick={() => setAbierto(!abierto)}>{abierto ? "Cancelar" : "Registrar empresa"}</button>
+        <div className="filters" style={{ margin: 0 }}>
+          <Link className="btn" to="/invitaciones">Invitar empresa</Link>
+          <button className="btn ghost" onClick={() => setAbierto(!abierto)}
+            title="Crea la empresa y envía una contraseña temporal">{abierto ? "Cancelar" : "Alta directa"}</button>
+        </div>
       </div>
 
       {abierto && (

@@ -156,6 +156,17 @@ else:
     ]
 CORS_ALLOW_CREDENTIALS = True
 
+# --- Producción detrás de HTTPS (Caddy/Nginx en el VPS) -------------------------
+CSRF_TRUSTED_ORIGINS = [o for o in env("CSRF_TRUSTED_ORIGINS", default="").split(",") if o]
+# False si el VPS se usa solo con su IP (http://, sin certificado).
+USAR_HTTPS = env.bool("USAR_HTTPS", default=not DEBUG)
+if USAR_HTTPS:
+    # El proxy termina el HTTPS: así Django arma enlaces https:// (imágenes, QR, correos).
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 # --- Correo (credenciales de empresas) ----------------------------------------
 # En desarrollo los correos se imprimen en la consola; en producción usar SMTP.
 EMAIL_BACKEND = env(
@@ -169,6 +180,12 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+# Dominios inventados de las cuentas de demo: no se les envía correo real (ver paseo_erp/correo.py).
+# En producción, muestra en los logs los códigos de las cuentas de demo (para presentaciones).
+CODIGOS_DEMO_EN_LOG = env.bool("CODIGOS_DEMO_EN_LOG", default=False)
+EMAIL_DOMINIOS_DEMO = [d.strip().lower() for d in env("EMAIL_DOMINIOS_DEMO", default="paseo.bo").split(",") if d.strip()]
+# Si tiene un correo, los mensajes para cuentas de demo se le reenvían (asunto "[Demo: cuenta]").
+EMAIL_DEMO_REDIRIGIR = env("EMAIL_DEMO_REDIRIGIR", default="").strip()
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Paseo Aranjuez 360 <no-responder@localhost>")
 
 # --- Enlaces de la plataforma ----------------------------------------------------
