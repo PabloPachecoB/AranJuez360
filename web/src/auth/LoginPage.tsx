@@ -8,10 +8,9 @@ import { useAuth } from "./AuthContext";
 const inputClase = "min-h-[52px] w-full min-w-0 rounded-[5px] border border-[#dedde8] bg-[#f6f6f9] px-4 py-3 text-base text-[#19182d] outline-none transition-colors placeholder:text-[#858397] focus:border-[#091734] focus:bg-white focus:ring-4 focus:ring-[#091734]/10 sm:text-sm";
 const labelClase = "relative flex min-w-0 flex-col gap-2 text-xs font-bold text-[#2c2b40]";
 
-function AuthIcon({ name, className = "h-6 w-6 shrink-0" }: { name: "storefront" | "eye" | "eyeOff" | "arrow"; className?: string }) {
+function AuthIcon({ name, className = "h-6 w-6 shrink-0" }: { name: "eye" | "eyeOff" | "arrow"; className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      {name === "storefront" && <><path d="M4 10v10h16V10M3 10l2-6h14l2 6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><path d="M3 10a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2 2 0 0 0 4 0M9 20v-6h6v6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></>}
       {name === "eye" && <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" /></>}
       {name === "eyeOff" && <><path d="m3 3 18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 4.4A10.6 10.6 0 0 1 12 4c5.5 0 9 6 9 6a14 14 0 0 1-2.1 2.8M6.2 6.2C4.1 7.6 3 10 3 10s3.5 6 9 6c1.2 0 2.3-.3 3.3-.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></>}
       {name === "arrow" && <path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
@@ -164,16 +163,28 @@ export function LoginPage() {
         className="relative hidden min-h-svh flex-col justify-between overflow-hidden bg-[#091734] p-12 text-white lg:flex xl:p-20"
         aria-label="Paseo Aranjuez 360"
       >
-        <div className="flex items-center gap-3">
-          <span className="grid size-12 place-items-center border border-white/45 text-[#f4c95d]"><AuthIcon name="storefront" /></span>
-          <span className="grid gap-1 text-[0.65rem] leading-tight"><strong className="font-headline-sm text-lg font-extrabold text-white">PASEO</strong><b className="font-label-sm text-[#d2d1e0]">ARANJUEZ 360</b></span>
+        {!reducirMovimiento && (
+          <video
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-45"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+          >
+            <source src="/video_dron.mp4" type="video/mp4" />
+          </video>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-[#091734]/35" aria-hidden="true" />
+        <div className="relative z-10 flex w-full justify-center">
+          <img src="/logo-paseo-aranjuez.svg" alt="Paseo Aranjuez" className="size-48 object-contain" />
         </div>
         <div className="relative z-10 my-20 max-w-xl">
-          <p className="font-label-sm text-xs font-bold uppercase text-[#f4c95d]">PaseoYa</p>
-          <h2 className="mt-4 font-headline-lg text-5xl leading-[1.06] font-extrabold xl:text-6xl">Un paseo.<br />Muchas razones<br />para volver.</h2>
+          <h2 className="justify-center  font-headline-lg text-5xl leading-[1.06] font-extrabold xl:text-6xl">Paseo Aaranjuez<br />360°<br /></h2>
           <p className="mt-5 max-w-md font-body-lg text-base leading-7 text-[#dfdeeb]">Tu comunidad de compras, sabores y experiencias favoritas.</p>
         </div>
-        <div className="relative z-10 flex flex-wrap justify-between gap-3 border-t border-[#f4c95d]/50 pt-5 font-label-sm text-[0.64rem] font-bold text-[#d2d1e0]"><span>SUCRE · BOLIVIA</span><span>COMUNIDAD PASEO ARANJUEZ</span></div>
+        <div className="relative z-10 flex flex-wrap justify-between gap-3 border-t border-white/50 pt-5 font-label-sm text-[0.64rem] font-bold text-[#d2d1e0]"><span>SUCRE · BOLIVIA</span><span>COMUNIDAD PASEO ARANJUEZ</span></div>
       </motion.aside>
 
       <section className="grid min-h-svh min-w-0 place-items-center px-4 py-6 sm:px-8 lg:px-16 lg:py-8">
@@ -183,12 +194,11 @@ export function LoginPage() {
           transition={{ duration: reducirMovimiento ? 0 : 0.35, delay: reducirMovimiento ? 0 : 0.08, ease: "easeOut" }}
           className={`max-h-[calc(100svh-2rem)] w-full overflow-y-auto border border-[#e1e0e9] bg-white p-6 shadow-[0_18px_56px_rgba(9,23,52,0.08)] sm:p-10 lg:max-h-[calc(100svh-4rem)] ${paso === "registro" || paso === "registroCliente" ? "max-w-[620px]" : "max-w-[520px]"}`}
         >
-          <div className="mb-8 flex items-center gap-3 text-sm text-[#686779] lg:hidden">
-            <AuthIcon name="storefront" className="h-7 w-7 text-[#091734]" />
-            <strong className="font-headline-sm text-lg text-[#091734]">PaseoYa</strong><span>· Aranjuez 360</span>
+          <div className="mb-8 flex justify-center lg:hidden">
+            <span className="grid size-36 place-items-center bg-[#091734] p-4"><img src="/logo-paseo-aranjuez.svg" alt="Paseo Aranjuez" className="size-full object-contain" /></span>
           </div>
           <header className="mb-7">
-            <span className="font-label-sm text-xs font-bold uppercase tracking-[0.08em] text-[#091734]">{paso === "credenciales" ? "Bienvenido de nuevo" : paso === "codigo" ? "Verificación segura" : "PaseoYa · Registro"}</span>
+            <span className="font-label-sm text-xs font-bold uppercase tracking-[0.08em] text-[#091734]">{paso === "credenciales" ? "Bienvenido de nuevo" : paso === "codigo" ? "Verificación segura" : "Registro"}</span>
             <h1 className="mt-2 font-headline-lg text-[1.85rem] leading-tight font-extrabold text-[#19182d] sm:text-[2.2rem]">{paso === "credenciales" ? "Inicia sesión" : paso === "codigo" ? "Confirma tu acceso" : paso === "registroCliente" ? "Únete al Paseo" : "Registra tu negocio"}</h1>
             <p className="mt-2 font-body-md text-sm leading-6 text-[#686779]">{paso === "credenciales" ? "Ingresa tus datos para continuar." : paso === "codigo" ? "Un paso más y estarás dentro." : paso === "registroCliente" ? "Crea tu cuenta de cliente en unos minutos." : "Completa los datos de tu establecimiento."}</p>
           </header>
@@ -210,8 +220,8 @@ export function LoginPage() {
                     <button type="button" className="absolute right-2 bottom-[0.45rem] grid size-10 place-items-center text-[#686779] hover:text-[#091734]" aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setMostrarPassword((visible) => !visible)}><AuthIcon name={mostrarPassword ? "eyeOff" : "eye"} className="h-5 w-5" /></button>
                   </label>
                   {error && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="alert" className="border-l-[3px] border-[#ae352b] bg-[#fff1ed] px-3 py-2.5 text-[0.82rem] leading-5 text-[#842b24]">{error}</motion.p>}
-                  <motion.button type="submit" disabled={cargando} whileHover={whileHover} whileTap={whileTap} className="mt-1 flex min-h-[54px] items-center justify-between gap-4 bg-[#091734] px-4 py-3 font-headline-sm text-[0.92rem] font-bold text-white transition-colors hover:bg-[#050d20] disabled:cursor-wait disabled:opacity-65">
-                    {cargando ? "Enviando..." : "Iniciar sesión"}<AuthIcon name="arrow" className="h-5 w-5 text-[#f4c95d]" />
+                  <motion.button type="submit" disabled={cargando} whileHover={whileHover} whileTap={whileTap} className="mt-1 flex min-h-[54px] items-center justify-center gap-4 bg-[#091734] px-4 py-3 text-center font-headline-sm text-[0.92rem] font-bold text-white transition-colors hover:bg-[#050d20] disabled:cursor-wait disabled:opacity-65">
+                    {cargando ? "Enviando..." : "Iniciar sesión"}
                   </motion.button>
                   <p className="mt-1 text-center text-[0.82rem] text-[#686779]">¿Aún no tienes cuenta? <button type="button" className="font-bold text-[#091734] hover:underline" onClick={() => { setError(null); setPaso("registroCliente"); }}>Regístrate como cliente</button></p>
                   <button type="button" className="self-center text-[0.8rem] font-bold text-[#686779] hover:text-[#091734] hover:underline" onClick={() => { setError(null); setPaso("registro"); }}>¿Tienes un local? Registra tu negocio</button>
