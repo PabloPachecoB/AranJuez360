@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { pedidoItemsIniciales, productosIniciales } from "../mockData";
 import { usePedidos } from "../context/PedidosContext";
 import { useNegocio } from "../context/NegocioContext";
-import type { Negocio } from "../types";
+import { ApiError } from "../api/client";
+import type { NegocioInput } from "../api/negocio";
 import { Switch } from "../components/Switch";
 
 const inputClase =
@@ -11,46 +11,75 @@ const labelClase = "font-label-md text-label-md text-on-surface font-semibold";
 
 export function NegocioPage() {
   const { pedidos } = usePedidos();
-  const { negocio: negocioGuardado, setNegocio: setNegocioGuardado } = useNegocio();
-  const [negocio, setNegocio] = useState<Negocio>(negocioGuardado);
+  const { negocio, cargando, guardar } = useNegocio();
+  const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
-
-  function actualizar<K extends keyof Negocio>(campo: K, valor: Negocio[K]) {
-    setGuardado(false);
-    setNegocio((prev) => ({ ...prev, [campo]: valor }));
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    // Mock: no hay backend todavía, solo confirmamos visualmente el guardado.
-    setNegocioGuardado(negocio);
-    setGuardado(true);
-  }
+  const [error, setError] = useState<string | null>(null);
 
   const resumenVentas = useMemo(() => {
-    const entregados = pedidos.filter((p) => p.estado === "entregado");
-    const totalVendido = entregados.reduce((suma, p) => suma + p.total, 0);
+    const entregados = pedidos.filter((p) => p.estado === "ENTREGADO");
+    const totalVendido = entregados.reduce((suma, p) => suma + Number(p.total), 0);
     const ticketPromedio = entregados.length ? totalVendido / entregados.length : 0;
 
     const cantidadPorProducto = new Map<string, number>();
     for (const pedido of entregados) {
-      for (const item of pedidoItemsIniciales.filter((i) => i.pedido_id === pedido.id)) {
+      for (const item of pedido.items) {
         cantidadPorProducto.set(
-          item.producto_id,
-          (cantidadPorProducto.get(item.producto_id) ?? 0) + item.cantidad
+          item.producto_nombre,
+          (cantidadPorProducto.get(item.producto_nombre) ?? 0) + item.cantidad
         );
       }
     }
     let productoTop: { nombre: string; cantidad: number } | null = null;
-    for (const [productoId, cantidad] of cantidadPorProducto) {
-      if (!productoTop || cantidad > productoTop.cantidad) {
-        const producto = productosIniciales.find((p) => p.id === productoId);
-        productoTop = { nombre: producto?.nombre ?? productoId, cantidad };
-      }
+    for (const [nombre, cantidad] of cantidadPorProducto) {
+      if (!productoTop || cantidad > productoTop.cantidad) productoTop = { nombre, cantidad };
     }
 
     return { totalVendido, pedidosEntregados: entregados.length, ticketPromedio, productoTop };
   }, [pedidos]);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!negocio) return;
+    const form = new FormData(e.target as HTMLFormElement);
+    const datos: NegocioInput = {
+      telefono: String(form.get("telefono") ?? ""),
+      descripcion: String(form.get("descripcion") ?? ""),
+      piso: String(form.get("piso") ?? ""),
+      local: String(form.get("local") ?? ""),
+      referencia: String(form.get("referencia") ?? ""),
+      activo: negocio.activo,
+    };
+    setGuardando(true);
+    setError(null);
+    setGuardado(false);
+    try {
+      await guardar(datos);
+      setGuardado(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo guardar.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function alternarActivo(activo: boolean) {
+    try {
+      await guardar({ activo });
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo cambiar el estado.");
+    }
+  }
+
+  if (cargando || !negocio) {
+    return (
+      <div className="flex items-center justify-center py-space-xl text-on-surface-variant font-body-md text-body-md">
+        Cargando negocio...
+      </div>
+    );
+  }
+
+  const diasAbiertos = negocio.horarios.filter((h) => !h.cerrado);
 
   return (
     <div className="flex flex-col w-full gap-space-lg max-w-7xl">
@@ -60,7 +89,7 @@ export function NegocioPage() {
           <span className="font-badge-code text-badge-code uppercase tracking-wider text-secondary px-2 py-0.5 rounded-full bg-secondary-container/40 w-fit">
             Gestión de Local
           </span>
-          <h1 className="font-display text-display text-on-surface tracking-tight">Mi Negocio</h1>
+          <h1 className="font-display text-display text-on-surface tracking-tight">{negocio.nombre}</h1>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
             Administra la presencia de tu marca y revisa el rendimiento de ventas por Click &amp; Collect.
           </p>
@@ -114,11 +143,7 @@ export function NegocioPage() {
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between">
             <div className="flex items-start justify-between">
-              <div className="flex flex-col min-w-0 pr-2">
-                <span className="font-label-md text-label-md text-on-surface-variant font-medium">
-                  Producto estrella
-                </span>
-              </div>
+              <span className="font-label-md text-label-md text-on-surface-variant font-medium">Producto estrella</span>
               <div className="p-2.5 bg-primary-fixed text-primary rounded-lg shrink-0">
                 <span className="material-symbols-outlined text-[20px]">local_cafe</span>
               </div>
@@ -145,7 +170,7 @@ export function NegocioPage() {
                   Información comercial y localización
                 </h3>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  Estos datos determinan la ficha oficial de tu local en la app de PaseoYa.
+                  Nombre, tipo y correo los administra Paseo Aranjuez; el resto lo completas tú.
                 </p>
               </div>
               <span className="material-symbols-outlined text-primary text-[24px]">edit_document</span>
@@ -153,26 +178,17 @@ export function NegocioPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
               <div className="flex flex-col gap-1.5">
-                <label className={labelClase}>Nombre comercial</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3.5 top-3 text-on-surface-variant text-[18px]">
-                    store
-                  </span>
-                  <input
-                    className={`${inputClase} pl-10`}
-                    value={negocio.nombre}
-                    onChange={(e) => actualizar("nombre", e.target.value)}
-                  />
-                </div>
+                <label className={labelClase}>Teléfono</label>
+                <input name="telefono" className={inputClase} defaultValue={negocio.telefono} />
               </div>
               <div className="grid grid-cols-2 gap-space-sm">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClase}>Piso / Nivel</label>
-                  <input className={inputClase} value={negocio.piso} onChange={(e) => actualizar("piso", e.target.value)} />
+                  <input name="piso" className={inputClase} defaultValue={negocio.piso} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClase}>Local #</label>
-                  <input className={inputClase} value={negocio.local} onChange={(e) => actualizar("local", e.target.value)} />
+                  <input name="local" className={inputClase} defaultValue={negocio.local} />
                 </div>
               </div>
             </div>
@@ -182,7 +198,20 @@ export function NegocioPage() {
                 <span className="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
                 Horario de atención
               </label>
-              <input className={inputClase} value={negocio.horario} onChange={(e) => actualizar("horario", e.target.value)} />
+              {diasAbiertos.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {diasAbiertos.map((d) => (
+                    <span
+                      key={d.dia}
+                      className="font-body-sm text-body-sm bg-surface-container-low px-2.5 py-1 rounded-full text-on-surface-variant"
+                    >
+                      {d.dia_nombre.slice(0, 3)} {d.abre}–{d.cierra}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="font-body-sm text-body-sm text-on-surface-variant">Sin horario configurado.</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -190,20 +219,16 @@ export function NegocioPage() {
                 <span className="material-symbols-outlined text-[16px] text-primary">navigation</span>
                 Referencia de llegada
               </label>
-              <input
-                className={inputClase}
-                value={negocio.referencia}
-                onChange={(e) => actualizar("referencia", e.target.value)}
-              />
+              <input name="referencia" className={inputClase} defaultValue={negocio.referencia} />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className={labelClase}>Descripción del negocio</label>
               <textarea
+                name="descripcion"
                 className="w-full p-3 bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all resize-none"
                 rows={3}
-                value={negocio.descripcion}
-                onChange={(e) => actualizar("descripcion", e.target.value)}
+                defaultValue={negocio.descripcion}
               />
             </div>
           </div>
@@ -225,13 +250,15 @@ export function NegocioPage() {
                   </span>
                 </div>
               </div>
-              <Switch
-                checked={negocio.activo}
-                onChange={(activo) => actualizar("activo", activo)}
-                label="Negocio activo"
-              />
+              <Switch checked={negocio.activo} onChange={alternarActivo} label="Negocio activo" />
             </div>
           </div>
+
+          {error && (
+            <p className="font-body-sm text-body-sm text-error bg-error-container/40 rounded-lg px-space-md py-2">
+              {error}
+            </p>
+          )}
 
           <div className="flex items-center justify-end gap-space-md p-space-md bg-surface-container-lowest rounded-xl shadow-sm">
             {guardado && (
@@ -239,10 +266,11 @@ export function NegocioPage() {
             )}
             <button
               type="submit"
-              className="px-space-xl py-3 bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm rounded-lg shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
+              disabled={guardando}
+              className="px-space-xl py-3 bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm rounded-lg shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <span className="material-symbols-outlined text-[20px]">save</span>
-              <span>Guardar cambios</span>
+              <span>{guardando ? "Guardando..." : "Guardar cambios"}</span>
             </button>
           </div>
         </form>
@@ -277,11 +305,7 @@ export function NegocioPage() {
               <div className="p-space-sm bg-surface-container-low rounded-lg flex flex-col gap-1 text-on-surface-variant text-body-sm font-body-sm">
                 <div className="flex items-center gap-1.5 text-on-surface font-semibold">
                   <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
-                  {negocio.referencia}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
-                  {negocio.horario}
+                  {negocio.referencia || "Sin referencia"}
                 </div>
               </div>
             </div>

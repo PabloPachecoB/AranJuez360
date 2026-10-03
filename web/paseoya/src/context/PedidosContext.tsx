@@ -1,19 +1,40 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { pedidosIniciales } from "../mockData";
-import { usePersistentState } from "../hooks/usePersistentState";
-import type { Pedido } from "../types";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { listarPedidosEmpresa, type PedidoApi } from "../api/pedidos";
+import { useAuth } from "./AuthContext";
 
 interface PedidosContextValue {
-  pedidos: Pedido[];
-  setPedidos: React.Dispatch<React.SetStateAction<Pedido[]>>;
+  pedidos: PedidoApi[];
+  cargando: boolean;
+  recargar: () => Promise<void>;
 }
 
 const PedidosContext = createContext<PedidosContextValue | null>(null);
 
 export function PedidosProvider({ children }: { children: ReactNode }) {
-  const [pedidos, setPedidos] = usePersistentState<Pedido[]>("paseoya_pedidos", pedidosIniciales);
+  const { usuario } = useAuth();
+  const [pedidos, setPedidos] = useState<PedidoApi[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  async function recargar() {
+    setCargando(true);
+    try {
+      setPedidos(await listarPedidosEmpresa());
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!usuario) {
+      setCargando(false);
+      return;
+    }
+    recargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario]);
+
   return (
-    <PedidosContext.Provider value={{ pedidos, setPedidos }}>{children}</PedidosContext.Provider>
+    <PedidosContext.Provider value={{ pedidos, cargando, recargar }}>{children}</PedidosContext.Provider>
   );
 }
 

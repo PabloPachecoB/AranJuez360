@@ -1,52 +1,31 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { clientesMock, pedidoItemsIniciales, productosIniciales } from "../mockData";
 import { usePedidos } from "../context/PedidosContext";
 import { useNegocio } from "../context/NegocioContext";
-import type { EstadoPedido, Pedido } from "../types";
+import { avanzarPedido, cancelarPedido, validarRetiro, type EstadoPedidoApi, type PedidoApi } from "../api/pedidos";
+import { ApiError } from "../api/client";
 
-const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
-  recibido: "confirmado",
-  confirmado: "preparando",
-  preparando: "listo_para_recoger",
+const ETIQUETA_ACCION: Partial<Record<EstadoPedidoApi, string>> = {
+  RECIBIDO: "Confirmar pedido",
+  CONFIRMADO: "Empezar a preparar",
+  PREPARANDO: "Marcar listo para recoger",
 };
 
-const ETIQUETA_ACCION: Partial<Record<EstadoPedido, string>> = {
-  recibido: "Confirmar pedido",
-  confirmado: "Empezar a preparar",
-  preparando: "Marcar listo para recoger",
+const ICONO_ACCION: Partial<Record<EstadoPedidoApi, string>> = {
+  RECIBIDO: "soup_kitchen",
+  CONFIRMADO: "soup_kitchen",
+  PREPARANDO: "notification_important",
 };
 
-const ICONO_ACCION: Partial<Record<EstadoPedido, string>> = {
-  recibido: "soup_kitchen",
-  confirmado: "soup_kitchen",
-  preparando: "notification_important",
+const CLASE_ESTADO: Record<EstadoPedidoApi, string> = {
+  RECIBIDO: "bg-tertiary-fixed text-on-tertiary-fixed",
+  CONFIRMADO: "bg-tertiary-fixed text-on-tertiary-fixed",
+  PREPARANDO: "bg-primary-fixed text-on-primary-fixed-variant",
+  LISTO_PARA_RECOGER: "bg-primary text-on-primary",
+  ENTREGADO: "bg-secondary-container text-on-secondary-container",
+  CANCELADO: "bg-error-container text-on-error-container",
 };
 
-const ETIQUETA_ESTADO: Record<EstadoPedido, string> = {
-  recibido: "Recibido",
-  confirmado: "Confirmado",
-  preparando: "Preparando",
-  listo_para_recoger: "Listo para recoger",
-  cliente_llego: "Cliente llegó",
-  entregado: "Entregado",
-  cancelado: "Cancelado",
-};
-
-const CLASE_ESTADO: Record<EstadoPedido, string> = {
-  recibido: "bg-tertiary-fixed text-on-tertiary-fixed",
-  confirmado: "bg-tertiary-fixed text-on-tertiary-fixed",
-  preparando: "bg-primary-fixed text-on-primary-fixed-variant",
-  listo_para_recoger: "bg-primary text-on-primary",
-  cliente_llego: "bg-primary text-on-primary",
-  entregado: "bg-secondary-container text-on-secondary-container",
-  cancelado: "bg-error-container text-on-error-container",
-};
-
-const SE_PUEDE_CANCELAR: EstadoPedido[] = ["recibido", "confirmado", "preparando"];
-
-function nombreCliente(clienteId: string) {
-  return clientesMock[clienteId]?.nombre ?? clienteId;
-}
+const SE_PUEDE_CANCELAR: EstadoPedidoApi[] = ["RECIBIDO", "CONFIRMADO", "PREPARANDO"];
 
 function iniciales(nombre: string) {
   return nombre
@@ -57,14 +36,8 @@ function iniciales(nombre: string) {
     .join("");
 }
 
-function resumenItems(pedidoId: string) {
-  return pedidoItemsIniciales
-    .filter((item) => item.pedido_id === pedidoId)
-    .map((item) => {
-      const producto = productosIniciales.find((p) => p.id === item.producto_id);
-      return `${item.cantidad}x ${producto?.nombre ?? item.producto_id}`;
-    })
-    .join(", ");
+function resumenItems(pedido: PedidoApi) {
+  return pedido.items.map((item) => `${item.cantidad}x ${item.producto_nombre}`).join(", ");
 }
 
 function esHoy(fechaIso: string) {
@@ -78,72 +51,77 @@ function esHoy(fechaIso: string) {
 }
 
 export function PedidosPage() {
-  const { pedidos, setPedidos } = usePedidos();
+  const { pedidos, recargar } = usePedidos();
   const { negocio } = useNegocio();
   const [codigoIngresado, setCodigoIngresado] = useState("");
+  const [validando, setValidando] = useState(false);
   const [mensajeValidacion, setMensajeValidacion] = useState<{ tipo: "ok" | "error"; texto: string } | null>(
     null
   );
+  const [accionEnCurso, setAccionEnCurso] = useState<number | null>(null);
 
   const pedidosActivos = useMemo(
-    () => pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado"),
+    () => pedidos.filter((p) => p.estado !== "ENTREGADO" && p.estado !== "CANCELADO"),
     [pedidos]
   );
   const pedidosFinalizados = useMemo(
-    () => pedidos.filter((p) => p.estado === "entregado" || p.estado === "cancelado"),
+    () => pedidos.filter((p) => p.estado === "ENTREGADO" || p.estado === "CANCELADO"),
     [pedidos]
   );
 
   const kpis = useMemo(() => {
-    const porPreparar = pedidosActivos.filter((p) => p.estado !== "listo_para_recoger" && p.estado !== "cliente_llego").length;
-    const listos = pedidosActivos.filter((p) => p.estado === "listo_para_recoger" || p.estado === "cliente_llego").length;
-    const entregadosHoy = pedidos.filter((p) => p.estado === "entregado" && p.entregado_en && esHoy(p.entregado_en));
-    const facturadoHoy = entregadosHoy.reduce((suma, p) => suma + p.total, 0);
+    const porPreparar = pedidosActivos.filter((p) => p.estado !== "LISTO_PARA_RECOGER").length;
+    const listos = pedidosActivos.filter((p) => p.estado === "LISTO_PARA_RECOGER").length;
+    const entregadosHoy = pedidos.filter((p) => p.estado === "ENTREGADO" && p.entregado_en && esHoy(p.entregado_en));
+    const facturadoHoy = entregadosHoy.reduce((suma, p) => suma + Number(p.total), 0);
     return { porPreparar, listos, entregadosHoy: entregadosHoy.length, facturadoHoy };
   }, [pedidos, pedidosActivos]);
 
-  function avanzarEstado(pedido: Pedido) {
-    const siguiente = SIGUIENTE_ESTADO[pedido.estado];
-    if (!siguiente) return;
-    setPedidos((prev) => prev.map((p) => (p.id === pedido.id ? { ...p, estado: siguiente } : p)));
-  }
-
-  function entregarAhora(pedido: Pedido) {
-    setPedidos((prev) =>
-      prev.map((p) =>
-        p.id === pedido.id ? { ...p, estado: "entregado", entregado_en: new Date().toISOString() } : p
-      )
-    );
-  }
-
-  function cancelarPedido(pedido: Pedido) {
-    if (!confirm(`¿Cancelar el pedido ${pedido.codigo_retiro}?`)) return;
-    setPedidos((prev) => prev.map((p) => (p.id === pedido.id ? { ...p, estado: "cancelado" } : p)));
-  }
-
-  function validarRetiro(e: FormEvent) {
-    e.preventDefault();
-    const codigo = codigoIngresado.trim().toUpperCase();
-    const pedido = pedidos.find((p) => p.codigo_retiro.toUpperCase() === codigo);
-
-    if (!pedido) {
-      setMensajeValidacion({ tipo: "error", texto: "No se encontró ningún pedido con ese código." });
-      return;
+  async function onAvanzar(pedido: PedidoApi) {
+    setAccionEnCurso(pedido.id);
+    try {
+      await avanzarPedido(pedido.id);
+      await recargar();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo avanzar el pedido.");
+    } finally {
+      setAccionEnCurso(null);
     }
-    if (pedido.estado !== "listo_para_recoger" && pedido.estado !== "cliente_llego") {
+  }
+
+  async function onCancelar(pedido: PedidoApi) {
+    if (!confirm(`¿Cancelar el pedido ${pedido.codigo_retiro}?`)) return;
+    setAccionEnCurso(pedido.id);
+    try {
+      await cancelarPedido(pedido.id);
+      await recargar();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo cancelar el pedido.");
+    } finally {
+      setAccionEnCurso(null);
+    }
+  }
+
+  async function onValidarRetiro(e: FormEvent) {
+    e.preventDefault();
+    setValidando(true);
+    setMensajeValidacion(null);
+    try {
+      const pedido = await validarRetiro(codigoIngresado.trim());
+      await recargar();
+      setMensajeValidacion({
+        tipo: "ok",
+        texto: `¡Código ${pedido.codigo_retiro} verificado! Pedido entregado a ${pedido.cliente_nombre}.`,
+      });
+      setCodigoIngresado("");
+    } catch (err) {
       setMensajeValidacion({
         tipo: "error",
-        texto: `El pedido ${pedido.codigo_retiro} todavía está "${ETIQUETA_ESTADO[pedido.estado]}", no está listo para entregar.`,
+        texto: err instanceof ApiError ? err.message : "No se pudo validar el código.",
       });
-      return;
+    } finally {
+      setValidando(false);
     }
-
-    entregarAhora(pedido);
-    setMensajeValidacion({
-      tipo: "ok",
-      texto: `¡Código ${pedido.codigo_retiro} verificado! Pedido entregado a ${nombreCliente(pedido.cliente_id)}.`,
-    });
-    setCodigoIngresado("");
   }
 
   return (
@@ -151,11 +129,13 @@ export function PedidosPage() {
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
         <div>
-          <div className="flex items-center gap-space-xs text-on-surface-variant mb-1">
-            <span className="font-label-md text-label-md uppercase tracking-wider text-primary font-bold">
-              Piso {negocio.piso} · Local {negocio.local}
-            </span>
-          </div>
+          {negocio && (
+            <div className="flex items-center gap-space-xs text-on-surface-variant mb-1">
+              <span className="font-label-md text-label-md uppercase tracking-wider text-primary font-bold">
+                Piso {negocio.piso} · Local {negocio.local}
+              </span>
+            </div>
+          )}
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Gestión de Retiros</h1>
           <p className="font-body-md text-body-md text-on-surface-variant">
             Atiende los pedidos entrantes y valida el retiro Click &amp; Collect en el local.
@@ -178,24 +158,28 @@ export function PedidosPage() {
               Escribe el código de retiro del voucher digital de PaseoYa para liberar el pedido al cliente.
             </p>
           </div>
-          <form onSubmit={validarRetiro} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm w-full lg:w-auto">
+          <form
+            onSubmit={onValidarRetiro}
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm w-full lg:w-auto"
+          >
             <div className="relative min-w-[260px] flex-1 sm:flex-initial">
               <span className="material-symbols-outlined absolute left-3.5 top-3 text-outline text-[20px]">
                 qr_code_scanner
               </span>
               <input
                 className="w-full pl-11 pr-4 py-3 bg-surface-container-low rounded-xl font-headline-sm text-headline-sm uppercase text-on-surface placeholder:text-outline placeholder:font-body-md placeholder:normal-case focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary shadow-inner transition-all"
-                placeholder="Código ej. PY-4821"
+                placeholder="Código ej. BD069AC6"
                 value={codigoIngresado}
                 onChange={(e) => setCodigoIngresado(e.target.value)}
               />
             </div>
             <button
               type="submit"
-              className="flex items-center justify-center gap-space-xs px-space-lg py-3 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm shadow-md hover:bg-primary-container active:scale-[0.98] transition-all"
+              disabled={validando}
+              className="flex items-center justify-center gap-space-xs px-space-lg py-3 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm shadow-md hover:bg-primary-container active:scale-[0.98] transition-all disabled:opacity-60"
             >
               <span className="material-symbols-outlined text-[20px]">check_circle</span>
-              <span className="whitespace-nowrap">Validar y Entregar</span>
+              <span className="whitespace-nowrap">{validando ? "Validando..." : "Validar y Entregar"}</span>
             </button>
           </form>
         </div>
@@ -273,21 +257,11 @@ export function PedidosPage() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-surface-container-low text-on-surface-variant">
-                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">
-                  Código
-                </th>
-                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">
-                  Comanda
-                </th>
-                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">
-                  Estado
-                </th>
+                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">Código</th>
+                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">Cliente</th>
+                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">Comanda</th>
+                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">Total</th>
+                <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider">Estado</th>
                 <th className="py-3.5 px-space-md font-badge-code text-badge-code uppercase tracking-wider text-right">
                   Acciones
                 </th>
@@ -304,57 +278,48 @@ export function PedidosPage() {
                   <td className="py-4 px-space-md">
                     <div className="flex items-center gap-space-sm">
                       <div className="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-primary font-headline-sm text-headline-sm">
-                        {iniciales(nombreCliente(pedido.cliente_id))}
+                        {iniciales(pedido.cliente_nombre)}
                       </div>
                       <span className="font-label-md text-label-md font-bold text-on-surface">
-                        {nombreCliente(pedido.cliente_id)}
+                        {pedido.cliente_nombre}
                       </span>
                     </div>
                   </td>
                   <td className="py-4 px-space-md max-w-xs">
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">
-                      {resumenItems(pedido.id)}
-                    </span>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant">{resumenItems(pedido)}</span>
                   </td>
                   <td className="py-4 px-space-md">
-                    <span className="font-price-display text-price-display text-on-surface">
-                      Bs {pedido.total}
-                    </span>
+                    <span className="font-price-display text-price-display text-on-surface">Bs {pedido.total}</span>
                   </td>
                   <td className="py-4 px-space-md">
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm font-bold ${CLASE_ESTADO[pedido.estado]}`}
                     >
-                      {ETIQUETA_ESTADO[pedido.estado]}
+                      {pedido.estado_display}
                     </span>
                   </td>
                   <td className="py-4 px-space-md text-right">
                     <div className="flex items-center justify-end gap-space-xs">
-                      {pedido.estado === "listo_para_recoger" || pedido.estado === "cliente_llego" ? (
+                      {ETIQUETA_ACCION[pedido.estado] && (
                         <button
-                          className="px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:bg-secondary/90 transition-all flex items-center gap-1 shadow-sm"
-                          onClick={() => entregarAhora(pedido)}
+                          disabled={accionEnCurso === pedido.id}
+                          className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-xs transition-all flex items-center gap-1 disabled:opacity-60"
+                          onClick={() => onAvanzar(pedido)}
                         >
-                          <span className="material-symbols-outlined text-[16px]">check</span>
-                          Entregar ahora
+                          <span className="material-symbols-outlined text-[16px]">{ICONO_ACCION[pedido.estado]}</span>
+                          {ETIQUETA_ACCION[pedido.estado]}
                         </button>
-                      ) : (
-                        ETIQUETA_ACCION[pedido.estado] && (
-                          <button
-                            className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-xs transition-all flex items-center gap-1"
-                            onClick={() => avanzarEstado(pedido)}
-                          >
-                            <span className="material-symbols-outlined text-[16px]">
-                              {ICONO_ACCION[pedido.estado]}
-                            </span>
-                            {ETIQUETA_ACCION[pedido.estado]}
-                          </button>
-                        )
+                      )}
+                      {pedido.estado === "LISTO_PARA_RECOGER" && (
+                        <span className="font-body-sm text-body-sm text-on-surface-variant italic">
+                          Esperando código del cliente
+                        </span>
                       )}
                       {SE_PUEDE_CANCELAR.includes(pedido.estado) && (
                         <button
-                          className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors"
-                          onClick={() => cancelarPedido(pedido)}
+                          disabled={accionEnCurso === pedido.id}
+                          className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors disabled:opacity-60"
+                          onClick={() => onCancelar(pedido)}
                           title="Cancelar"
                         >
                           <span className="material-symbols-outlined text-[18px]">close</span>
@@ -402,7 +367,7 @@ export function PedidosPage() {
                     </td>
                     <td className="py-3.5 px-space-md">
                       <span className="font-label-md text-label-md font-semibold text-on-surface">
-                        {nombreCliente(pedido.cliente_id)}
+                        {pedido.cliente_nombre}
                       </span>
                     </td>
                     <td className="py-3.5 px-space-md font-price-sm text-price-sm">Bs {pedido.total}</td>
@@ -410,7 +375,7 @@ export function PedidosPage() {
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-semibold ${CLASE_ESTADO[pedido.estado]}`}
                       >
-                        {ETIQUETA_ESTADO[pedido.estado]}
+                        {pedido.estado_display}
                       </span>
                     </td>
                     <td className="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface-variant">

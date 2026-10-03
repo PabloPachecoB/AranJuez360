@@ -119,7 +119,7 @@ class EmpresaPerfilSerializer(serializers.ModelSerializer):
         model = Empresa
         fields = [
             "id", "nombre", "tipo", "categoria_nombre", "email_contacto", "telefono",
-            "descripcion", "piso", "local", "referencia", "logo", "horarios",
+            "descripcion", "piso", "local", "referencia", "logo", "activo", "horarios",
         ]
         read_only_fields = ["nombre", "tipo", "email_contacto"]
 

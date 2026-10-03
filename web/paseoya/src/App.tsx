@@ -5,10 +5,12 @@ import { Header } from "./components/Header";
 import { ProductosPage } from "./pages/ProductosPage";
 import { PedidosPage } from "./pages/PedidosPage";
 import { NegocioPage } from "./pages/NegocioPage";
+import { LoginPage } from "./pages/LoginPage";
 import { PedidosProvider } from "./context/PedidosContext";
 import { NegocioProvider } from "./context/NegocioContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-function App() {
+function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   return (
@@ -32,6 +34,28 @@ function App() {
         </BrowserRouter>
       </PedidosProvider>
     </NegocioProvider>
+  );
+}
+
+function Contenido() {
+  const { usuario, cargando } = useAuth();
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-on-surface-variant font-body-md text-body-md">
+        Cargando...
+      </div>
+    );
+  }
+
+  return usuario ? <PanelAutenticado /> : <LoginPage />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Contenido />
+    </AuthProvider>
   );
 }
 

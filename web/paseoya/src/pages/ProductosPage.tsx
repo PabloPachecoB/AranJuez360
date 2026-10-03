@@ -1,24 +1,48 @@
-import { useMemo, useState } from "react";
-import { productosIniciales, STOCK_BAJO_UMBRAL } from "../mockData";
-import type { Producto, ProductoInput } from "../types";
+import { useEffect, useMemo, useState } from "react";
+import {
+  listarMisProductos,
+  crearProducto,
+  actualizarProducto,
+  eliminarProducto,
+  type ProductoApi,
+  type ProductoInput,
+} from "../api/productos";
+import { ApiError } from "../api/client";
 import { ProductoFormModal } from "../components/ProductoFormModal";
 import { Switch } from "../components/Switch";
-import { usePersistentState } from "../hooks/usePersistentState";
 
-function crearId() {
-  return `producto-${Math.random().toString(36).slice(2, 10)}`;
-}
+const STOCK_BAJO_UMBRAL = 5;
 
 type FiltroEstado = "todos" | "activos" | "pausados";
 type FiltroPromo = "todos" | "con_descuento" | "regular";
 
 export function ProductosPage() {
-  const [productos, setProductos] = usePersistentState<Producto[]>("paseoya_productos", productosIniciales);
+  const [productos, setProductos] = useState<ProductoApi[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("todos");
   const [filtroPromo, setFiltroPromo] = useState<FiltroPromo>("todos");
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [productoEnEdicion, setProductoEnEdicion] = useState<Producto | null>(null);
+  const [productoEnEdicion, setProductoEnEdicion] = useState<ProductoApi | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+
+  async function recargar() {
+    setCargando(true);
+    setErrorCarga(null);
+    try {
+      setProductos(await listarMisProductos());
+    } catch (err) {
+      setErrorCarga(err instanceof ApiError ? err.message : "No se pudo cargar el catálogo.");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    recargar();
+  }, []);
 
   const kpis = useMemo(
     () => ({
@@ -44,45 +68,53 @@ export function ProductosPage() {
 
   function abrirNuevo() {
     setProductoEnEdicion(null);
+    setErrorModal(null);
     setModalAbierto(true);
   }
 
-  function abrirEdicion(producto: Producto) {
+  function abrirEdicion(producto: ProductoApi) {
     setProductoEnEdicion(producto);
+    setErrorModal(null);
     setModalAbierto(true);
   }
 
-  function guardarProducto(datos: ProductoInput) {
-    if (productoEnEdicion) {
-      setProductos((prev) =>
-        prev.map((p) => (p.id === productoEnEdicion.id ? { ...p, ...datos } : p))
-      );
-    } else {
-      setProductos((prev) => [
-        ...prev,
-        {
-          ...datos,
-          id: crearId(),
-          negocio_id: "negocio-1",
-          creado_en: new Date().toISOString(),
-        },
-      ]);
+  async function guardarProducto(datos: ProductoInput) {
+    setGuardando(true);
+    setErrorModal(null);
+    try {
+      if (productoEnEdicion) {
+        const actualizado = await actualizarProducto(productoEnEdicion.id, datos);
+        setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)));
+      } else {
+        const creado = await crearProducto(datos);
+        setProductos((prev) => [...prev, creado]);
+      }
+      setModalAbierto(false);
+    } catch (err) {
+      setErrorModal(err instanceof ApiError ? err.message : "No se pudo guardar el producto.");
+    } finally {
+      setGuardando(false);
     }
-    setModalAbierto(false);
   }
 
-  function eliminarProducto(id: string) {
+  async function eliminar(producto: ProductoApi) {
     if (!confirm("¿Eliminar este producto? Esta acción no se puede deshacer.")) return;
-    setProductos((prev) => prev.filter((p) => p.id !== id));
+    await eliminarProducto(producto.id);
+    setProductos((prev) => prev.filter((p) => p.id !== producto.id));
   }
 
-  function cambiarActivo(id: string, activo: boolean) {
-    setProductos((prev) => prev.map((p) => (p.id === id ? { ...p, activo } : p)));
+  async function cambiarActivo(producto: ProductoApi, activo: boolean) {
+    setProductos((prev) => prev.map((p) => (p.id === producto.id ? { ...p, activo } : p)));
+    try {
+      await actualizarProducto(producto.id, { activo });
+    } catch {
+      // revertir si falló
+      setProductos((prev) => prev.map((p) => (p.id === producto.id ? { ...p, activo: !activo } : p)));
+    }
   }
 
   return (
     <div className="flex flex-col w-full">
-      {/* Encabezado y chips de KPI */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
         <div>
           <div className="flex items-center gap-space-xs text-on-surface-variant font-badge-code text-badge-code uppercase tracking-wider mb-1">
@@ -122,7 +154,6 @@ export function ProductosPage() {
         </div>
       </div>
 
-      {/* Barra de búsqueda, filtros y acción */}
       <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_2px_12px_rgba(19,27,46,0.04)] mb-space-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
         <div className="relative flex-1">
           <span className="material-symbols-outlined absolute left-3.5 top-3 text-on-surface-variant text-[20px]">
@@ -136,34 +167,24 @@ export function ProductosPage() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-space-sm">
-          <div className="relative">
-            <select
-              className="appearance-none bg-surface-container-low hover:bg-surface-container pl-3.5 pr-8 py-2.5 rounded-lg font-label-md text-label-md text-on-surface font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/80 transition-all"
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value as FiltroEstado)}
-            >
-              <option value="todos">Estado: Todos</option>
-              <option value="activos">Solo activos</option>
-              <option value="pausados">Pausados</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-2.5 top-3 pointer-events-none text-on-surface-variant text-[18px]">
-              expand_more
-            </span>
-          </div>
-          <div className="relative">
-            <select
-              className="appearance-none bg-surface-container-low hover:bg-surface-container pl-3.5 pr-8 py-2.5 rounded-lg font-label-md text-label-md text-on-surface font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/80 transition-all"
-              value={filtroPromo}
-              onChange={(e) => setFiltroPromo(e.target.value as FiltroPromo)}
-            >
-              <option value="todos">Promoción: Todos</option>
-              <option value="con_descuento">Con descuento activo</option>
-              <option value="regular">Precio regular</option>
-            </select>
-            <span className="material-symbols-outlined absolute right-2.5 top-3 pointer-events-none text-on-surface-variant text-[18px]">
-              expand_more
-            </span>
-          </div>
+          <select
+            className="appearance-none bg-surface-container-low hover:bg-surface-container pl-3.5 pr-8 py-2.5 rounded-lg font-label-md text-label-md text-on-surface font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/80 transition-all"
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value as FiltroEstado)}
+          >
+            <option value="todos">Estado: Todos</option>
+            <option value="activos">Solo activos</option>
+            <option value="pausados">Pausados</option>
+          </select>
+          <select
+            className="appearance-none bg-surface-container-low hover:bg-surface-container pl-3.5 pr-8 py-2.5 rounded-lg font-label-md text-label-md text-on-surface font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/80 transition-all"
+            value={filtroPromo}
+            onChange={(e) => setFiltroPromo(e.target.value as FiltroPromo)}
+          >
+            <option value="todos">Promoción: Todos</option>
+            <option value="con_descuento">Con descuento activo</option>
+            <option value="regular">Precio regular</option>
+          </select>
           <button
             className="flex items-center gap-space-xs bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md px-5 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95"
             onClick={abrirNuevo}
@@ -174,13 +195,17 @@ export function ProductosPage() {
         </div>
       </div>
 
-      {/* Tabla de productos */}
+      {errorCarga && (
+        <p className="font-body-sm text-body-sm text-error bg-error-container/40 rounded-lg px-space-md py-2 mb-space-md">
+          {errorCarga}
+        </p>
+      )}
+
       <div className="bg-surface-container-lowest rounded-xl shadow-[0_2px_12px_rgba(19,27,46,0.04)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
-                <th className="py-3.5 pl-6 pr-3 w-16 text-center">Foto</th>
                 <th className="py-3.5 px-4">Producto y Detalle</th>
                 <th className="py-3.5 px-4">Precio</th>
                 <th className="py-3.5 px-4">Existencias</th>
@@ -190,111 +215,104 @@ export function ProductosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container">
-              {productosFiltrados.map((producto) => {
-                const stockBajo = producto.stock > 0 && producto.stock <= STOCK_BAJO_UMBRAL;
-                const sinStock = producto.stock === 0;
-                return (
-                  <tr key={producto.id} className="hover:bg-surface-container-low/60 transition-colors group">
-                    <td className="py-3.5 pl-6 pr-3 text-center">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-high shadow-inner mx-auto">
-                        {producto.foto_url ? (
-                          <img
-                            src={producto.foto_url}
-                            alt={producto.nombre}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-on-surface-variant">
-                            <span className="material-symbols-outlined text-[20px]">image</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">
-                          {producto.nombre}
-                        </span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
-                          {producto.descripcion}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {producto.en_promocion ? (
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-body-sm text-body-sm line-through text-on-surface-variant">
-                            Bs {producto.precio}
+              {cargando && (
+                <tr>
+                  <td colSpan={6} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
+                    Cargando productos...
+                  </td>
+                </tr>
+              )}
+              {!cargando &&
+                productosFiltrados.map((producto) => {
+                  const stockBajo = producto.stock > 0 && producto.stock <= STOCK_BAJO_UMBRAL;
+                  const sinStock = producto.stock === 0;
+                  return (
+                    <tr key={producto.id} className="hover:bg-surface-container-low/60 transition-colors group">
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">
+                            {producto.nombre}
                           </span>
-                          <span className="font-price-sm text-price-sm text-primary font-extrabold">
-                            Bs {producto.precio_promocion}
+                          <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
+                            {producto.descripcion}
                           </span>
                         </div>
-                      ) : (
-                        <span className="font-price-sm text-price-sm text-on-surface font-extrabold">
-                          Bs {producto.precio}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {sinStock ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-md text-label-md font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-error" />
-                          Sin stock
-                        </span>
-                      ) : stockBajo ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-md text-label-md font-bold">
-                          <span className="material-symbols-outlined text-[14px]">warning</span>
-                          {producto.stock} · Stock bajo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-md text-label-md font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                          {producto.stock} unid.
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {producto.en_promocion ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-sm text-label-sm font-bold shadow-xs">
-                          <span className="material-symbols-outlined text-[13px]">percent</span>
-                          En promoción
-                        </span>
-                      ) : (
-                        <span className="font-body-sm text-body-sm text-on-surface-variant/60">—</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <Switch
-                        checked={producto.activo}
-                        onChange={(activo) => cambiarActivo(producto.id, activo)}
-                        label={`Mostrar ${producto.nombre} en PaseoYa`}
-                      />
-                    </td>
-                    <td className="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          className="p-1.5 rounded-lg text-primary hover:bg-primary-fixed transition-colors flex items-center gap-1 font-label-md text-label-md font-bold"
-                          onClick={() => abrirEdicion(producto)}
-                        >
-                          <span className="material-symbols-outlined text-[17px]">edit</span>
-                          <span>Editar</span>
-                        </button>
-                        <button
-                          className="p-1.5 rounded-lg text-error hover:bg-error-container transition-colors flex items-center gap-1 font-label-md text-label-md font-medium"
-                          onClick={() => eliminarProducto(producto.id)}
-                        >
-                          <span className="material-symbols-outlined text-[17px]">delete</span>
-                          <span>Eliminar</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {productosFiltrados.length === 0 && (
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {producto.en_promocion && producto.precio_promocion ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-body-sm text-body-sm line-through text-on-surface-variant">
+                              Bs {producto.precio}
+                            </span>
+                            <span className="font-price-sm text-price-sm text-primary font-extrabold">
+                              Bs {producto.precio_promocion}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-price-sm text-price-sm text-on-surface font-extrabold">
+                            Bs {producto.precio}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {sinStock ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-md text-label-md font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-error" />
+                            Sin stock
+                          </span>
+                        ) : stockBajo ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-md text-label-md font-bold">
+                            <span className="material-symbols-outlined text-[14px]">warning</span>
+                            {producto.stock} · Stock bajo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container font-label-md text-label-md font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+                            {producto.stock} unid.
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {producto.en_promocion ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-sm text-label-sm font-bold shadow-xs">
+                            <span className="material-symbols-outlined text-[13px]">percent</span>
+                            En promoción
+                          </span>
+                        ) : (
+                          <span className="font-body-sm text-body-sm text-on-surface-variant/60">—</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <Switch
+                          checked={producto.activo}
+                          onChange={(activo) => cambiarActivo(producto, activo)}
+                          label={`Mostrar ${producto.nombre} en PaseoYa`}
+                        />
+                      </td>
+                      <td className="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            className="p-1.5 rounded-lg text-primary hover:bg-primary-fixed transition-colors flex items-center gap-1 font-label-md text-label-md font-bold"
+                            onClick={() => abrirEdicion(producto)}
+                          >
+                            <span className="material-symbols-outlined text-[17px]">edit</span>
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            className="p-1.5 rounded-lg text-error hover:bg-error-container transition-colors flex items-center gap-1 font-label-md text-label-md font-medium"
+                            onClick={() => eliminar(producto)}
+                          >
+                            <span className="material-symbols-outlined text-[17px]">delete</span>
+                            <span>Eliminar</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              {!cargando && productosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
+                  <td colSpan={6} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
                     No se encontraron productos.
                   </td>
                 </tr>
@@ -315,6 +333,8 @@ export function ProductosPage() {
           productoExistente={productoEnEdicion}
           onGuardar={guardarProducto}
           onCerrar={() => setModalAbierto(false)}
+          guardando={guardando}
+          error={errorModal}
         />
       )}
     </div>
