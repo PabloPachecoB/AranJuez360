@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -10,8 +11,10 @@ from rest_framework.response import Response
 from usuarios.permissions import EsAdmin, EsEmpresa
 
 from . import services
-from .models import Categoria, Empresa, Horario, Oferta, Producto
+from .models import Categoria, Empresa, FotoEmpresa, Horario, Oferta, Producto
 from .serializers import (
+    FotoEmpresaSerializer,
+    OfertaPublicaSerializer,
     CategoriaSerializer,
     EmpresaAdminSerializer,
     EmpresaPerfilSerializer,
@@ -145,6 +148,13 @@ class MisProductosViewSet(_DeMiEmpresaViewSet):
     serializer_class = ProductoSerializer
 
 
+class MisFotosViewSet(_DeMiEmpresaViewSet):
+    """Galería del mini-sitio (subir con multipart: imagen, titulo, orden)."""
+
+    model = FotoEmpresa
+    serializer_class = FotoEmpresaSerializer
+
+
 class MisOfertasViewSet(_DeMiEmpresaViewSet):
     model = Oferta
     serializer_class = OfertaSerializer
@@ -172,6 +182,22 @@ class EmpresaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == "retrieve":
             return EmpresaPublicaDetalleSerializer
         return EmpresaPublicaListSerializer
+
+
+class OfertaPublicaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Ofertas vigentes hoy de negocios activos (pantalla de Inicio de la app)."""
+
+    serializer_class = OfertaPublicaSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        hoy = timezone.localdate()
+        return (
+            Oferta.objects.filter(activo=True, empresa__activo=True, inicio__lte=hoy, fin__gte=hoy)
+            .select_related("empresa", "producto")
+            .order_by("fin")[:20]
+        )
 
 
 class CategoriaPublicaViewSet(viewsets.ReadOnlyModelViewSet):

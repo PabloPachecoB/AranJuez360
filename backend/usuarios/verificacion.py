@@ -14,6 +14,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
+from django.utils.html import escape
 
 from .models import CodigoVerificacion, Usuario
 
@@ -26,6 +27,27 @@ class CodigoError(Exception):
 
 def _hash(codigo: str) -> str:
     return hmac.new(settings.SECRET_KEY.encode(), codigo.encode(), hashlib.sha256).hexdigest()
+
+
+def _html_codigo(nombre: str, intro: str, codigo: str) -> str:
+    return f"""
+<div style="font-family:Arial,Helvetica,sans-serif;background:#f7f9ff;padding:24px">
+  <div style="max-width:440px;margin:auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e8ee">
+    <div style="background:#00324b;padding:20px 24px">
+      <span style="color:#f6be3b;font-weight:800;font-size:18px">PASEO ARANJUEZ 360</span>
+    </div>
+    <div style="padding:24px">
+      <p style="color:#181c20;font-size:16px;margin:0 0 8px">Hola, <b>{escape(nombre)}</b>:</p>
+      <p style="color:#41474d;font-size:15px;margin:0 0 20px">{escape(intro)}</p>
+      <div style="background:#f1f4f9;border-radius:12px;padding:18px;text-align:center;
+                  font-size:34px;letter-spacing:10px;font-weight:800;color:#00324b">{codigo}</div>
+      <p style="color:#72787e;font-size:13px;margin:20px 0 0">
+        Vence en {settings.CODIGO_VERIFICACION_MINUTOS} minutos.
+        Si no fuiste tú, ignora este correo y cambia tu contraseña.
+      </p>
+    </div>
+  </div>
+</div>"""
 
 
 def _enviar(usuario: Usuario, codigo: str, proposito: str):
@@ -42,9 +64,14 @@ def _enviar(usuario: Usuario, codigo: str, proposito: str):
             f"Vence en {settings.CODIGO_VERIFICACION_MINUTOS} minutos. "
             "Si no fuiste tú, ignora este correo y cambia tu contraseña.\n"
         ),
+        # Versión con diseño; los clientes de correo que no la soportan muestran el texto.
+        html_message=_html_codigo(usuario.first_name or usuario.username, intro, codigo),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[usuario.email],
     )
+    if settings.DEBUG:
+        # En desarrollo también se muestra aquí: las cuentas de demo tienen correos que no existen.
+        print(f"\n===== CÓDIGO DE VERIFICACIÓN para {usuario.email}: {codigo} =====\n", flush=True)
 
 
 @transaction.atomic

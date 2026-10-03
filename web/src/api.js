@@ -68,3 +68,23 @@ export function qs(params) {
   const s = p.toString();
   return s ? `?${s}` : "";
 }
+
+/** Envío multipart (logos, portadas, fotos). `datos` es un FormData. */
+export async function apiForm(path, datos, method = "PATCH", reintento = true) {
+  const headers = {};
+  if (tokens.access) headers.Authorization = `Bearer ${tokens.access}`;
+  let r;
+  try {
+    r = await fetch(`/api/v1${path}`, { method, headers, body: datos });
+  } catch {
+    throw new ApiError(0, { detail: "No se pudo conectar con el servidor." });
+  }
+  if (r.status === 401 && reintento) {
+    if (await refrescar()) return apiForm(path, datos, method, false);
+    tokens.clear();
+    onExpired();
+  }
+  const data = r.status === 204 ? null : await r.json().catch(() => null);
+  if (!r.ok) throw new ApiError(r.status, data);
+  return data;
+}

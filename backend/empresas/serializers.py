@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from usuarios.models import Usuario
 
-from .models import Categoria, Empresa, Horario, Oferta, Producto
+from .models import Categoria, Empresa, FotoEmpresa, Horario, Oferta, Producto
 
 
 class CategoriaSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class HorarioSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
-        fields = ["id", "nombre", "descripcion", "precio", "foto", "activo", "creado_en"]
+        fields = ["id", "nombre", "descripcion", "seccion", "precio", "foto", "activo", "creado_en"]
         read_only_fields = ["creado_en"]
 
     def validate_precio(self, value):
@@ -58,6 +58,12 @@ class OfertaSerializer(serializers.ModelSerializer):
         if inicio and fin and fin < inicio:
             raise serializers.ValidationError({"fin": "La fecha de fin no puede ser anterior al inicio."})
         return attrs
+
+
+class FotoEmpresaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FotoEmpresa
+        fields = ["id", "imagen", "titulo", "orden"]
 
 
 # --- Vista administrativa -----------------------------------------------------
@@ -96,17 +102,41 @@ class EmpresaPerfilSerializer(serializers.ModelSerializer):
 
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True, default=None)
     horarios = HorarioSerializer(many=True, read_only=True)
+    fotos = serializers.SerializerMethodField()
+
+    def get_fotos(self, obj):
+        return FotoEmpresaSerializer(obj.fotos.all(), many=True, context=self.context).data
 
     class Meta:
         model = Empresa
         fields = [
             "id", "nombre", "tipo", "categoria_nombre", "email_contacto", "telefono",
             "descripcion", "piso", "local", "referencia", "logo", "horarios",
+            "lema", "portada", "whatsapp", "facebook", "instagram", "sitio_web", "fotos",
         ]
         read_only_fields = ["nombre", "tipo", "email_contacto"]
 
 
 # --- Público (app y web) --------------------------------------------------------
+
+class OfertaPublicaSerializer(OfertaSerializer):
+    """Oferta vigente para la app: incluye el negocio y el precio normal del producto."""
+
+    empresa_id = serializers.IntegerField(source="empresa.id", read_only=True)
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True)
+    piso = serializers.CharField(source="empresa.piso", read_only=True)
+    local = serializers.CharField(source="empresa.local", read_only=True)
+    precio_normal = serializers.DecimalField(
+        source="producto.precio", max_digits=10, decimal_places=2, read_only=True, default=None
+    )
+
+    class Meta(OfertaSerializer.Meta):
+        fields = [
+            "id", "titulo", "descripcion", "precio_oferta", "precio_normal", "imagen", "fin",
+            "empresa_id", "empresa_nombre", "piso", "local",
+        ]
+        read_only_fields = fields
+
 
 class EmpresaPublicaListSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True, default=None)
@@ -120,11 +150,16 @@ class EmpresaPublicaDetalleSerializer(EmpresaPublicaListSerializer):
     horarios = HorarioSerializer(many=True, read_only=True)
     productos = serializers.SerializerMethodField()
     ofertas = serializers.SerializerMethodField()
+    fotos = serializers.SerializerMethodField()
 
     class Meta(EmpresaPublicaListSerializer.Meta):
         fields = EmpresaPublicaListSerializer.Meta.fields + [
             "descripcion", "referencia", "telefono", "horarios", "productos", "ofertas",
+            "lema", "portada", "whatsapp", "facebook", "instagram", "sitio_web", "fotos",
         ]
+
+    def get_fotos(self, obj):
+        return FotoEmpresaSerializer(obj.fotos.all(), many=True, context=self.context).data
 
     def get_productos(self, obj):
         qs = obj.productos.filter(activo=True)

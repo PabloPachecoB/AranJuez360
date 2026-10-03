@@ -38,3 +38,10 @@ class EsCaja(_RolPermission):
 
     roles = (Usuario.Rol.NEGOCIO, Usuario.Rol.CAJERO)
     requiere_empresa = True
+
+
+class EsOficina(_RolPermission):
+    """Responsable de una oficina: gestiona las visitas a su oficina."""
+
+    roles = (Usuario.Rol.OFICINA,)
+    requiere_empresa = True

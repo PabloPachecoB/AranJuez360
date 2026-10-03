@@ -1,10 +1,14 @@
-import { NavLink, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
+import EmpresaApp from "./empresa/EmpresaApp";
+import Sitio from "./empresa/Sitio";
 import { ROLES } from "./format";
 import ClienteHistorial from "./pages/ClienteHistorial";
 import Dashboard from "./pages/Dashboard";
+import Diversion from "./pages/Diversion";
 import Empresas from "./pages/Empresas";
 import Login from "./pages/Login";
+import Monedas from "./pages/Monedas";
 import Usuarios from "./pages/Usuarios";
 
 function Layout() {
@@ -17,6 +21,8 @@ function Layout() {
           <NavLink to="/" end>Inicio</NavLink>
           <NavLink to="/usuarios">Usuarios</NavLink>
           <NavLink to="/empresas">Empresas</NavLink>
+          <NavLink to="/monedas">Monedas</NavLink>
+          <NavLink to="/diversion">Diversión</NavLink>
         </nav>
         <div className="user">
           {user.first_name || user.email}
@@ -37,8 +43,8 @@ function SoloAdmin() {
       <div className="card">
         <h1>Hola, {user.first_name || user.email}</h1>
         <p>
-          Tu cuenta es de tipo <strong>{ROLES[user.rol]}</strong>. El panel de empresas y oficinas
-          está en construcción; por ahora esta web es solo para la administración del Paseo.
+          Tu cuenta es de tipo <strong>{ROLES[user.rol]}</strong>. Esta web es para la administración
+          del Paseo y para los responsables de cada negocio u oficina.
         </p>
         <button className="btn" onClick={salir}>Cerrar sesión</button>
       </div>
@@ -48,8 +54,15 @@ function SoloAdmin() {
 
 export default function App() {
   const { user, cargando } = useAuth();
+  const { pathname } = useLocation();
+  // Página pública de cada empresa: no requiere iniciar sesión.
+  if (pathname.startsWith("/sitio/")) {
+    return <Routes><Route path="/sitio/:id" element={<Sitio />} /></Routes>;
+  }
   if (cargando) return <div className="empty">Cargando…</div>;
   if (!user) return <Login />;
+  // Negocios, emprendimientos y oficinas tienen su propio mini-sistema.
+  if ((user.rol === "NEGOCIO" || user.rol === "OFICINA") && user.empresa) return <EmpresaApp />;
   if (user.rol !== "ADMIN") return <SoloAdmin />;
 
   return (
@@ -58,6 +71,8 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="empresas" element={<Empresas />} />
+        <Route path="monedas" element={<Monedas />} />
+        <Route path="diversion" element={<Diversion />} />
         <Route path="clientes/:id" element={<ClienteHistorial />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

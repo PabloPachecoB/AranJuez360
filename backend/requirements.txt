@@ -16,6 +16,8 @@ langgraph-checkpoint-sqlite==3.1.0
 langsmith==0.10.5
 pydantic==2.*
 openai==1.*
+qrcode[pil]==8.2           # QR de invitaciones a oficinas
+edge-tts==7.2.8          # voz de Jarvis (voces neuronales, sin API key)
 
 # --- Utilidades ---
 python-dotenv==1.1.0
