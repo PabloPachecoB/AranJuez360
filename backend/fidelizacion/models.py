@@ -4,7 +4,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 
-# Las "monedas" de Paseo admiten decimales (p. ej. 0,75 por visita). 1 moneda = Bs 0,10 por defecto.
+# Monedas de Paseo: 1000 monedas = Bs 30 (1 moneda = Bs 0,03) por defecto. El cliente nunca ve
+# la equivalencia en Bs; solo la ven el admin del Paseo y los negocios (para fijar sus recompensas).
 MONEDA_CERO = Decimal("0")
 
 
@@ -20,7 +21,8 @@ class ConfiguracionPuntos(models.Model):
         help_text="Monedas por Bs de compra; solo se usa si no hay rangos de compra configurados.",
     )
     valor_moneda_bs = models.DecimalField(
-        max_digits=6, decimal_places=2, default=Decimal("0.10"), help_text="Cuántos Bs vale 1 moneda.",
+        max_digits=6, decimal_places=4, default=Decimal("0.03"),
+        help_text="Cuántos Bs vale 1 moneda (no se muestra a los clientes).",
     )
     monto_maximo_solicitud = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal("5000"),
@@ -30,7 +32,7 @@ class ConfiguracionPuntos(models.Model):
         default=3, help_text="Máximo de solicitudes de un cliente en una misma empresa por día.",
     )
     puntos_por_visita = models.DecimalField(
-        max_digits=6, decimal_places=2, default=Decimal("0.75"),
+        max_digits=6, decimal_places=2, default=Decimal("20"),
         help_text="Monedas por visita (NFC de la puerta o registro del portero).",
     )
     horas_entre_visitas = models.PositiveSmallIntegerField(
@@ -82,7 +84,7 @@ class PuntoEscaneo(models.Model):
     nombre = models.CharField(max_length=120)
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     descripcion = models.CharField(max_length=200, blank=True)
-    monedas = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.50"))
+    monedas = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("15"))
     horas_espera = models.PositiveSmallIntegerField(
         default=24, help_text="Horas antes de poder volver a ganar en este punto (Entrada usa la regla de visitas).",
     )
@@ -208,6 +210,10 @@ class Recompensa(models.Model):
     descripcion = models.TextField(blank=True)
     categoria = models.CharField(max_length=20, choices=Categoria.choices, default=Categoria.OTRO)
     costo_puntos = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo en monedas.")
+    valor_bs = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Valor real del premio en Bs (lo ven el admin y el negocio; nunca el cliente).",
+    )
     empresa = models.ForeignKey(
         "empresas.Empresa", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="recompensas", help_text="Vacío si aplica en todo el Paseo.",

@@ -14,7 +14,7 @@ from django.utils import timezone
 from empresas.models import Categoria, Empresa, Horario, Oferta, Producto
 from empresas.services import rol_responsable
 from entretenimiento.models import Evento, Funcion, Pelicula
-from fidelizacion.models import PuntoEscaneo, RangoCompra, Recompensa
+from fidelizacion.models import ConfiguracionPuntos, PuntoEscaneo, RangoCompra, Recompensa
 from usuarios.models import Usuario
 
 PASSWORD = "Paseo2026!"
@@ -56,30 +56,35 @@ OFERTAS = [
     ("Dulce Hogar", "Alfajores x6", "Alfajores artesanales x6", 24),
 ]
 
+# Escala: 1000 monedas = Bs 30. (nombre, categoría, costo en monedas, negocio, valor real en Bs)
+# Lo del Paseo (parqueo, cine) va por debajo de su valor; los productos de tiendas, un poco por encima.
 RECOMPENSAS = [
-    ("Parqueo gratis (1 hora)", "PARQUEO", 50, None),
-    ("Entrada de cine 2D", "CINE", 300, None),
-    ("Capuchino gratis", "PRODUCTO", 220, "Café Aranjuez"),
-    ("10% de descuento en TecnoPlus", "DESCUENTO", 150, "TecnoPlus"),
-    ("Combo hamburguesa clásica", "PRODUCTO", 390, "Burger Paseo"),
+    ("Parqueo gratis (1 hora)", "PARQUEO", 150, None, 5),
+    ("Entrada de cine 2D", "CINE", 1000, None, 35),
+    ("Capuchino gratis", "PRODUCTO", 760, "Café Aranjuez", 22),
+    ("Combo hamburguesa clásica", "PRODUCTO", 1580, "Burger Paseo", 45),
+    ("10% de descuento en TecnoPlus", "DESCUENTO", 500, "TecnoPlus", None),
+    ("Audífonos Bluetooth", "PRODUCTO", 9170, "TecnoPlus", 250),
+    ("Camisa de lino", "PRODUCTO", 6600, "Moda Urbana", 180),
 ]
 RECOMPENSAS_VIEJAS = [
     "Cupón 10% de descuento", "Producto promocional del Paseo",
     "Bs 50 de descuento en tiendas participantes", "Acceso a promoción exclusiva",
 ]
 
-# Monedas por compra según el monto (Bs desde, Bs hasta, monedas).
+# Monedas por compra según el monto (Bs desde, Bs hasta, monedas): retorno de ~2,5%.
 RANGOS_COMPRA = [
-    (Decimal("0"), Decimal("49.99"), Decimal("2")),
-    (Decimal("50"), Decimal("99.99"), Decimal("5")),
-    (Decimal("100"), Decimal("299.99"), Decimal("12")),
-    (Decimal("300"), None, Decimal("40")),
+    (Decimal("10"), Decimal("49.99"), Decimal("20")),
+    (Decimal("50"), Decimal("99.99"), Decimal("60")),
+    (Decimal("100"), Decimal("199.99"), Decimal("130")),
+    (Decimal("200"), Decimal("499.99"), Decimal("300")),
+    (Decimal("500"), None, Decimal("800")),
 ]
 
 PUNTOS_ESCANEO = [
-    ("Puerta principal", "ENTRADA", Decimal("0.75"), "NFC de la entrada: una visita cada 24 horas."),
-    ("Zona de juegos", "ACTIVIDAD", Decimal("0.50"), "Escanea al jugar."),
-    ("Cine Paseo", "ACTIVIDAD", Decimal("0.50"), "Escanea al entrar a la función."),
+    ("Puerta principal", "ENTRADA", Decimal("20"), "NFC de la entrada: una visita cada 24 horas."),
+    ("Zona de juegos", "ACTIVIDAD", Decimal("15"), "Escanea al jugar."),
+    ("Cine Paseo", "ACTIVIDAD", Decimal("15"), "Escanea al entrar a la función."),
 ]
 
 # Cartelera de demostración (títulos ficticios).
@@ -165,15 +170,21 @@ class Command(BaseCommand):
 
         cafe = Empresa.objects.get(nombre="Café Aranjuez")
         # Recompensas en monedas (1 moneda = Bs 0,10).
-        for nombre, categoria, costo, empresa_nombre in RECOMPENSAS:
+        for nombre, categoria, costo, empresa_nombre, valor in RECOMPENSAS:
             empresa = Empresa.objects.get(nombre=empresa_nombre) if empresa_nombre else None
             Recompensa.objects.update_or_create(
                 nombre=nombre,
-                defaults={"categoria": categoria, "costo_puntos": costo, "empresa": empresa, "activo": True},
+                defaults={"categoria": categoria, "costo_puntos": costo, "empresa": empresa, "activo": True,
+                          "valor_bs": valor},
             )
+        config = ConfiguracionPuntos.actual()
+        config.valor_moneda_bs, config.puntos_por_visita = Decimal("0.03"), Decimal("20")
+        config.save(update_fields=["valor_moneda_bs", "puntos_por_visita"])
         # Las recompensas de la versión anterior de la demo (en puntos enteros) se desactivan.
         Recompensa.objects.filter(nombre__in=RECOMPENSAS_VIEJAS).update(activo=False)
 
+        # Los rangos de la escala anterior se reemplazan por los nuevos.
+        RangoCompra.objects.exclude(monto_minimo__in=[r[0] for r in RANGOS_COMPRA]).delete()
         for minimo, maximo, monedas in RANGOS_COMPRA:
             RangoCompra.objects.update_or_create(
                 monto_minimo=minimo, defaults={"monto_maximo": maximo, "monedas": monedas, "activo": True},

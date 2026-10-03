@@ -9,7 +9,7 @@ async function get(url) {
   }
 }
 
-/** { saldo, recompensas_disponibles, siguiente: { nombre, faltan_puntos, faltan_bs, progreso } | null } */
+/** { saldo, recompensas_disponibles, siguiente: { nombre, faltan_puntos, progreso } | null } (solo monedas, sin Bs) */
 export const getMonedero = () => get("/puntos/monedero/");
 export const getRecompensas = () => get("/puntos/recompensas/");
 export const getMovimientos = () => get("/puntos/movimientos/");

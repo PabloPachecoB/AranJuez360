@@ -91,15 +91,23 @@ class VisitaSerializer(serializers.ModelSerializer):
 
 
 class RecompensaSerializer(serializers.ModelSerializer):
+    """Para el admin del Paseo: incluye el valor real en Bs y el costo sugerido."""
+
     empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+    costo_sugerido = serializers.SerializerMethodField()
 
     class Meta:
         model = Recompensa
         fields = [
-            "id", "nombre", "descripcion", "categoria", "costo_puntos", "empresa", "empresa_nombre",
-            "imagen", "activo", "creado_en",
+            "id", "nombre", "descripcion", "categoria", "costo_puntos", "valor_bs", "costo_sugerido",
+            "empresa", "empresa_nombre", "imagen", "activo", "creado_en",
         ]
         read_only_fields = ["creado_en"]
+
+    def get_costo_sugerido(self, obj):
+        from .services import costo_sugerido
+
+        return costo_sugerido(obj.valor_bs) if obj.valor_bs else None
 
     def validate_costo_puntos(self, value):
         if value <= 0:
@@ -172,3 +180,49 @@ class CanjeSerializer(serializers.ModelSerializer):
             "codigo", "estado", "estado_nombre", "creado_en", "usado_en",
         ]
         read_only_fields = fields
+
+
+
+class RecompensaClienteSerializer(serializers.ModelSerializer):
+    """Lo que ve el cliente en la app: solo monedas, nunca el valor en Bs."""
+
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+
+    class Meta:
+        model = Recompensa
+        fields = ["id", "nombre", "descripcion", "categoria", "costo_puntos", "empresa", "empresa_nombre", "imagen"]
+        read_only_fields = fields
+
+
+class RecompensaNegocioSerializer(RecompensaSerializer):
+    """El negocio publica sus propios productos en el catálogo de canje."""
+
+    canjes = serializers.SerializerMethodField()
+
+    class Meta(RecompensaSerializer.Meta):
+        fields = [
+            "id", "nombre", "descripcion", "categoria", "costo_puntos", "valor_bs", "costo_sugerido",
+            "imagen", "activo", "canjes", "creado_en",
+        ]
+        read_only_fields = ["creado_en"]
+
+    def get_canjes(self, obj):
+        return obj.canjes.count()
+
+    def validate_categoria(self, value):
+        if value not in (Recompensa.Categoria.PRODUCTO, Recompensa.Categoria.DESCUENTO, Recompensa.Categoria.OTRO):
+            raise serializers.ValidationError("Los negocios publican productos, descuentos u otros premios propios.")
+        return value
+
+
+class CanjeNegocioSerializer(CanjeSerializer):
+    """Canje visto por el negocio o el admin: quién lo canjeó y su estado."""
+
+    cliente_nombre = serializers.SerializerMethodField()
+
+    class Meta(CanjeSerializer.Meta):
+        fields = CanjeSerializer.Meta.fields + ["cliente_nombre"]
+        read_only_fields = fields
+
+    def get_cliente_nombre(self, obj):
+        return obj.cliente.get_full_name() or obj.cliente.username

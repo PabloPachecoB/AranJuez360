@@ -2,9 +2,10 @@ from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from usuarios.permissions import EsAdmin, EsCaja, EsCliente, EsPortero
+from usuarios.permissions import EsAdmin, EsCaja, EsCliente, EsEmpresa, EsPortero
 
 from . import services
 from .models import (
@@ -18,6 +19,9 @@ from .models import (
     Visita,
 )
 from .serializers import (
+    CanjeNegocioSerializer,
+    RecompensaClienteSerializer,
+    RecompensaNegocioSerializer,
     CanjeSerializer,
     ConfiguracionPuntosSerializer,
     CrearSolicitudSerializer,
@@ -57,7 +61,7 @@ def mi_monedero(request):
 class RecompensasClienteViewSet(viewsets.ReadOnlyModelViewSet):
     """Catálogo de recompensas activas para el cliente."""
 
-    serializer_class = RecompensaSerializer
+    serializer_class = RecompensaClienteSerializer  # sin el valor en Bs
     permission_classes = [EsCliente]
     queryset = Recompensa.objects.filter(activo=True).select_related("empresa")
 
@@ -270,3 +274,61 @@ class RangosCompraAdminViewSet(viewsets.ModelViewSet):
     permission_classes = [EsAdmin]
     queryset = RangoCompra.objects.all()
     pagination_class = None
+
+
+
+# --- Catálogo de canje de cada negocio ---------------------------------------------------
+
+class _ConCajaMixin:
+    def _empresa(self):
+        empresa = self.request.user.empresa
+        if empresa.tipo == "OFICINA":
+            raise ValidationError({"detail": "Las oficinas no tienen catálogo de canje."})
+        return empresa
+
+
+class MisRecompensasViewSet(_ConCajaMixin, viewsets.ModelViewSet):
+    """El negocio publica sus productos para canjear con monedas (y ve el costo sugerido)."""
+
+    serializer_class = RecompensaNegocioSerializer
+    permission_classes = [EsEmpresa]
+
+    def get_queryset(self):
+        return Recompensa.objects.filter(empresa=self._empresa()).prefetch_related("canjes")
+
+    def perform_create(self, serializer):
+        serializer.save(empresa=self._empresa())
+
+
+class CanjesRecibidosViewSet(_ConCajaMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Cupones que los clientes canjearon con productos de este negocio."""
+
+    serializer_class = CanjeNegocioSerializer
+    permission_classes = [EsEmpresa]
+
+    def get_queryset(self):
+        return Canje.objects.filter(recompensa__empresa=self._empresa()).select_related("recompensa", "cliente")
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def conversion(request):
+    """Cómo funciona la escala de monedas. Solo admin y negocios (el cliente no ve los Bs)."""
+    if request.user.rol not in ("ADMIN", "NEGOCIO", "CAJERO"):
+        raise NotFound()
+    return Response(services.conversion())
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def validar_canje(request, codigo):
+    """GET: qué premio es el cupón. POST: marcarlo como entregado.
+
+    Los premios de un negocio los valida ese negocio (dueño o cajero); los del Paseo
+    (parqueo, cine), el admin.
+    """
+    if request.method == "GET":
+        canje = _regla(services.canje_por_codigo, request.user, codigo)
+    else:
+        canje = _regla(services.usar_canje, request.user, codigo)
+    return Response(CanjeNegocioSerializer(canje).data)

@@ -71,8 +71,6 @@ def construir_contexto(user) -> dict:
         "nombre": user.first_name or user.username,
         "rol": user.get_rol_display(),
         "puntos": _monedas(user.puntos_saldo),
-        "valor_moneda": _monedas(config.valor_moneda_bs),
-        "saldo_bs": _monedas(user.puntos_saldo * config.valor_moneda_bs),
         "visita": _monedas(config.puntos_por_visita),
         "horas_visita": config.horas_entre_visitas,
         "actividades": [
@@ -141,7 +139,7 @@ Ejemplos: "[excited] ¡Felicidades, ya tienes quinientas monedas!",
 No uses corchetes para nada más.
 
 Usuario: {ctx.get("nombre", "cliente")} (rol: {ctx.get("rol", "cliente")}).
-Saldo: {ctx.get("puntos", 0)} monedas de Paseo (equivalen a Bs {ctx.get("saldo_bs", 0)}). Fecha de hoy: {ctx.get("fecha", "")}.
+Saldo: {ctx.get("puntos", 0)} monedas de Paseo. Fecha de hoy: {ctx.get("fecha", "")}.
 
 Tiendas del Paseo:
 {_lista(ctx.get("tiendas"))}
@@ -164,8 +162,9 @@ Eventos en el Paseo:
 Recompensas canjeables con monedas (parqueo, cine, descuentos, productos):
 {_lista(ctx.get("recompensas"))}
 
-Cómo se ganan monedas (1 moneda = Bs {ctx.get("valor_moneda", "0,1")}), todo desde el escáner de la app:
-- Visita: escanear el NFC de la puerta principal da {ctx.get("visita", "0,75")} monedas, una vez cada {ctx.get("horas_visita", 24)} horas.
+Cómo se ganan monedas, todo desde el escáner de la app (NUNCA digas cuánto vale una moneda en
+bolivianos ni conviertas monedas a Bs: las monedas se cuentan solo en monedas):
+- Visita: escanear el NFC de la puerta principal da {ctx.get("visita", "20")} monedas, una vez cada {ctx.get("horas_visita", 24)} horas.
 - Actividades del Paseo:
 {_lista(ctx.get("actividades"))}
 - Compras: se escanea el QR o NFC de la caja del negocio, se ingresa NIT y monto, y el cajero aprueba

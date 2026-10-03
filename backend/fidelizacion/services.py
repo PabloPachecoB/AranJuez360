@@ -271,8 +271,7 @@ def escanear_punto(cliente: Usuario, codigo: str) -> dict:
 def monedero(cliente: Usuario) -> dict:
     """Saldo, recompensas alcanzables y cuánto falta para la siguiente.
 
-    `faltan_bs` estima cuánto debe comprar el cliente para llegar, según la regla
-    vigente de puntos por boliviano.
+    Solo en monedas: la equivalencia en Bs no se muestra al cliente (mantiene la "mística").
     """
     # Saldo fresco de la base (el objeto del request puede estar desactualizado).
     saldo = Usuario.objects.values_list("puntos_saldo", flat=True).get(pk=cliente.pk)
@@ -282,11 +281,8 @@ def monedero(cliente: Usuario) -> dict:
 
     data = {
         "saldo": saldo,
-        "saldo_bs": (saldo * config.valor_moneda_bs).quantize(CENTAVO),
-        "valor_moneda_bs": config.valor_moneda_bs,
         "recompensas_disponibles": activas.filter(costo_puntos__lte=saldo).count(),
         "siguiente": None,
-        "puntos_por_boliviano": config.puntos_por_boliviano,
         "puntos_por_visita": config.puntos_por_visita,
     }
     if siguiente:
@@ -300,9 +296,6 @@ def monedero(cliente: Usuario) -> dict:
             "costo_puntos": siguiente.costo_puntos,
             "empresa": siguiente.empresa.nombre if siguiente.empresa else None,
             "faltan_puntos": faltan,
-            # Estimación de compra necesaria; con rangos de compra no hay una tasa fija.
-            "faltan_bs": None if RangoCompra.objects.filter(activo=True).exists() or not config.puntos_por_boliviano
-            else int((Decimal(faltan) / config.puntos_por_boliviano).to_integral_value(rounding=ROUND_UP)),
             # Progreso dentro del tramo actual (desde la última recompensa alcanzada).
             "progreso": round(float((saldo - base) / tramo), 3) if tramo else 1,
         }
@@ -344,3 +337,69 @@ def canjear_recompensa(cliente: Usuario, recompensa_id) -> Canje:
     Usuario.objects.select_for_update().filter(pk=cliente.pk).first()
     cobrar_monedas(cliente.pk, recompensa.costo_puntos, f"Canje: {recompensa.nombre}", empresa=recompensa.empresa)
     return Canje.objects.create(cliente=cliente, recompensa=recompensa, monedas=recompensa.costo_puntos)
+
+
+
+# --- Recompensas de los negocios y validación de cupones -------------------------------
+
+# Margen sobre el valor real: un producto de tienda cuesta un poco más en monedas que su precio,
+# así es aspiracional y el negocio no pierde (el admin y el negocio lo pueden ajustar).
+MARGEN_PRODUCTO = Decimal("1.10")
+
+
+def costo_sugerido(valor_bs, config: ConfiguracionPuntos | None = None) -> Decimal:
+    """Monedas que debería costar un premio de `valor_bs` (redondeado a decenas)."""
+    config = config or ConfiguracionPuntos.actual()
+    if not valor_bs or not config.valor_moneda_bs:
+        return Decimal("0")
+    monedas = Decimal(valor_bs) / config.valor_moneda_bs * MARGEN_PRODUCTO
+    return (monedas / 10).to_integral_value(rounding=ROUND_UP) * 10
+
+
+def conversion(config: ConfiguracionPuntos | None = None) -> dict:
+    """Cómo funciona la escala (para el panel del negocio y del admin; nunca para el cliente)."""
+    config = config or ConfiguracionPuntos.actual()
+    rangos = list(RangoCompra.objects.filter(activo=True).values("monto_minimo", "monto_maximo", "monedas"))
+    return {
+        "valor_moneda_bs": config.valor_moneda_bs,
+        "monedas_por_bs": (Decimal(1) / config.valor_moneda_bs).quantize(CENTAVO) if config.valor_moneda_bs else None,
+        "margen_producto": MARGEN_PRODUCTO,
+        "puntos_por_visita": config.puntos_por_visita,
+        "rangos_compra": rangos,
+    }
+
+
+def _puede_validar(usuario: Usuario, canje: Canje) -> bool:
+    if usuario.rol == Usuario.Rol.ADMIN:
+        return True
+    empresa_premio = canje.recompensa.empresa_id
+    # Los premios de un negocio los valida ese negocio (dueño o cajero); los del Paseo, el admin.
+    return bool(empresa_premio) and usuario.rol in (Usuario.Rol.NEGOCIO, Usuario.Rol.CAJERO) \
+        and usuario.empresa_id == empresa_premio
+
+
+def canje_por_codigo(usuario: Usuario, codigo: str) -> Canje:
+    canje = (
+        Canje.objects.select_related("recompensa__empresa", "cliente")
+        .filter(codigo=(codigo or "").strip().upper()).first()
+    )
+    if canje is None or not _puede_validar(usuario, canje):
+        raise ReglaNegocioError("No encontramos ese cupón entre los premios que puedes entregar.")
+    return canje
+
+
+@transaction.atomic
+def usar_canje(usuario: Usuario, codigo: str) -> Canje:
+    """Marca el cupón como entregado (una sola vez)."""
+    canje = canje_por_codigo(usuario, codigo)
+    canje = Canje.objects.select_for_update().select_related("recompensa", "cliente").get(pk=canje.pk)
+    if canje.estado == Canje.Estado.USADO:
+        raise ReglaNegocioError(
+            f"Este cupón ya se entregó el {timezone.localtime(canje.usado_en):%d/%m/%Y a las %H:%M}."
+        )
+    if canje.estado != Canje.Estado.ACTIVO:
+        raise ReglaNegocioError("Este cupón fue anulado.")
+    canje.estado = Canje.Estado.USADO
+    canje.usado_en = timezone.now()
+    canje.save(update_fields=["estado", "usado_en"])
+    return canje

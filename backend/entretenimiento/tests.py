@@ -74,11 +74,12 @@ class ReservasTests(APITestCase):
         self.assertEqual(self._reservar(1).status_code, 201)
 
     def test_monedas_insuficientes(self):
-        resp = self._reservar(2, "MONEDAS")  # 700 monedas > 500
+        resp = self._reservar(2, "MONEDAS")  # 2333,34 monedas > 500
         self.assertEqual(resp.status_code, 400)
         self.assertIn("No te alcanzan", resp.data["detail"])
 
     def test_no_cancela_a_menos_de_una_hora(self):
+        Usuario.objects.filter(pk=self.cliente.pk).update(puntos_saldo=5000)
         reserva = self._reservar(1, "MONEDAS").data
         Funcion.objects.filter(pk=self.funcion.pk).update(inicio=timezone.now() + timedelta(minutes=30))
         resp = self.client.post(f"/api/v1/entretenimiento/reservas/{reserva['id']}/cancelar/")

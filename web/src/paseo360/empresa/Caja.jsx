@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, qs } from "../api";
+import ValidarCupon from "../ValidarCupon";
 import { Estado, useApi } from "../ui";
 
 const FILTROS = [["PENDIENTE", "Por aprobar"], ["APROBADA", "Aprobadas"], ["RECHAZADA", "Rechazadas"]];
@@ -64,6 +65,9 @@ export default function Caja() {
         </div>
       </div>
       {msg && <p className="muted">{msg}</p>}
+
+      <ValidarCupon titulo="Entregar un premio canjeado"
+        ayuda="Si el cliente canjeó uno de tus productos con monedas, escribe el código de su cupón y entrégaselo." />
 
       <div className="card">
         <Estado cargando={lista.cargando && !lista.data} error={lista.error} vacio={false}>

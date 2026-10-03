@@ -209,3 +209,14 @@
   .qr-cartel, .qr-cartel * { visibility: visible !important; }
   .qr-cartel { position: absolute; inset: 0 auto auto 0; width: 100%; border: 0 !important; }
 }
+
+/* Canje: equivalencia (solo admin/negocio), simulación y cupones */
+.p360 .conversion { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.p360 .conversion span { display: block; font-size: 12px; }
+.p360 .conversion strong { font-size: 18px; }
+.p360 .simulacion { background: #fff8e1; border: 1px solid #f5b301; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+.p360 .simulacion ul { margin: 6px 0 0; padding-left: 18px; }
+.p360 .codigo-cupon { letter-spacing: 3px; font-weight: 700; min-width: 220px; }
+.p360 .cupon { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px;
+  padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+.p360 .cupon.activo { border-color: var(--up); }

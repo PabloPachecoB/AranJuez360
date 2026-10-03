@@ -9,6 +9,8 @@ router.register(r"puntos/solicitudes", views.MisSolicitudesViewSet, basename="mi
 router.register(r"puntos/movimientos", views.MisMovimientosViewSet, basename="mis-movimientos")
 router.register(r"puntos/recompensas", views.RecompensasClienteViewSet, basename="recompensas")
 router.register(r"puntos/canjes", views.MisCanjesViewSet, basename="mis-canjes")
+router.register(r"mi-empresa/recompensas", views.MisRecompensasViewSet, basename="mis-recompensas")
+router.register(r"mi-empresa/canjes", views.CanjesRecibidosViewSet, basename="canjes-recibidos")
 # Portería
 router.register(r"porteria/visitas", views.PorteriaVisitasViewSet, basename="porteria-visitas")
 # Caja del establecimiento
@@ -26,5 +28,7 @@ urlpatterns = [
     path("puntos/empresa/<str:codigo>/", views.empresa_escaneada, name="puntos-empresa"),
     path("puntos/codigo/<str:codigo>/", views.resolver_codigo, name="puntos-codigo"),
     path("puntos/escanear/", views.escanear, name="puntos-escanear"),
+    path("puntos/conversion/", views.conversion, name="puntos-conversion"),
+    path("canjes/validar/<str:codigo>/", views.validar_canje, name="validar-canje"),
     path("admin/configuracion-puntos/", views.configuracion_puntos, name="admin-configuracion-puntos"),
 ] + router.urls

@@ -16,7 +16,7 @@ import Sitio from "./paseo360/empresa/Sitio";
 import EmpresaApp from "./paseo360/empresa/EmpresaApp";
 import Activar from "./paseo360/pages/Activar";
 import CajeroApp from "./paseo360/empresa/CajeroApp";
-import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio } from "./paseo360/empresa/ParaNegocio";
+import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -37,6 +37,7 @@ function PanelAutenticado() {
                 {/* Paseo 360: lo que se ve en la app del Paseo y en la página pública del negocio */}
                 <Route path="/caja" element={<CajaNegocio />} />
                 <Route path="/mi-qr" element={<QRNegocio />} />
+                <Route path="/recompensas" element={<RecompensasNegocio />} />
                 <Route path="/horarios" element={<HorariosNegocio />} />
                 <Route path="/ofertas" element={<OfertasNegocio />} />
                 <Route path="/fotos" element={<FotosNegocio />} />

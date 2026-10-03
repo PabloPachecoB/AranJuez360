@@ -61,7 +61,7 @@ class ReportesTests(APITestCase):
         self.assertEqual(data["totales"]["tickets"], 4)
         self.assertEqual(data["totales"]["tiendas_distintas"], 2)
         self.assertEqual(data["totales"]["visitas"], 1)
-        self.assertEqual(data["cliente"]["puntos_saldo"], Decimal("360.75"))  # 360 por compras + 0,75 por visita
+        self.assertEqual(data["cliente"]["puntos_saldo"], Decimal("380"))  # 360 por compras + 20 por visita
 
     def test_historial_solo_de_clientes(self):
         resp = self.client.get(f"{BASE}/clientes/{self.portero.id}/historial/")
@@ -79,9 +79,9 @@ class ReportesTests(APITestCase):
         self.assertEqual(actual["clientes_distintos"], 2)
         self.assertEqual(actual["compras"], 1)
         self.assertEqual(actual["monto_total"], Decimal("100"))
-        self.assertEqual(actual["puntos_entregados"], Decimal("101.5"))
+        self.assertEqual(actual["puntos_entregados"], Decimal("140"))  # 100 por la compra + 2 visitas de 20
         self.assertEqual(actual["solicitudes_rechazadas"], 1)
-        self.assertEqual(data["puntos_en_circulacion"], Decimal("101.5"))
+        self.assertEqual(data["puntos_en_circulacion"], Decimal("140"))  # 100 por la compra + 2 visitas de 20
 
     def test_visitas_por_dia_y_horas_pico(self):
         self._visita(self.ana, hace_dias=1, hora=18)

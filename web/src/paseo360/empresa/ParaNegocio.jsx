@@ -5,6 +5,7 @@ import { Fotos, Ofertas } from "./Catalogo";
 import Horarios from "./Horarios";
 import MiFicha from "./MiFicha";
 import MiQR from "./MiQR";
+import Recompensas from "./Recompensas";
 
 /**
  * Pantallas de Paseo 360 dentro del panel del negocio (PaseoYa): lo que ese panel no
@@ -54,4 +55,8 @@ export function CajaNegocio() {
 
 export function QRNegocio() {
   return <Paseo360><MiQR /></Paseo360>;
+}
+
+export function RecompensasNegocio() {
+  return <Paseo360><Recompensas /></Paseo360>;
 }

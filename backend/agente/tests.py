@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -165,7 +166,7 @@ class AccionesJarvisTests(AsistenteTests):
         from django.utils import timezone
         from entretenimiento.models import Funcion, Pelicula
 
-        Usuario.objects.filter(pk=self.cliente.pk).update(puntos_saldo=1000)
+        Usuario.objects.filter(pk=self.cliente.pk).update(puntos_saldo=5000)
         self.parqueo = Recompensa.objects.create(nombre="Parqueo", costo_puntos=50, categoria="PARQUEO")
         peli = Pelicula.objects.create(titulo="Galaxia")
         self.funcion = Funcion.objects.create(pelicula=peli, inicio=timezone.now() + timedelta(hours=5), precio=35)
@@ -184,12 +185,12 @@ class AccionesJarvisTests(AsistenteTests):
         accion = resp.data["accion"]
         self.assertIn("Parqueo", accion["resumen"])
         self.assertIn("Confirmar", resp.data["text"])
-        self.assertEqual(self._saldo(), 1000)  # todavía no cobró
+        self.assertEqual(self._saldo(), 5000)  # todavía no cobró
 
         ok = self._confirmar(accion["id"])
         self.assertEqual(ok.status_code, 200, ok.data)
         self.assertEqual(ok.data["resultado"]["tipo"], "canje")
-        self.assertEqual(self._saldo(), 950)
+        self.assertEqual(self._saldo(), 4950)
         self.assertEqual(self._confirmar(accion["id"]).status_code, 400)  # no se ejecuta dos veces
 
     def test_reserva_con_monedas_y_cancelacion(self):
@@ -198,15 +199,15 @@ class AccionesJarvisTests(AsistenteTests):
         self.llm.herramienta = ("reservar_entradas_cine",
                                 {"funcion_id": self.funcion.id, "cantidad": 2, "metodo": "MONEDAS"})
         accion = self._chat("dos entradas").data["accion"]
-        self.assertIn("700 monedas", accion["resumen"])  # 2 × Bs 35 / Bs 0,10
+        self.assertIn("2333,34 monedas", accion["resumen"])  # 2 × Bs 35 / Bs 0,03 (redondeo hacia arriba)
         self.assertEqual(self._confirmar(accion["id"]).status_code, 200)
-        self.assertEqual(self._saldo(), 300)
+        self.assertEqual(self._saldo(), Decimal("2666.66"))
         reserva = ReservaCine.objects.get()
 
         self.llm.herramienta = ("cancelar_reserva_cine", {"reserva_id": reserva.id})
         accion = self._chat("cancela").data["accion"]
         self.assertEqual(self._confirmar(accion["id"]).status_code, 200)
-        self.assertEqual(self._saldo(), 1000)  # devolvió las monedas
+        self.assertEqual(self._saldo(), 5000)  # devolvió las monedas
 
     def test_accion_invalida_responde_sin_proponer(self):
         self.llm.herramienta = ("canjear_recompensa", {"recompensa_id": 99999})

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import Crud, { activo } from "../Crud";
+import ValidarCupon from "../ValidarCupon";
 import { useApi } from "../ui";
 
 const CATEGORIAS_RECOMPENSA = [
@@ -47,11 +48,12 @@ function Configuracion() {
     <section className="card" style={{ marginBottom: 14 }}>
       <h2>Reglas de las monedas</h2>
       <p className="sub">
-        1 moneda = Bs {m(form.valor_moneda_bs)} · Visita: {m(form.puntos_por_visita)} monedas cada {form.horas_entre_visitas} h
+        1.000 monedas = Bs {m(1000 * form.valor_moneda_bs)} · Visita: {m(form.puntos_por_visita)} monedas cada {form.horas_entre_visitas} h
+        · 🔒 los clientes nunca ven la equivalencia en Bs
       </p>
       <form onSubmit={guardar} className="crud-form">
         <div className="crud-grid">
-          {campo("valor_moneda_bs", "Valor de 1 moneda (Bs)")}
+          {campo("valor_moneda_bs", "Valor de 1 moneda (Bs)", "Ej. 0,03 → 1.000 monedas = Bs 30", "0.0001")}
           {campo("puntos_por_visita", "Monedas por visita", "NFC de la puerta o registro del portero")}
           {campo("horas_entre_visitas", "Horas entre visitas", "Tras escanear, no vuelve a ganar hasta que pasen", "1")}
           {campo("monto_maximo_solicitud", "Monto máximo por compra (Bs)")}
@@ -91,6 +93,9 @@ export default function Monedas() {
       </div>
 
       <Configuracion />
+
+      <ValidarCupon titulo="Entregar premios del Paseo"
+        ayuda="Parqueo gratis, entradas de cine y otros premios del Paseo: escribe el código del cupón del cliente." />
 
       <Crud
         titulo="Rangos de compra"
@@ -153,6 +158,7 @@ export default function Monedas() {
           { k: "nombre", label: "Nombre", requerido: true },
           { k: "categoria", label: "Categoría", tipo: "select", opciones: CATEGORIAS_RECOMPENSA, requerido: true },
           { k: "costo_puntos", label: "Costo (monedas)", tipo: "decimal", requerido: true },
+          { k: "valor_bs", label: "Valor real (Bs)", tipo: "decimal", ayuda: "Interno: el cliente no lo ve" },
           { k: "empresa", label: "Negocio (vacío = todo el Paseo)", tipo: "select", opciones: opcionesEmpresas },
           { k: "descripcion", label: "Descripción", tipo: "textarea" },
           { k: "activo", label: "Activa", tipo: "checkbox" },
@@ -161,6 +167,8 @@ export default function Monedas() {
           { label: "Recompensa", render: (f) => <strong>{f.nombre}</strong> },
           { label: "Categoría", render: (f) => <span className="pill">{CATEGORIAS_RECOMPENSA.find(([k]) => k === f.categoria)?.[1]}</span> },
           { label: "Costo", render: (f) => `${m(f.costo_puntos)} monedas`, num: true },
+          { label: "Valor real", render: (f) => (f.valor_bs ? `Bs ${m(f.valor_bs)}` : "—"), num: true },
+          { label: "Sugerido", render: (f) => (f.costo_sugerido ? m(f.costo_sugerido) : "—"), num: true },
           { label: "Negocio", render: (f) => f.empresa_nombre || <span className="muted">Todo el Paseo</span> },
           { label: "Estado", render: activo },
         ]}

@@ -109,9 +109,7 @@ export default function Monedero({ datos }) {
         <PilaMonedas saldo={saldo} />
         <View>
           <Text style={styles.saldo}>{fmt(contador)}</Text>
-          <Text style={styles.saldoUnidad}>
-            monedas{datos?.saldo_bs != null ? ` · ≈ Bs ${fmt(datos.saldo_bs)}` : ""}
-          </Text>
+          <Text style={styles.saldoUnidad}>monedas</Text>
         </View>
       </View>
 
@@ -129,10 +127,7 @@ export default function Monedero({ datos }) {
             Te faltan <Text style={styles.faltaFuerte}>{fmt(siguiente.faltan_puntos)} monedas</Text> para{" "}
             <Text style={styles.faltaFuerte}>{siguiente.nombre}</Text>
           </Text>
-          <Text style={styles.faltaBs}>
-            {siguiente.faltan_bs != null ? `≈ Bs ${fmt(siguiente.faltan_bs)} en compras · ` : "Compra, juega o "}
-            {siguiente.faltan_bs != null ? "o sigue sumando con tus visitas" : "visita el Paseo para sumar"}
-          </Text>
+          <Text style={styles.faltaBs}>Compra, juega o visita el Paseo para sumar más monedas</Text>
         </>
       ) : (
         <Text style={styles.falta}>¡Alcanzaste todas las recompensas! Canjea las que quieras.</Text>

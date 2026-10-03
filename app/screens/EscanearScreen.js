@@ -194,9 +194,9 @@ export default function EscanearScreen({ navigation, route }) {
 
               <View style={styles.tipos}>
                 {[
-                  ["log-in-outline", "Puerta", "0,75 por visita"],
+                  ["log-in-outline", "Puerta", "cada visita"],
                   ["bag-handle-outline", "Compras", "según el monto"],
-                  ["game-controller-outline", "Juegos", "0,5 por actividad"],
+                  ["game-controller-outline", "Juegos", "cada actividad"],
                 ].map(([icono, nombre, detalle]) => (
                   <View key={nombre} style={styles.tipo}>
                     <Ionicons name={icono} size={20} color={ORO} />

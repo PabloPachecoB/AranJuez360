@@ -159,9 +159,9 @@ class VisitasTests(APITestCase):
         resp = self._registrar(self._qr())
         self.assertEqual(resp.status_code, 201, resp.data)
         self.assertEqual(resp.data["cliente_nombre"], "Ana")
-        self.assertEqual(resp.data["puntos"], "0.75")
+        self.assertEqual(resp.data["puntos"], "20.00")
         self.cliente.refresh_from_db()
-        self.assertEqual(self.cliente.puntos_saldo, Decimal("0.75"))
+        self.assertEqual(self.cliente.puntos_saldo, Decimal("20"))
         self.assertEqual(MovimientoPuntos.objects.get().tipo, MovimientoPuntos.Tipo.VISITA)
 
     def test_segunda_visita_en_24_horas_se_registra_sin_monedas(self):
@@ -171,15 +171,15 @@ class VisitasTests(APITestCase):
         self.assertEqual(resp.data["puntos"], "0.00")
         self.assertEqual(Visita.objects.count(), 2)
         self.cliente.refresh_from_db()
-        self.assertEqual(self.cliente.puntos_saldo, Decimal("0.75"))
+        self.assertEqual(self.cliente.puntos_saldo, Decimal("20"))
 
     def test_visita_vuelve_a_sumar_pasadas_las_horas(self):
         self._registrar(self._qr())
         Visita.objects.update(creado_en=timezone.now() - timedelta(hours=25))
         resp = self._registrar(self._qr())
-        self.assertEqual(resp.data["puntos"], "0.75")
+        self.assertEqual(resp.data["puntos"], "20.00")
         self.cliente.refresh_from_db()
-        self.assertEqual(self.cliente.puntos_saldo, Decimal("1.50"))
+        self.assertEqual(self.cliente.puntos_saldo, Decimal("40"))
 
     def test_monedas_por_visita_configurables(self):
         config = ConfiguracionPuntos.actual()
@@ -257,14 +257,15 @@ class MonederoTests(APITestCase):
         self.assertEqual(data["siguiente"]["progreso"], 0)
         self.assertEqual(data["recompensas_disponibles"], 0)
 
-    def test_progreso_dentro_del_tramo_y_faltante_en_bs(self):
+    def test_progreso_dentro_del_tramo_sin_bolivianos(self):
         config = ConfiguracionPuntos.actual()
         config.puntos_por_boliviano = Decimal("1.5")
         config.save()
         data = self._monedero(400)  # entre Cupón (300) y Café (500); ignora la inactiva
         self.assertEqual(data["siguiente"]["nombre"], "Café")
         self.assertEqual(data["siguiente"]["faltan_puntos"], 100)
-        self.assertEqual(data["siguiente"]["faltan_bs"], 67)  # 100 / 1.5 redondeado hacia arriba
+        self.assertNotIn("faltan_bs", data["siguiente"])  # el cliente no ve la equivalencia en Bs
+        self.assertNotIn("saldo_bs", data)
         self.assertEqual(data["siguiente"]["progreso"], 0.5)
         self.assertEqual(data["recompensas_disponibles"], 1)
 
@@ -372,3 +373,70 @@ class CanjeTests(APITestCase):
         self.assertEqual(len(self.client.get("/api/v1/puntos/canjes/").data["results"]), 1)
         # Ya no alcanza para otro.
         self.assertEqual(self.client.post(f"/api/v1/puntos/recompensas/{self.parqueo.id}/canjear/").status_code, 400)
+
+
+class RecompensasNegocioTests(APITestCase):
+    """Escala 1000 monedas = Bs 30, catálogo de cada negocio y validación de cupones."""
+
+    def setUp(self):
+        self.cafe = Empresa.objects.create(nombre="Café X", email_contacto="cafe@x.com")
+        self.tienda = Empresa.objects.create(nombre="Tienda Y", email_contacto="t@y.com")
+        self.dueno = Usuario.objects.create_user("dueno", password="x", rol=Usuario.Rol.NEGOCIO, empresa=self.cafe)
+        self.cajero = Usuario.objects.create_user("caja", password="x", rol=Usuario.Rol.CAJERO, empresa=self.cafe)
+        self.otro = Usuario.objects.create_user("otro", password="x", rol=Usuario.Rol.NEGOCIO, empresa=self.tienda)
+        self.admin = Usuario.objects.create_user("adm", password="x", rol=Usuario.Rol.ADMIN)
+        self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
+        Usuario.objects.filter(pk=self.cliente.pk).update(puntos_saldo=Decimal("2000"))
+
+    def test_negocio_publica_producto_con_costo_sugerido(self):
+        self.client.force_authenticate(self.dueno)
+        resp = self.client.post("/api/v1/mi-empresa/recompensas/", {
+            "nombre": "Capuchino gratis", "categoria": "PRODUCTO", "costo_puntos": "760", "valor_bs": "22",
+        }, format="json")
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data["costo_sugerido"], Decimal("810"))  # 22 / 0,03 × 1,10 → decenas
+        self.assertEqual(Recompensa.objects.get().empresa, self.cafe)
+        conv = self.client.get("/api/v1/puntos/conversion/").data
+        self.assertEqual(conv["valor_moneda_bs"], Decimal("0.0300"))
+        # Un negocio no puede publicar parqueo ni cine (son del Paseo).
+        resp = self.client.post("/api/v1/mi-empresa/recompensas/",
+                                {"nombre": "Parqueo", "categoria": "PARQUEO", "costo_puntos": "10"}, format="json")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_cliente_no_ve_bolivianos(self):
+        Recompensa.objects.create(nombre="Capuchino", costo_puntos=760, valor_bs=22, empresa=self.cafe)
+        self.client.force_authenticate(self.cliente)
+        item = self.client.get("/api/v1/puntos/recompensas/").data["results"][0]
+        self.assertNotIn("valor_bs", item)
+        self.assertNotIn("costo_sugerido", item)
+        self.assertEqual(self.client.get("/api/v1/puntos/conversion/").status_code, 404)
+
+    def test_validar_cupon_solo_el_negocio_del_premio_y_una_vez(self):
+        premio = Recompensa.objects.create(nombre="Capuchino", costo_puntos=760, empresa=self.cafe)
+        self.client.force_authenticate(self.cliente)
+        codigo = self.client.post(f"/api/v1/puntos/recompensas/{premio.id}/canjear/").data["codigo"]
+
+        self.client.force_authenticate(self.otro)  # otro negocio
+        self.assertEqual(self.client.get(f"/api/v1/canjes/validar/{codigo}/").status_code, 400)
+
+        self.client.force_authenticate(self.cajero)
+        ver = self.client.get(f"/api/v1/canjes/validar/{codigo.lower()}/")
+        self.assertEqual(ver.data["recompensa_nombre"], "Capuchino")
+        self.assertEqual(ver.data["estado"], "ACTIVO")
+        usar = self.client.post(f"/api/v1/canjes/validar/{codigo}/")
+        self.assertEqual(usar.data["estado"], "USADO")
+        otra = self.client.post(f"/api/v1/canjes/validar/{codigo}/")
+        self.assertIn("ya se entregó", otra.data["detail"])
+
+        self.client.force_authenticate(self.dueno)
+        recibidos = self.client.get("/api/v1/mi-empresa/canjes/").data["results"]
+        self.assertEqual([c["codigo"] for c in recibidos], [codigo])
+
+    def test_premios_del_paseo_los_valida_el_admin(self):
+        parqueo = Recompensa.objects.create(nombre="Parqueo", categoria="PARQUEO", costo_puntos=150)
+        self.client.force_authenticate(self.cliente)
+        codigo = self.client.post(f"/api/v1/puntos/recompensas/{parqueo.id}/canjear/").data["codigo"]
+        self.client.force_authenticate(self.dueno)
+        self.assertEqual(self.client.post(f"/api/v1/canjes/validar/{codigo}/").status_code, 400)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.post(f"/api/v1/canjes/validar/{codigo}/").data["estado"], "USADO")
