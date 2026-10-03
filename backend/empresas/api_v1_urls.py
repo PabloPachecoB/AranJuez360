@@ -20,6 +20,7 @@ router.register(r"ofertas", views.OfertaPublicaViewSet, basename="ofertas")
 mi_empresa = views.MiEmpresaViewSet
 
 urlpatterns = [
+    path("auth/registro-negocio/", views.registro_negocio, name="registro-negocio"),
     path("auth/invitacion-empresa/<str:token>/", views.invitacion_empresa, name="invitacion-empresa"),
     path("mi-empresa/", mi_empresa.as_view({"get": "perfil", "patch": "perfil"}), name="mi-empresa"),
     path("mi-empresa/horarios/", mi_empresa.as_view({"get": "horarios", "put": "horarios"}), name="mi-empresa-horarios"),

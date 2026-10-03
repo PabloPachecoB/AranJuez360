@@ -2,17 +2,21 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
+from usuarios import verificacion
+from usuarios.models import CodigoVerificacion
 from usuarios.permissions import EsAdmin, EsEmpresa
 
 from . import services
 from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
 from .serializers import (
+    RegistroEmpresaSerializer,
     AceptarInvitacionSerializer,
     CrearInvitacionSerializer,
     InvitacionEmpresaSerializer,
@@ -273,3 +277,43 @@ def invitacion_empresa(request, token):
         services.aceptar_invitacion, token, d.get("nombre_empresa", ""), d["first_name"], d["last_name"], d["password"]
     )
     return Response({"email": usuario.email, "empresa": usuario.empresa.nombre}, status=status.HTTP_201_CREATED)
+
+
+
+# --- Autorregistro (rama reto3-paseoya de Alan) ------------------------------------
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+def registro_negocio(request):
+    """Autorregistro de negocio/emprendimiento con código por correo.
+
+    Desactivado por defecto: en Paseo 360 solo entran empresas invitadas por el admin.
+    Se habilita con PERMITIR_AUTORREGISTRO_EMPRESAS=True (p. ej. para el reto 3, PaseoYa).
+    """
+    if not settings.PERMITIR_AUTORREGISTRO_EMPRESAS:
+        return Response(
+            {"detail": "El registro de empresas es solo por invitación de la administración del Paseo."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    serializer = RegistroEmpresaSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    datos = serializer.validated_data
+    with transaction.atomic():
+        usuario = services.registrar_negocio_propio(
+            nombre=datos["nombre"], tipo=datos["tipo"], categoria=datos["categoria"],
+            email=datos["email"], telefono=datos.get("telefono", ""), password=datos["password"],
+        )
+        codigo = verificacion.emitir_codigo(usuario, CodigoVerificacion.Proposito.VERIFICAR_EMAIL)
+    return Response(
+        {
+            "paso": "verificar_correo",
+            "desafio": str(codigo.desafio),
+            "email": usuario.email,
+            "vence_en_minutos": settings.CODIGO_VERIFICACION_MINUTOS,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+registro_negocio.cls.throttle_scope = "auth"

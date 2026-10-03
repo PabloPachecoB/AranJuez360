@@ -28,6 +28,21 @@ def crear_empresa_con_acceso(**datos_empresa) -> Empresa:
     return empresa
 
 
+@transaction.atomic
+def registrar_negocio_propio(*, nombre, tipo, categoria, email, telefono, password) -> Usuario:
+    """Autorregistro (rama reto3-paseoya): el negocio elige su contraseña sin esperar al admin.
+
+    Solo se usa si PERMITIR_AUTORREGISTRO_EMPRESAS está activo; lo normal es la invitación.
+    """
+    empresa = Empresa.objects.create(
+        nombre=nombre, tipo=tipo, categoria=categoria, email_contacto=email, telefono=telefono,
+    )
+    usuario = Usuario(username=email, email=email, rol=rol_responsable(empresa), empresa=empresa)
+    usuario.set_password(password)
+    usuario.save()
+    return usuario
+
+
 def reenviar_acceso(empresa: Empresa) -> Usuario:
     """Genera una nueva contraseña temporal para el responsable y la reenvía."""
     usuario = empresa.usuarios.get(rol=rol_responsable(empresa))

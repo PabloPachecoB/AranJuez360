@@ -47,6 +47,7 @@ LOCAL_APPS = [
     "reportes",
     "entretenimiento",
     "oficinas",
+    "pedidos",
     "agente",
 ]
 
@@ -189,6 +190,8 @@ EMAIL_DEMO_REDIRIGIR = env("EMAIL_DEMO_REDIRIGIR", default="").strip()
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Paseo Aranjuez 360 <no-responder@localhost>")
 
 # --- Enlaces de la plataforma ----------------------------------------------------
+# Autorregistro de negocios (rama reto3-paseoya). Apagado: las empresas entran por invitación.
+PERMITIR_AUTORREGISTRO_EMPRESAS = env.bool("PERMITIR_AUTORREGISTRO_EMPRESAS", default=False)
 WEB_PANEL_URL = env("WEB_PANEL_URL", default="http://localhost:3000")
 # Esquema de la app: el QR/NFC de cada empresa abre {APP_DEEP_LINK}/puntos/<codigo>
 APP_DEEP_LINK = env("APP_DEEP_LINK", default="paseo360:/")

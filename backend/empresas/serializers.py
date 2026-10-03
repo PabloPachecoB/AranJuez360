@@ -8,6 +8,39 @@ from usuarios.models import Usuario
 from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
 
 
+class RegistroEmpresaSerializer(serializers.Serializer):
+    """Autorregistro de negocio/emprendimiento (rama reto3-paseoya de Alan).
+
+    Desactivado por defecto: en Paseo 360 las empresas entran por invitación del admin
+    (ver PERMITIR_AUTORREGISTRO_EMPRESAS)."""
+
+    TIPOS_PERMITIDOS = (Empresa.Tipo.NEGOCIO, Empresa.Tipo.EMPRENDIMIENTO)
+
+    nombre = serializers.CharField(max_length=120)
+    tipo = serializers.ChoiceField(choices=[(t, t) for t in TIPOS_PERMITIDOS])
+    categoria = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all())
+    email = serializers.EmailField()
+    telefono = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirmacion = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if Usuario.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirmacion"]:
+            raise serializers.ValidationError({"password_confirmacion": "Las contraseñas no coinciden."})
+        candidato = Usuario(username=attrs["email"], email=attrs["email"])
+        try:
+            validate_password(attrs["password"], candidato)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
+        return attrs
+
+
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
@@ -30,13 +63,31 @@ class HorarioSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
-        fields = ["id", "nombre", "descripcion", "seccion", "precio", "foto", "activo", "creado_en"]
+        fields = [
+            "id", "nombre", "descripcion", "seccion", "precio", "foto", "stock",
+            "en_promocion", "precio_promocion", "activo", "creado_en",
+        ]
         read_only_fields = ["creado_en"]
 
     def validate_precio(self, value):
         if value <= 0:
             raise serializers.ValidationError("El precio debe ser mayor a 0.")
         return value
+
+    def validate(self, attrs):
+        en_promocion = attrs.get("en_promocion", getattr(self.instance, "en_promocion", False))
+        precio_promocion = attrs.get("precio_promocion", getattr(self.instance, "precio_promocion", None))
+        precio = attrs.get("precio", getattr(self.instance, "precio", None))
+        if en_promocion:
+            if precio_promocion is None:
+                raise serializers.ValidationError(
+                    {"precio_promocion": "Requerido cuando el producto está en promoción."}
+                )
+            if precio is not None and precio_promocion >= precio:
+                raise serializers.ValidationError(
+                    {"precio_promocion": "Debe ser menor al precio regular."}
+                )
+        return attrs
 
 
 class OfertaSerializer(serializers.ModelSerializer):
@@ -113,7 +164,7 @@ class EmpresaPerfilSerializer(serializers.ModelSerializer):
         model = Empresa
         fields = [
             "id", "nombre", "tipo", "categoria_nombre", "email_contacto", "telefono",
-            "descripcion", "piso", "local", "referencia", "logo", "horarios",
+            "descripcion", "piso", "local", "referencia", "logo", "activo", "horarios",
             "lema", "portada", "whatsapp", "facebook", "instagram", "sitio_web", "fotos",
         ]
         read_only_fields = ["nombre", "tipo", "email_contacto"]

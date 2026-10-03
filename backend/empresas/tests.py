@@ -216,3 +216,29 @@ class InvitacionEmpresaTests(APITestCase):
         self.client.force_authenticate(cliente)
         resp = self.client.post("/api/v1/admin/invitaciones-empresa/", {"email": "z@x.com"}, format="json")
         self.assertEqual(resp.status_code, 403)
+
+
+class AutorregistroNegocioTests(APITestCase):
+    """Autorregistro de la rama reto3-paseoya: apagado salvo que se habilite."""
+
+    def setUp(self):
+        self.cat = Categoria.objects.create(nombre="Comida")
+        self.datos = {"nombre": "Salteñas Doña Ana", "tipo": "EMPRENDIMIENTO", "categoria": self.cat.id,
+                      "email": "ana@saltenas.com", "password": "Cochabamba77x", "password_confirmacion": "Cochabamba77x"}
+
+    def test_apagado_por_defecto_solo_invitacion(self):
+        resp = self.client.post("/api/v1/auth/registro-negocio/", self.datos, format="json")
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn("invitación", resp.data["detail"])
+        self.assertFalse(Empresa.objects.filter(nombre="Salteñas Doña Ana").exists())
+
+    def test_habilitado_crea_negocio_y_pide_codigo(self):
+        from django.test import override_settings
+
+        with override_settings(PERMITIR_AUTORREGISTRO_EMPRESAS=True):
+            resp = self.client.post("/api/v1/auth/registro-negocio/", self.datos, format="json")
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data["paso"], "verificar_correo")
+        usuario = Usuario.objects.get(username="ana@saltenas.com")
+        self.assertEqual(usuario.rol, "NEGOCIO")
+        self.assertEqual(usuario.empresa.tipo, "EMPRENDIMIENTO")

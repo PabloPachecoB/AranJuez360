@@ -99,6 +99,14 @@ class Producto(models.Model):
     seccion = models.CharField(
         max_length=60, blank=True, help_text="Sección del menú o catálogo (ej. Bebidas). En oficinas: servicios.",
     )
+    # Campos de PaseoYa (Reto 3, rama reto3-paseoya de Alan): el reto pide "administrar
+    # inventario" y valora promociones, por eso viven en el Producto compartido.
+    stock = models.PositiveIntegerField(default=0)
+    en_promocion = models.BooleanField(default=False)
+    precio_promocion = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Solo si en_promocion es verdadero; debe ser menor al precio regular.",
+    )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
