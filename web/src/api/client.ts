@@ -93,27 +93,18 @@ function extraerMensaje(data: unknown): string {
   return "Ocurrió un error inesperado.";
 }
 
-export async function api<T>(path: string, opciones: Opciones = {}): Promise<T> {
-  const { method = "GET", body, auth = true } = opciones;
-
-  async function intentar(): Promise<Response> {
-    const headers: Record<string, string> = {};
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    if (auth && accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-    return fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  }
-
+// Llama a `intentar`, y si el servidor responde 401, refresca el access
+// token y reintenta UNA vez — misma lógica para pedidos JSON y multipart.
+async function conReintento(auth: boolean, intentar: () => Promise<Response>): Promise<Response> {
   let res = await intentar();
-
   if (res.status === 401 && auth) {
     const refrescado = await refrescarAccessToken();
     if (refrescado) res = await intentar();
   }
+  return res;
+}
 
+async function leerOtirarError<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let data: unknown = null;
     try {
@@ -123,7 +114,39 @@ export async function api<T>(path: string, opciones: Opciones = {}): Promise<T> 
     }
     throw new ApiError(res.status, extraerMensaje(data));
   }
-
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+export async function api<T>(path: string, opciones: Opciones = {}): Promise<T> {
+  const { method = "GET", body, auth = true } = opciones;
+
+  const res = await conReintento(auth, () => {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (auth && accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    return fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  });
+
+  return leerOtirarError<T>(res);
+}
+
+// Para subir archivos (fotos): usa FormData en vez de JSON. No se fija el
+// Content-Type a mano — el navegador le agrega el boundary correcto solo.
+export async function apiForm<T>(
+  path: string,
+  formData: FormData,
+  method: "POST" | "PATCH" = "POST"
+): Promise<T> {
+  const res = await conReintento(true, () => {
+    const headers: Record<string, string> = {};
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+    return fetch(`${API_BASE}${path}`, { method, headers, body: formData });
+  });
+
+  return leerOtirarError<T>(res);
 }
