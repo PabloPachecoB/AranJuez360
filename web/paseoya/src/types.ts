@@ -11,6 +11,21 @@ export interface Negocio {
   activo: boolean;
 }
 
+export interface VarianteOpcion {
+  id: string;
+  nombre: string;
+  precio_extra: number;
+}
+
+// Nota: "variantes" no existe todavía en el schema acordado por el equipo
+// (ver docs/BASE_PROYECTO_PASEO.md, tabla productos). Es una propuesta de UI,
+// client-side por ahora — no persiste a ningún backend real. Falta validarla
+// con el equipo antes de tratarla como campo definitivo.
+export interface ProductoVariantes {
+  tamanios: VarianteOpcion[];
+  extras: VarianteOpcion[];
+}
+
 export interface Producto {
   id: string;
   negocio_id: string;
@@ -22,6 +37,7 @@ export interface Producto {
   en_promocion: boolean;
   precio_promocion: number | null;
   activo: boolean;
+  variantes?: ProductoVariantes;
   creado_en: string;
 }
 
