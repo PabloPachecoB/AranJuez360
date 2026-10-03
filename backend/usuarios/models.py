@@ -39,7 +39,8 @@ class Usuario(AbstractUser):
     fecha_nacimiento = models.DateField(null=True, blank=True)
     acepto_terminos_en = models.DateTimeField(null=True, blank=True)
     email_verificado = models.BooleanField(default=False)
-    puntos_saldo = models.PositiveIntegerField(default=0)
+    # Saldo en monedas de Paseo (con decimales: 0,75 por visita).
+    puntos_saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # Las cuentas creadas por el admin reciben una contraseña temporal por correo.
     debe_cambiar_password = models.BooleanField(default=False)
 

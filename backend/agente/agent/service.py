@@ -8,6 +8,7 @@ acción tras la confirmación autenticada (interrupt de LangGraph).
 from functools import lru_cache
 from typing import Any, Dict
 
+from ..contexto import construir_contexto
 from .checkpoints import get_checkpoint_runtime
 from .graph import build_agent_graph
 
@@ -21,11 +22,13 @@ class AgentConversationService:
         return {"configurable": {"thread_id": thread_id}}
 
     def chat(self, user, thread_id: str, message: str) -> Dict[str, Any]:
-        """Procesa un turno del usuario. TODO: formatear entrada/salida."""
+        """Procesa un turno del usuario y devuelve {"text": respuesta}."""
         state = {
             "messages": [{"role": "user", "content": message}],
             "thread_id": thread_id,
             "user_id": user.id,
+            # Se recalcula en cada turno: puntos y ofertas siempre al día.
+            "authenticated_context": construir_contexto(user),
         }
         result = self._graph.invoke(state, config=self._config(thread_id))
         return result.get("presentation") or {}

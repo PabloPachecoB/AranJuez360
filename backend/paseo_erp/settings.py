@@ -44,8 +44,9 @@ LOCAL_APPS = [
     "usuarios",
     "empresas",
     "fidelizacion",
-    "pedidos",
     "reportes",
+    "entretenimiento",
+    "oficinas",
     "agente",
 ]
 
@@ -174,6 +175,8 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Paseo Aranjuez 360 <no-r
 WEB_PANEL_URL = env("WEB_PANEL_URL", default="http://localhost:3000")
 # Esquema de la app: el QR/NFC de cada empresa abre {APP_DEEP_LINK}/puntos/<codigo>
 APP_DEEP_LINK = env("APP_DEEP_LINK", default="paseo360:/")
+# URL pública del backend: las invitaciones por WhatsApp enlazan a {PUBLIC_BASE_URL}/invitacion/<código>/
+PUBLIC_BASE_URL = env("PUBLIC_BASE_URL", default="http://localhost:8001")
 
 # --- Paseo Points ------------------------------------------------------------------
 # Vigencia del QR personal del cliente (la app lo renueva antes de que venza).

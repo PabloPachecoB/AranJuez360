@@ -43,6 +43,13 @@ class Empresa(models.Model):
     local = models.CharField(max_length=20, blank=True, help_text="Número de local u oficina.")
     referencia = models.CharField(max_length=200, blank=True, help_text="Cómo llegar.")
     logo = models.ImageField(upload_to="empresas/logos/", blank=True)
+    # Mini-sitio de la empresa (idea tomada del panel "Mi local" de la rama brenda-explorar).
+    lema = models.CharField(max_length=120, blank=True, help_text="Frase corta bajo el nombre.")
+    portada = models.ImageField(upload_to="empresas/portadas/", blank=True)
+    whatsapp = models.CharField(max_length=20, blank=True)
+    facebook = models.URLField(blank=True)
+    instagram = models.URLField(blank=True)
+    sitio_web = models.URLField(blank=True)
     activo = models.BooleanField(default=True)
     # Va dentro del QR y del sticker NFC de caja. Regenerable si se filtra.
     codigo_fidelizacion = models.CharField(
@@ -89,14 +96,8 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, help_text="En bolivianos.")
     foto = models.ImageField(upload_to="empresas/productos/", blank=True)
-    # Campos de PaseoYa (Reto 3): el reto oficial pide "administrar inventario"
-    # y valora promociones, por eso viven en el Producto compartido y no en un
-    # modelo aparte.
-    stock = models.PositiveIntegerField(default=0)
-    en_promocion = models.BooleanField(default=False)
-    precio_promocion = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text="Solo si en_promocion es verdadero; debe ser menor al precio regular.",
+    seccion = models.CharField(
+        max_length=60, blank=True, help_text="Sección del menú o catálogo (ej. Bebidas). En oficinas: servicios.",
     )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -127,3 +128,20 @@ class Oferta(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.empresa})"
+
+
+
+class FotoEmpresa(models.Model):
+    """Galería del mini-sitio: fotos del local, la oficina o los productos."""
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="fotos")
+    imagen = models.ImageField(upload_to="empresas/fotos/")
+    titulo = models.CharField(max_length=80, blank=True)
+    orden = models.PositiveSmallIntegerField(default=0)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["orden", "id"]
+
+    def __str__(self):
+        return f"Foto de {self.empresa}"

@@ -22,23 +22,6 @@ def crear_empresa_con_acceso(**datos_empresa) -> Empresa:
     return empresa
 
 
-@transaction.atomic
-def registrar_negocio_propio(*, nombre, tipo, categoria, email, telefono, password) -> Usuario:
-    """Autorregistro: a diferencia de crear_empresa_con_acceso (alta manual del
-    admin con contraseña temporal), acá el negocio/emprendimiento elige su
-    propia contraseña y no espera aprobación — pensado para un emprendimiento
-    que viene por poco tiempo y no puede esperar un alta manual."""
-    empresa = Empresa.objects.create(
-        nombre=nombre, tipo=tipo, categoria=categoria, email_contacto=email, telefono=telefono,
-    )
-    usuario = Usuario(
-        username=email, email=email, rol=rol_responsable(empresa), empresa=empresa,
-    )
-    usuario.set_password(password)
-    usuario.save()
-    return usuario
-
-
 def reenviar_acceso(empresa: Empresa) -> Usuario:
     """Genera una nueva contraseña temporal para el responsable y la reenvía."""
     usuario = empresa.usuarios.get(rol=rol_responsable(empresa))

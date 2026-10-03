@@ -22,6 +22,8 @@ class LLMSettings:
     timeout_seconds: float
     temperature: float
     max_tokens: int
+    # Modelo multimodal que entiende audio (notas de voz). Vacío = sin voz.
+    audio_model: str = ""
 
     @classmethod
     def from_env(cls, environ: Optional[Mapping[str, str]] = None):
@@ -67,4 +69,5 @@ class LLMSettings:
             timeout_seconds=timeout_seconds,
             temperature=temperature,
             max_tokens=max_tokens,
+            audio_model=values.get("QWEN_AUDIO_MODEL", "").strip(),
         )

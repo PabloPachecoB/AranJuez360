@@ -1,6 +1,15 @@
 from rest_framework import serializers
 
-from .models import ConfiguracionPuntos, MovimientoPuntos, SolicitudPuntos, Visita
+from .models import (
+    Canje,
+    ConfiguracionPuntos,
+    MovimientoPuntos,
+    PuntoEscaneo,
+    RangoCompra,
+    Recompensa,
+    SolicitudPuntos,
+    Visita,
+)
 
 
 class EmpresaEscaneadaSerializer(serializers.Serializer):
@@ -53,9 +62,9 @@ class ConfiguracionPuntosSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracionPuntos
         fields = [
-            "puntos_por_boliviano", "monto_maximo_solicitud",
+            "valor_moneda_bs", "puntos_por_boliviano", "monto_maximo_solicitud",
             "solicitudes_diarias_por_empresa", "puntos_por_visita",
-            "visitas_con_puntos_por_dia", "actualizado_en",
+            "horas_entre_visitas", "actualizado_en",
         ]
         read_only_fields = ["actualizado_en"]
 
@@ -67,10 +76,11 @@ class RegistrarVisitaSerializer(serializers.Serializer):
 class VisitaSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.SerializerMethodField()
     portero_nombre = serializers.SerializerMethodField()
+    punto_nombre = serializers.CharField(source="punto.nombre", read_only=True, default=None)
 
     class Meta:
         model = Visita
-        fields = ["id", "cliente", "cliente_nombre", "portero_nombre", "puntos", "creado_en"]
+        fields = ["id", "cliente", "cliente_nombre", "portero_nombre", "punto_nombre", "puntos", "creado_en"]
         read_only_fields = fields
 
     def get_cliente_nombre(self, obj):
@@ -78,3 +88,87 @@ class VisitaSerializer(serializers.ModelSerializer):
 
     def get_portero_nombre(self, obj):
         return obj.portero and (obj.portero.get_full_name() or obj.portero.username)
+
+
+class RecompensaSerializer(serializers.ModelSerializer):
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+
+    class Meta:
+        model = Recompensa
+        fields = [
+            "id", "nombre", "descripcion", "categoria", "costo_puntos", "empresa", "empresa_nombre",
+            "imagen", "activo", "creado_en",
+        ]
+        read_only_fields = ["creado_en"]
+
+    def validate_costo_puntos(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El costo debe ser mayor a 0.")
+        return value
+
+
+class RangoCompraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RangoCompra
+        fields = ["id", "monto_minimo", "monto_maximo", "monedas", "activo"]
+
+    def validate(self, data):
+        minimo = data.get("monto_minimo", getattr(self.instance, "monto_minimo", None))
+        maximo = data.get("monto_maximo", getattr(self.instance, "monto_maximo", None))
+        if minimo is not None and minimo < 0:
+            raise serializers.ValidationError({"monto_minimo": "No puede ser negativo."})
+        if maximo is not None and minimo is not None and maximo <= minimo:
+            raise serializers.ValidationError({"monto_maximo": "Debe ser mayor al monto mínimo."})
+        if data.get("monedas") is not None and data["monedas"] < 0:
+            raise serializers.ValidationError({"monedas": "No puede ser negativo."})
+        return data
+
+
+class PuntoEscaneoSerializer(serializers.ModelSerializer):
+    """Para el admin: incluye el enlace que se graba en el NFC o se imprime en el QR."""
+
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+    enlace = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PuntoEscaneo
+        fields = [
+            "id", "nombre", "tipo", "descripcion", "monedas", "horas_espera",
+            "empresa", "empresa_nombre", "codigo", "enlace", "activo", "creado_en",
+        ]
+        read_only_fields = ["codigo", "creado_en"]
+
+    def get_enlace(self, obj):
+        return f"paseo360://f/{obj.codigo}"
+
+    def validate_monedas(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Debe dar más de 0 monedas.")
+        return value
+
+
+class PuntoEscaneadoSerializer(serializers.ModelSerializer):
+    """Lo que ve el cliente al escanear la puerta o una actividad, antes de cobrar."""
+
+    class Meta:
+        model = PuntoEscaneo
+        fields = ["id", "nombre", "tipo", "descripcion", "monedas", "horas_espera"]
+
+
+class EscanearSerializer(serializers.Serializer):
+    codigo = serializers.CharField(max_length=32)
+
+
+class CanjeSerializer(serializers.ModelSerializer):
+    recompensa_nombre = serializers.CharField(source="recompensa.nombre", read_only=True)
+    categoria = serializers.CharField(source="recompensa.categoria", read_only=True)
+    empresa_nombre = serializers.CharField(source="recompensa.empresa.nombre", read_only=True, default=None)
+    estado_nombre = serializers.CharField(source="get_estado_display", read_only=True)
+
+    class Meta:
+        model = Canje
+        fields = [
+            "id", "recompensa", "recompensa_nombre", "categoria", "empresa_nombre", "monedas",
+            "codigo", "estado", "estado_nombre", "creado_en", "usado_en",
+        ]
+        read_only_fields = fields
