@@ -5,6 +5,8 @@ Las acciones sensibles exigen reautenticación (la contraseña nunca entra al
 estado conversacional ni al checkpoint).
 """
 
+import re
+
 from django.http import HttpResponse
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -15,6 +17,8 @@ from rest_framework.response import Response
 from datetime import timedelta
 
 from django.utils import timezone
+from empresas.models import Empresa
+from empresas.rubros import normalizar
 from fidelizacion.services import ReglaNegocioError
 
 from . import herramientas
@@ -31,6 +35,25 @@ from .voz import MAX_CARACTERES, VozError, quitar_emociones, sintetizar
 # Prefijos de tipo_accion que requieren reautenticar al confirmar.
 ACCIONES_SENSIBLES = ()  # p. ej. ("PAGO_", "ANULACION_")
 VIGENCIA_PROPUESTA_MIN = 15
+MAX_FICHAS = 4
+
+
+def _empresas_mencionadas(request, texto: str) -> list:
+    """Fichas (con logo) de los establecimientos que Jarvis nombró, para mostrarlas bajo su globo."""
+    texto = normalizar(texto or "")
+    fichas = []
+    for empresa in Empresa.objects.filter(activo=True).select_related("categoria"):
+        # "Patanegra, cocina española" también cuenta si Jarvis solo dice "Patanegra".
+        nombre = normalizar(empresa.nombre.split(",")[0])
+        hallado = re.search(rf"\b{re.escape(nombre)}\b", texto) if len(nombre) >= 3 else None
+        if not hallado:  # \b evita que "Tigo" coincida dentro de "contigo"
+            continue
+        fichas.append((hallado.start(), {
+            "id": empresa.id, "nombre": empresa.nombre, "piso": empresa.piso, "local": empresa.local,
+            "categoria_nombre": empresa.categoria.nombre if empresa.categoria else None,
+            "logo": request.build_absolute_uri(empresa.logo.url) if empresa.logo else None,
+        }))
+    return [ficha for _, ficha in sorted(fichas, key=lambda par: par[0])][:MAX_FICHAS]
 
 
 class AgentActionViewSet(
@@ -51,7 +74,7 @@ class AgentActionViewSet(
         result = get_conversation_service().chat(
             request.user, thread_id, data["message"]
         )
-        return Response(result)
+        return Response({**result, "empresas": _empresas_mencionadas(request, result.get("text"))})
 
     @action(detail=False, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def voz(self, request):
@@ -75,7 +98,8 @@ class AgentActionViewSet(
             )
         thread_id = data.get("thread_id") or f"user-{request.user.id}"
         result = get_conversation_service().chat(request.user, thread_id, transcripcion)
-        return Response({**result, "transcripcion": transcripcion})
+        return Response({**result, "transcripcion": transcripcion,
+                         "empresas": _empresas_mencionadas(request, result.get("text"))})
 
     @action(detail=False, methods=["get"])
     def hablar(self, request):

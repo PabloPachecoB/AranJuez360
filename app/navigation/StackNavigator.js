@@ -4,7 +4,10 @@ import { COLORS } from "../constants/colors";
 import { useUserContext } from "../context/UserContext";
 import AsistenteScreen from "../screens/AsistenteScreen";
 import DesbloqueoScreen from "../screens/DesbloqueoScreen";
+import ComerScreen from "../screens/ComerScreen";
+import DirectorioScreen from "../screens/DirectorioScreen";
 import DiversionScreen from "../screens/DiversionScreen";
+import EmpresaScreen from "../screens/EmpresaScreen";
 import EscanearScreen from "../screens/EscanearScreen";
 import HomeScreen from "../screens/HomeScreen";
 import LoginScreen from "../screens/LoginScreen";
@@ -38,6 +41,9 @@ export default function StackNavigator() {
           <Stack.Screen name="Escanear" component={EscanearScreen} />
           <Stack.Screen name="Diversion" component={DiversionScreen} />
           <Stack.Screen name="Oficinas" component={OficinasScreen} />
+          <Stack.Screen name="Directorio" component={DirectorioScreen} />
+          <Stack.Screen name="Empresa" component={EmpresaScreen} />
+          <Stack.Screen name="Comer" component={ComerScreen} />
         </>
       ) : estado === "bloqueado" ? (
         <Stack.Screen name="Desbloqueo" component={DesbloqueoScreen} />

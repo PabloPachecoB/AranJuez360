@@ -40,3 +40,10 @@ El proxy de Vite debe apuntar a `http://127.0.0.1:8001` (`web/vite.config.js`). 
 
 ## El monedero dice "solo para cuentas de cliente"
 Estás con la cuenta de admin en la app; entra con `cliente@paseo.bo`.
+
+## No se ven las fotos de los negocios en la app
+1. Recargar Expo (**r**) o `npx expo start -c`: el teléfono puede tener la versión anterior.
+2. Las URLs de las imágenes usan el host con el que la app llama al backend (`EXPO_PUBLIC_API_BASE`); el backend debe servir `/media/` (`DEBUG=True` en local).
+3. Logos `.webp`: en Windows hay que registrar el tipo (`mimetypes.add_type("image/webp", ".webp")` en `settings.py`), si no salen como `octet-stream`.
+4. Solo 12 tiendas tienen portada y galería; las demás muestran logo. → [[Directorio y rubros]]
+5. En Expo web, un `ScrollView` horizontal dentro de una columna puede colapsar: usar `style={{ flexGrow: 0 }}`.

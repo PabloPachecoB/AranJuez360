@@ -1,0 +1,96 @@
+{
+  "fuente": "Publicaciones de @mercado_gastronomico_bypaseo mostradas en paseoaranjuez.com (revisado el 2026-10-03)",
+  "nota": "La fuente no publica precios ni clasificación. Clasificación y duración son las de la película original.",
+  "cine": "Cinema Lounge · Mercado Gastronómico, piso 3",
+  "peliculas": [
+    {
+      "titulo": "Exterminio (28 Días Después)",
+      "genero": "Terror",
+      "clasificacion": "+16",
+      "duracion_min": 113,
+      "sinopsis": "Terror y supervivencia: un mensajero despierta en un Londres desierto, arrasado por un virus que vuelve violentos a los infectados.",
+      "funciones": ["2026-10-02T18:30"],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+    },
+    {
+      "titulo": "Demon Slayer: Castillo Infinito",
+      "genero": "Anime",
+      "clasificacion": "+16",
+      "duracion_min": 155,
+      "sinopsis": "La batalla final del anime: Tanjiro y los Pilares enfrentan a los demonios dentro del Castillo Infinito.",
+      "funciones": ["2026-10-03T15:30"],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+    },
+    {
+      "titulo": "Weapons (La Hora de la Desaparición)",
+      "genero": "Suspenso",
+      "clasificacion": "+18",
+      "duracion_min": 128,
+      "sinopsis": "Misterio y suspenso: todos los alumnos de una clase, salvo uno, desaparecen la misma noche a la misma hora.",
+      "funciones": ["2026-10-03T19:00"],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+    },
+    {
+      "titulo": "Hotel Transilvania",
+      "genero": "Animación",
+      "clasificacion": "ATP",
+      "duracion_min": 91,
+      "sinopsis": "Drácula organiza el cumpleaños de su hija en su hotel para monstruos, hasta que llega un humano. Para toda la familia.",
+      "funciones": ["2026-10-04T14:30"],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+    },
+    {
+      "titulo": "Monsters, Inc.",
+      "genero": "Animación",
+      "clasificacion": "ATP",
+      "duracion_min": 92,
+      "sinopsis": "Mike y Sulley, los mejores asustadores de Monstruópolis, descubren que los niños no son tan peligrosos. Para toda la familia.",
+      "funciones": ["2026-10-04T18:00"],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+    }
+  ],
+  "eventos": [
+    {
+      "titulo": "Feria La Tribu",
+      "categoria": "OTRO",
+      "inicio": "2026-10-02T11:00",
+      "fin": "2026-10-02T22:00",
+      "lugar": "El Club by Mercado Gastronómico, piso 3",
+      "descripcion": "Feria de Mercado Vivo en El Club by Mercado Gastronómico.",
+      "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+    },
+    {
+      "titulo": "Emily Guzman en concierto",
+      "categoria": "MUSICA",
+      "inicio": "2026-10-02T19:30",
+      "fin": null,
+      "lugar": "El Club by Mercado Gastronómico, piso 3",
+      "descripcion": "Música en vivo para cerrar el viernes de Mercado Vivo.",
+      "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+    },
+    {
+      "titulo": "Gran Torneo de Rubik",
+      "categoria": "OTRO",
+      "inicio": "2026-10-03T17:00",
+      "fin": null,
+      "lugar": "El Club by Mercado Gastronómico, piso 3",
+      "descripcion": "Pon a prueba tu agilidad mental en el torneo de cubo Rubik de Mercado Vivo.",
+      "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
+      "destacado": true,
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+    },
+    {
+      "titulo": "Un Domingo de Bingo Familiar",
+      "categoria": "INFANTIL",
+      "inicio": "2026-10-04T15:00",
+      "fin": "2026-10-04T18:00",
+      "lugar": "El Club by Mercado Gastronómico, piso 3",
+      "descripcion": "Bingo para compartir en familia y cerrar el fin de semana de Mercado Vivo.",
+      "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
+      "destacado": true,
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+    }
+  ]
+}

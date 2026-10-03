@@ -24,3 +24,19 @@ Café Aranjuez, Burger Paseo, TecnoPlus, Moda Urbana (negocios) · Dulce Hogar (
 
 ## Recompensas
 300 · 500 · 700 · 1000 · 1500 puntos → [[Monedero y recompensas]]
+
+## Tiendas reales (2026-10-03)
+- 69 cuentas `demo.<nombre>@paseo.bo` con rol Negocio, misma contraseña. Lista completa: `docs/ACCESOS_DEMO_TIENDAS.csv` (solo local, no se sube a GitHub).
+- Ejemplos: `demo.brochetaking@paseo.bo`, `demo.waffleking@paseo.bo` (probada con pedidos).
+- **HOY HAY** no tiene cuenta.
+- El código de doble autenticación aparece en la terminal del backend local.
+
+## Cargar todos los datos reales
+```bash
+python manage.py cargar_demo              # cuentas base + agenda real (retira lo ficticio)
+python manage.py importar_tiendas_paseo   # 70 tiendas con logos y fotos
+python manage.py organizar_rubros
+python manage.py cargar_menus_paseo       # 93 platos
+python manage.py importar_agenda_paseo    # cartelera y eventos
+```
+→ [[Directorio y rubros]] · [[Comer y pedidos (PaseoYa)]] · [[Diversión (cartelera y eventos)]]

@@ -21,6 +21,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from empresas.models import Categoria, Empresa, FotoEmpresa
+from empresas.rubros import rubro_comercial
 
 SITIO = "https://paseoaranjuez.com"
 ARCHIVO = Path(__file__).resolve().parents[2] / "datos" / "tiendas_paseo_aranjuez.json"
@@ -36,7 +37,10 @@ CATEGORIAS = {
     "joyeria": "Joyería y accesorios", "joyas": "Joyería y accesorios", "relojeria": "Joyería y accesorios",
     "accesorios": "Joyería y accesorios",
     "jugueteria": "Juguetería y niños", "bebes": "Juguetería y niños", "juegos": "Juguetería y niños",
-    "tecnologia": "Tecnología", "telecomunicaciones": "Tecnología",
+    "tecnologia": "Tecnología", "electronica": "Electrónica",
+    "telecomunicaciones": "Servicios", "servicios": "Servicios",
+    "banca": "Banca", "banco": "Banca",
+    "concesionaria": "Concesionaria", "automoviles": "Concesionaria",
     "hogar": "Hogar y decoración", "floristeria": "Hogar y decoración",
     "deportes": "Deportes", "fitness": "Deportes",
     "artesanias": "Artesanías",
@@ -48,7 +52,7 @@ def _sin_tildes(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", texto.lower()) if not unicodedata.combining(c))
 
 
-def categoria_de(tienda: dict) -> str:
+def _categoria_detallada(tienda: dict) -> str:
     etiquetas = [_sin_tildes(e) for e in tienda.get("categories") or []]
     for etiqueta in etiquetas:
         # "ropa interior", "ropa infantil"... cuentan por su primera palabra.
@@ -63,6 +67,10 @@ def categoria_de(tienda: dict) -> str:
     if tienda.get("floor") in ("Tercer Piso", "Cuarto Piso") or etiquetas:
         return "Comida"
     return "Otros"
+
+
+def categoria_de(tienda: dict) -> str:
+    return rubro_comercial(_categoria_detallada(tienda), tienda["title"])
 
 
 def descripcion_de(tienda: dict) -> str:

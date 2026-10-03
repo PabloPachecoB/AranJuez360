@@ -4,6 +4,7 @@ from unittest import mock
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 
+from empresas.models import Empresa, Producto
 from fidelizacion.models import Recompensa
 from usuarios.models import Usuario
 
@@ -69,6 +70,17 @@ class AsistenteTests(APITestCase):
         self.assertIn("Ana", system)
         self.assertIn("420 monedas", system)
         self.assertIn("Café gratis (otro): 300 monedas", system)
+
+    def test_recomienda_platos_y_devuelve_fichas_de_los_locales_nombrados(self):
+        pastas = Empresa.objects.create(nombre="Solo Pastas", piso="3", email_contacto="p@p.com")
+        Producto.objects.create(empresa=pastas, nombre="Lasaña de carne", precio=Decimal("55"))
+        Empresa.objects.create(nombre="Tigo", email_contacto="t@t.com")
+        resp = self._chat("estoy triste contigo, ¿qué tal solo pastas?")
+        system, _ = self.llm.llamadas[-1]
+        self.assertIn("Menú: Lasaña de carne Bs 55.", system)
+        # "contigo" no debe traer la ficha de Tigo.
+        self.assertEqual([e["nombre"] for e in resp.data["empresas"]], ["Solo Pastas"])
+        self.assertEqual(resp.data["empresas"][0]["piso"], "3")
 
     def test_emociones_van_a_la_voz_y_no_a_la_pantalla(self):
         with mock.patch.object(self.llm, "chat", return_value="[excited] ¡Felicidades! [warmly] Te alcanza un café."):

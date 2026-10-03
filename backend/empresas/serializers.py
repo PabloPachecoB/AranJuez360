@@ -191,6 +191,23 @@ class OfertaPublicaSerializer(OfertaSerializer):
         read_only_fields = fields
 
 
+class ProductoPublicoSerializer(serializers.ModelSerializer):
+    """Plato o producto para el marketplace de la app, con los datos del negocio que lo vende."""
+
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True)
+    empresa_logo = serializers.ImageField(source="empresa.logo", read_only=True)
+    piso = serializers.CharField(source="empresa.piso", read_only=True)
+    local = serializers.CharField(source="empresa.local", read_only=True)
+
+    class Meta:
+        model = Producto
+        fields = [
+            "id", "nombre", "descripcion", "seccion", "precio", "en_promocion", "precio_promocion", "foto",
+            "empresa", "empresa_nombre", "empresa_logo", "piso", "local",
+        ]
+        read_only_fields = fields
+
+
 def abierto_ahora(empresa) -> bool | None:
     """Si está atendiendo ahora según sus horarios (None si no cargó horarios)."""
     horarios = list(empresa.horarios.all())

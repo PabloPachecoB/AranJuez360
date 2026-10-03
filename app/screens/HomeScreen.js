@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Alert,
   Modal,
   RefreshControl,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import CarteraPuntos from "../components/CarteraPuntos";
 import JarvisMini from "../components/JarvisMini";
 import ProcedenciaSelector from "../components/ProcedenciaSelector";
@@ -21,28 +23,30 @@ import Monedero from "../components/Monedero";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { useUserContext } from "../context/UserContext";
 import { getDiversion } from "../services/diversionService";
+import { getEmpresas } from "../services/directorioService";
 import { getOfertas } from "../services/empresasService";
+import { getMisPedidos } from "../services/pedidosService";
 import { getMonedero } from "../services/puntosService";
 
-// Atajos que llevan una pregunta lista a Jarvis.
+// Atajos a las secciones de la app (los que no tienen pantalla propia le preguntan a Jarvis).
 const CHIPS = [
-  { icono: "restaurant-outline", texto: "Restaurantes", pregunta: "¿Qué restaurantes hay en el Paseo?" },
-  { icono: "bag-handle-outline", texto: "Tiendas", pregunta: "¿Qué tiendas hay en el Paseo?" },
-  { icono: "flame-outline", texto: "Ofertas", pregunta: "¿Qué ofertas hay hoy?", color: STITCH.oro },
-  { icono: "briefcase-outline", texto: "Servicios", pregunta: "¿Qué servicios profesionales hay en el Paseo?" },
+  { icono: "restaurant-outline", texto: "Restaurantes", ruta: "Comer" },
+  { icono: "bag-handle-outline", texto: "Tiendas", ruta: "Directorio", params: { filtro: "tiendas", titulo: "Tiendas" } },
+  { icono: "flame-outline", texto: "Ofertas", ruta: "Directorio", params: { vista: "ofertas", titulo: "Ofertas" }, color: STITCH.oro },
+  { icono: "briefcase-outline", texto: "Servicios", ruta: "Oficinas" },
 ];
 
 const ACCESOS = [
-  { icono: "restaurant", texto: "Comer", pregunta: "Quiero comer algo, ¿qué me recomiendas?" },
-  { icono: "bag-handle", texto: "Comprar", pregunta: "¿Qué tiendas me recomiendas para comprar?" },
-  { icono: "pricetag", texto: "Promos", pregunta: "¿Qué promociones hay hoy?", hot: true },
-  { icono: "map", texto: "Mapa", detalle: "Pisos PB-5", pregunta: "¿Cómo están distribuidos los pisos del Paseo?" },
+  { icono: "restaurant", texto: "Comer", ruta: "Comer" },
+  { icono: "bag-handle", texto: "Comprar", ruta: "Directorio", params: { filtro: "tiendas", titulo: "Tiendas" } },
+  { icono: "pricetag", texto: "Promos", ruta: "Directorio", params: { vista: "ofertas", titulo: "Ofertas" }, hot: true },
+  { icono: "map", texto: "Mapa", detalle: "Pisos PB-5", ruta: "Directorio", params: { vista: "pisos", titulo: "Por piso" } },
 ];
 
 const EXPLORAR = [
-  { icono: "restaurant", texto: "Restaurantes", pregunta: "¿Qué restaurantes hay en el Paseo?" },
-  { icono: "bag-handle-outline", texto: "Tiendas", pregunta: "¿Qué tiendas hay en el Paseo?" },
-  { icono: "rocket-outline", texto: "Emprendimientos", pregunta: "¿Qué emprendimientos hay en el Paseo?" },
+  { icono: "restaurant", texto: "Restaurantes", ruta: "Comer" },
+  { icono: "bag-handle-outline", texto: "Tiendas", ruta: "Directorio", params: { filtro: "tiendas", titulo: "Tiendas" } },
+  { icono: "rocket-outline", texto: "Emprendimientos", ruta: "Directorio", params: { filtro: "emprendimientos", titulo: "Emprendimientos" } },
   { icono: "business-outline", texto: "Oficinas", ruta: "Oficinas" },
 ];
 
@@ -55,7 +59,7 @@ const TABS = [
   { icono: "film-outline", texto: "Diversión", ruta: "Diversion" },
   { icono: "jarvis", texto: "Jarvis" },
   { icono: "scan-outline", texto: "Mi QR", ruta: "Escanear" },
-  { icono: "star-outline", texto: "Beneficios" },
+  { icono: "star-outline", texto: "Beneficios", seccion: "monedas" },
 ];
 
 const bs = (valor) => `Bs ${Number(valor).toLocaleString("es-BO", { maximumFractionDigits: 2 })}`;
@@ -66,6 +70,8 @@ export default function HomeScreen({ navigation }) {
   const [errorMonedero, setErrorMonedero] = useState(null);
   const [ofertas, setOfertas] = useState([]);
   const [diversion, setDiversion] = useState(null);
+  const [pedidosEnCurso, setPedidosEnCurso] = useState([]);
+  const [restaurantes, setRestaurantes] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [refrescando, setRefrescando] = useState(false);
   // Clientes que se registraron antes de pedir la procedencia: se les pregunta una vez.
@@ -122,7 +128,30 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
+  // Al volver al Inicio (p. ej. desde Comer) se revisa si el negocio avanzó algún pedido.
+  const cargarPedidos = useCallback(async () => {
+    if (user?.rol !== "CLIENTE") return;
+    try {
+      const lista = await getMisPedidos();
+      setPedidosEnCurso(lista.filter((p) => !["ENTREGADO", "CANCELADO"].includes(p.estado)));
+    } catch {
+      setPedidosEnCurso([]);
+    }
+  }, [user?.rol]);
+  useFocusEffect(useCallback(() => { cargarPedidos(); }, [cargarPedidos]));
+
+  // Restaurantes con foto real primero (portada de paseoaranjuez.com), después los que solo tienen logo.
+  const cargarRestaurantes = useCallback(async () => {
+    try {
+      const lista = await getEmpresas({ tipo: "NEGOCIO", rubro: "comida" });
+      setRestaurantes(lista.filter((e) => e.portada || e.logo).sort((a, b) => !!b.portada - !!a.portada));
+    } catch {
+      setRestaurantes([]);
+    }
+  }, []);
+
   useEffect(() => {
+    cargarRestaurantes();
     cargarMonedero();
     cargarOfertas();
     cargarDiversion();
@@ -130,11 +159,12 @@ export default function HomeScreen({ navigation }) {
 
   const refrescar = useCallback(async () => {
     setRefrescando(true);
-    await Promise.all([recargarPerfil(), cargarMonedero(), cargarOfertas(), cargarDiversion()]);
+    await Promise.all([recargarPerfil(), cargarMonedero(), cargarOfertas(), cargarDiversion(), cargarPedidos(), cargarRestaurantes()]);
     setRefrescando(false);
-  }, [recargarPerfil, cargarMonedero, cargarOfertas, cargarDiversion]);
+  }, [recargarPerfil, cargarMonedero, cargarOfertas, cargarDiversion, cargarPedidos, cargarRestaurantes]);
 
   const preguntarAJarvis = (pregunta) => navigation.navigate("Asistente", { pregunta });
+  const ir = (atajo) => (atajo.ruta ? navigation.navigate(atajo.ruta, atajo.params) : preguntarAJarvis(atajo.pregunta));
   const abrirModoVoz = () => navigation.navigate("Asistente", { modoVoz: true });
 
   const buscar = () => {
@@ -161,9 +191,12 @@ export default function HomeScreen({ navigation }) {
     return lista;
   }, [nombre, ofertas.length, saldoTexto, errorMonedero, diversion]);
 
+  const irAMonedas = () => scroll.current?.scrollTo({ y: Math.max(0, yPuntos.current - 12), animated: true });
+
   const tocarTab = (tab) => {
     if (tab.icono === "jarvis") abrirModoVoz();
     else if (tab.ruta) navigation.navigate(tab.ruta);
+    else if (tab.seccion === "monedas") irAMonedas();
     else if (!tab.activo) Alert.alert(tab.texto, "Esta sección estará disponible pronto.");
   };
 
@@ -183,7 +216,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.headerAcciones}>
           {!errorMonedero ? (
             <CarteraPuntos saldo={saldo}
-              onPress={() => scroll.current?.scrollTo({ y: Math.max(0, yPuntos.current - 12), animated: true })} />
+              onPress={irAMonedas} />
           ) : null}
           <TouchableOpacity style={styles.iconoHeader} accessibilityLabel="Notificaciones"
             onPress={() => Alert.alert("Notificaciones", "Pronto verás aquí tus avisos del Paseo.")}>
@@ -202,6 +235,26 @@ export default function HomeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={STITCH.primary} />}
         showsVerticalScrollIndicator={false}
       >
+        {/* Pedidos de Comer en curso (el negocio los avanza desde su panel web) */}
+        {pedidosEnCurso.map((p) => {
+          const listo = p.estado === "LISTO_PARA_RECOGER";
+          return (
+            <TouchableOpacity key={p.id} style={[styles.cine, listo && styles.pedidoListo]}
+              onPress={() => navigation.navigate("Comer", { pestana: "pedidos" })}>
+              <View style={[styles.cineIcono, { backgroundColor: listo ? "#166534" : STITCH.secondary }]}>
+                <Ionicons name={listo ? "checkmark-done" : "time"} size={22} color={STITCH.white} />
+              </View>
+              <View style={styles.flex1}>
+                <Text style={styles.cineTitulo}>{listo ? "¡Tu pedido está listo!" : `Pedido: ${p.estado_display}`}</Text>
+                <Text style={styles.cineTexto} numberOfLines={1}>
+                  {p.empresa_nombre} · código {p.codigo_retiro}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={STITCH.outline} />
+            </TouchableOpacity>
+          );
+        })}
+
         {/* Saludo + Jarvis animado */}
         <View style={styles.saludoFila}>
           <View style={styles.saludoTexto}>
@@ -237,7 +290,7 @@ export default function HomeScreen({ navigation }) {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {CHIPS.map((c) => (
-            <TouchableOpacity key={c.texto} style={styles.chip} onPress={() => preguntarAJarvis(c.pregunta)}>
+            <TouchableOpacity key={c.texto} style={styles.chip} onPress={() => ir(c)}>
               <Ionicons name={c.icono} size={14} color={c.color || STITCH.secondary} />
               <Text style={styles.chipTexto}>{c.texto}</Text>
             </TouchableOpacity>
@@ -247,7 +300,7 @@ export default function HomeScreen({ navigation }) {
         {/* Accesos rápidos */}
         <View style={styles.accesos}>
           {ACCESOS.map((a) => (
-            <TouchableOpacity key={a.texto} style={styles.acceso} onPress={() => preguntarAJarvis(a.pregunta)}>
+            <TouchableOpacity key={a.texto} style={styles.acceso} onPress={() => ir(a)}>
               {a.hot ? <Text style={styles.hot}>HOT</Text> : null}
               <View style={styles.accesoIcono}>
                 <Ionicons name={a.icono} size={22} color={STITCH.primary} />
@@ -288,7 +341,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.seccionTitulo}>Promociones para hoy</Text>
             <Text style={styles.seccionSub}>Válidas en el local del negocio</Text>
           </View>
-          <TouchableOpacity onPress={() => preguntarAJarvis("¿Qué ofertas hay hoy?")}>
+          <TouchableOpacity onPress={() => navigation.navigate("Directorio", { vista: "ofertas", titulo: "Ofertas" })}>
             <Text style={styles.verTodas}>Ver todas</Text>
           </TouchableOpacity>
         </View>
@@ -300,7 +353,7 @@ export default function HomeScreen({ navigation }) {
               const descuento = normal && oferta && normal > oferta ? Math.round((1 - oferta / normal) * 100) : null;
               return (
                 <TouchableOpacity key={o.id} style={styles.promo} activeOpacity={0.85}
-                  onPress={() => preguntarAJarvis(`Cuéntame de la oferta "${o.titulo}" en ${o.empresa_nombre}`)}>
+                  onPress={() => navigation.navigate("Empresa", { id: o.empresa_id })}>
                   <View style={[styles.promoImagen, { backgroundColor: FONDOS_PROMO[i % FONDOS_PROMO.length] }]}>
                     <Ionicons name={ICONOS_PROMO[i % ICONOS_PROMO.length]} size={54} color="rgba(255,255,255,0.85)" />
                     {descuento ? <Text style={styles.promoDescuento}>-{descuento}% OFF</Text> : null}
@@ -325,6 +378,35 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.vacioTexto}>Hoy no hay promociones publicadas.</Text>
           </View>
         )}
+
+        {/* Restaurantes con sus fotos reales */}
+        {restaurantes.length ? (
+          <>
+            <View style={styles.seccionFila}>
+              <Text style={styles.seccionTitulo}>Para comer</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Comer")}>
+                <Text style={styles.verTodas}>Ver menús</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.restaurantesFila}
+              contentContainerStyle={styles.restaurantes}>
+              {restaurantes.map((r) => (
+                <TouchableOpacity key={r.id} style={styles.restaurante} activeOpacity={0.85}
+                  onPress={() => navigation.navigate("Empresa", { id: r.id })}>
+                  <Image source={{ uri: r.portada || r.logo }} style={styles.restauranteFoto}
+                    resizeMode={r.portada ? "cover" : "contain"} />
+                  <View style={styles.restauranteCuerpo}>
+                    {r.logo ? <Image source={{ uri: r.logo }} style={styles.restauranteLogo} /> : null}
+                    <View style={styles.flex1}>
+                      <Text style={styles.restauranteNombre} numberOfLines={1}>{r.nombre}</Text>
+                      <Text style={styles.restauranteMeta}>{r.piso === "PB" ? "Planta baja" : `Piso ${r.piso}`}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
 
         {/* Evento destacado y cartelera */}
         {diversion?.destacado ? (
@@ -389,7 +471,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.explorar}>
           {EXPLORAR.map((e, i) => (
             <TouchableOpacity key={e.texto} style={[styles.explorarChip, i === 0 && styles.explorarChipActivo]}
-              onPress={() => (e.ruta ? navigation.navigate(e.ruta) : preguntarAJarvis(e.pregunta))}>
+              onPress={() => ir(e)}>
               <Ionicons name={e.icono} size={16} color={i === 0 ? STITCH.white : STITCH.primary} />
               <Text style={[styles.explorarTexto, i === 0 && styles.explorarTextoActivo]}>{e.texto}</Text>
             </TouchableOpacity>
@@ -564,6 +646,15 @@ const styles = StyleSheet.create({
   eventoBoton: { alignSelf: "flex-end", backgroundColor: STITCH.white, borderRadius: 999, paddingHorizontal: 16,
     paddingVertical: 9, marginTop: 12 },
   eventoBotonTexto: { color: STITCH.primary, fontFamily: FUENTES.tituloBold, fontSize: 14 },
+  restaurantesFila: { flexGrow: 0, marginHorizontal: -20 },
+  restaurantes: { gap: 12, paddingHorizontal: 20, paddingBottom: 6 },
+  restaurante: { width: 170, backgroundColor: STITCH.surfaceLowest, borderRadius: 16, overflow: "hidden", ...SOMBRA },
+  restauranteFoto: { width: "100%", height: 110, backgroundColor: STITCH.surfaceLowest },
+  restauranteCuerpo: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10 },
+  restauranteLogo: { width: 28, height: 28, borderRadius: 14 },
+  restauranteNombre: { color: STITCH.onSurface, fontFamily: FUENTES.textoFuerte, fontSize: 13 },
+  restauranteMeta: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 11.5 },
+  pedidoListo: { borderWidth: 2, borderColor: "#166534" },
   cine: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, backgroundColor: STITCH.surfaceLowest,
     borderRadius: 16, padding: 14, ...SOMBRA },
   cineIcono: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#7c2d12", alignItems: "center",

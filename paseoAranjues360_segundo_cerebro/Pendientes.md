@@ -1,6 +1,6 @@
 ---
 tags: [pendientes, roadmap]
-actualizado: 2026-10-02
+actualizado: 2026-10-03
 ---
 
 # Pendientes
@@ -19,14 +19,24 @@ actualizado: 2026-10-02
 - [ ] Eventos y promociones destacadas
 - [ ] Dashboard: invitados por oficina, promociones, exportar Excel/PDF
 - [ ] Gestión de cajeros por la empresa
-- [ ] Directorio de tiendas en la app
+- [x] Directorio de tiendas en la app → [[Directorio y rubros]]
 
 ## 🟢 Extras que suman (PDF 3.9)
 - [ ] Niveles Bronce/Plata/Oro/Platinum
 - [ ] Puntos dobles en fechas especiales · bono de cumpleaños
 - [ ] Bono por visitar negocios distintos · misiones/logros
-- [ ] Asistente IA (Jarvis) con datos reales
-- [ ] Notificaciones
+- [x] Asistente IA (Jarvis) con datos reales → [[Jarvis (asistente IA)]]
+- [ ] Notificaciones (push "tu pedido está listo")
+
+## 🗂️ Datos reales (2026-10-03)
+- [ ] Cargar **CONSESO** como primera oficina real (Oficinas → Seguros) → [[Fuentes de datos reales]]
+- [ ] Confirmar en persona la oficina **Patiño** y el resto de oficinas halladas
+- [ ] Precios reales de menús, cine y eventos (hoy referenciales / "Entrada libre" puede ser falso) — decidir si mostrar "Precio por confirmar"
+- [ ] Actualizar la agenda del Cinema Lounge y El Club cada semana (`agenda_paseo.json`)
+- [ ] Fotos reales por plato (hoy se reparten fotos del local)
+- [ ] Horarios de las 70 tiendas reales
+- [ ] Revisar 3 WhatsApp con longitud rara (BELU Boutique, Bolivia Fitness, Chotto Matte)
+- [ ] Commit de todo lo de 2026-10-03 (aún sin commit en `integracion-equipo`)
 
 ## ⚙️ Producción
 - [ ] Docker Compose (Django + PostgreSQL + Redis + Caddy) → [[Despliegue VPS]]

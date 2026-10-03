@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -178,6 +179,15 @@ export default function DiversionScreen({ navigation, route }) {
     navigation.navigate("Asistente", { pregunta });
   };
 
+  const verEvento = (e) =>
+    Alert.alert(e.titulo, [
+      `${nombreDia(e.inicio)} · ${hora(e.inicio)}${e.fin ? ` a ${hora(e.fin)}` : ""}`,
+      e.lugar, e.descripcion,
+    ].filter(Boolean).join("\n\n"), [
+      { text: "Cerrar", style: "cancel" },
+      { text: "Preguntar a Jarvis", onPress: () => preguntar(`Cuéntame del evento "${e.titulo}"`) },
+    ]);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
@@ -233,7 +243,7 @@ export default function DiversionScreen({ navigation, route }) {
               const d = new Date(e.inicio);
               return (
                 <TouchableOpacity key={e.id} style={styles.evento}
-                  onPress={() => preguntar(`Cuéntame del evento "${e.titulo}"`)}>
+                  onPress={() => verEvento(e)}>
                   <View style={[styles.fecha, e.destacado && styles.fechaDestacada]}>
                     <Text style={[styles.fechaDia, e.destacado && styles.blanco]}>{d.getDate()}</Text>
                     <Text style={[styles.fechaMes, e.destacado && styles.blanco]}>{MESES[d.getMonth()]}</Text>
@@ -250,6 +260,7 @@ export default function DiversionScreen({ navigation, route }) {
                       {e.gratis ? "Entrada libre" : `Bs ${fmt(e.precio)}`}
                     </Text>
                   </View>
+                  {e.imagen ? <Image source={{ uri: e.imagen }} style={styles.eventoImagen} /> : null}
                 </TouchableOpacity>
               );
             }) : <Text style={styles.vacioTexto}>No hay eventos próximos.</Text>
@@ -310,6 +321,7 @@ const styles = StyleSheet.create({
 
   grilla: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 18 },
   peli: { width: "48%" },
+  eventoImagen: { width: 64, height: 64, borderRadius: 12, alignSelf: "center" },
   poster: { width: "100%", aspectRatio: 2 / 3, borderRadius: 14, alignItems: "center", justifyContent: "center",
     padding: 10, overflow: "hidden" },
   posterGrande: { width: 120 },

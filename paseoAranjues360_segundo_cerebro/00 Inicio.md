@@ -1,6 +1,6 @@
 ---
 tags: [moc, paseo360]
-actualizado: 2026-10-02
+actualizado: 2026-10-03
 ---
 
 # 🏬 Paseo Aranjuez 360 — Segundo cerebro
@@ -20,6 +20,10 @@ Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clien
 - [[Mapa de módulos]] — estado de cada módulo (✅ / ⏳)
 - [[Registro y acceso]] — CI, verificación de correo, doble autenticación, huella
 - [[Empresas]] — alta por el admin, ficha, productos, ofertas, QR/NFC
+- [[Directorio y rubros]] — 70 tiendas reales, tipo → rubro, fichas con fotos
+- [[Comer y pedidos (PaseoYa)]] — menús, pedido desde la app, retiro con código
+- [[Diversión (cartelera y eventos)]] — Cinema Lounge y eventos reales
+- [[Jarvis (asistente IA)]] — recomienda con datos reales y muestra fichas
 - [[Fidelización]] — puntos por **visita** (portería) y por **compra** (caja)
 - [[Monedero y recompensas]] — monedas, progreso, catálogo
 - [[Oficinas e invitaciones]] — QR para invitados (diseño)
@@ -31,6 +35,7 @@ Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clien
 - [[Modelo de datos]] — tablas y relaciones
 - [[Seguridad]] — antifraude y protección de cuentas
 - [[Despliegue VPS]] — PostgreSQL, Docker, HTTPS
+- [[Fuentes de datos reales]] — paseoaranjuez.com, oficinas halladas, precios
 
 ## 🛠️ Guías
 - [[Levantar en VS Code]] — paso a paso

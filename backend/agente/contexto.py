@@ -6,21 +6,22 @@ usuario autenticado, sus puntos, las tiendas, ofertas vigentes y recompensas.
 
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from empresas.models import Empresa, Oferta
+from empresas.models import Empresa, Oferta, Producto
 from entretenimiento.models import Evento, Funcion, ReservaCine
 from fidelizacion.models import Canje, ConfiguracionPuntos, PuntoEscaneo, RangoCompra, Recompensa
 from fidelizacion.services import racha_para
 
 from .voz import EMOCIONES
 
-MAX_TIENDAS = 40
+MAX_TIENDAS = 80
 MAX_OFERTAS = 20
 MAX_RECOMPENSAS = 15
 MAX_FUNCIONES = 40
 MAX_EVENTOS = 10
+MAX_PLATOS = 5  # por establecimiento, para que el prompt no crezca de más
 
 
 def _monedas(valor) -> str:
@@ -47,9 +48,9 @@ def construir_contexto(user) -> dict:
     hoy = timezone.localdate()
     tiendas = (
         Empresa.objects.filter(activo=True)
-        .exclude(tipo=Empresa.Tipo.OFICINA)
         .select_related("categoria")
-        .order_by("nombre")[:MAX_TIENDAS]
+        .prefetch_related(Prefetch("productos", Producto.objects.filter(activo=True), to_attr="menu"))
+        .order_by("tipo", "categoria__nombre", "nombre")[:MAX_TIENDAS]
     )
     ofertas = (
         Oferta.objects.filter(activo=True, empresa__activo=True, inicio__lte=hoy, fin__gte=hoy)
@@ -68,7 +69,19 @@ def construir_contexto(user) -> dict:
         .order_by("inicio")[:MAX_EVENTOS]
     )
 
+    directorio = {}
+    for tienda in tiendas:
+        tipo = tienda.get_tipo_display()
+        rubro = tienda.categoria.nombre if tienda.categoria else "Otros"
+        grupo = directorio.setdefault(tipo, {}).setdefault(rubro, [])
+        platos = "; ".join(f"{p.nombre} Bs {_monedas(p.precio_promocion if p.en_promocion and p.precio_promocion else p.precio)}"
+                           for p in tienda.menu[:MAX_PLATOS])
+        grupo.append(f"{tienda.nombre} ({_ubicacion(tienda)})"
+                     + (f": {tienda.descripcion[:160]}" if tienda.descripcion else "")
+                     + (f" Menú: {platos}." if platos else ""))
+
     return {
+        "directorio": directorio,
         "nombre": user.first_name or user.username,
         "rol": user.get_rol_display(),
         "puntos": _monedas(user.puntos_saldo),
@@ -131,6 +144,16 @@ def _lista(items) -> str:
     return "\n".join(f"- {i}" for i in items) if items else "- (ninguna registrada)"
 
 
+def _directorio(ctx):
+    if "directorio" not in ctx:
+        return _lista(ctx.get("tiendas"))
+    return "\n".join(
+        f"{tipo} > {rubro}:\n{_lista(tiendas)}"
+        for tipo, rubros in ctx["directorio"].items()
+        for rubro, tiendas in rubros.items()
+    ) or "- (ningún establecimiento registrado)"
+
+
 def prompt_sistema(ctx: dict) -> str:
     return f"""Eres Jarvis, el asistente virtual del Paseo Aranjuez, un centro comercial en Bolivia.
 Hablas español neutro, cálido y breve. Tus respuestas también se leen en voz alta:
@@ -144,8 +167,17 @@ No uses corchetes para nada más.
 Usuario: {ctx.get("nombre", "cliente")} (rol: {ctx.get("rol", "cliente")}).
 Saldo: {ctx.get("puntos", 0)} monedas de Paseo. Fecha de hoy: {ctx.get("fecha", "")}.
 
-Tiendas del Paseo:
-{_lista(ctx.get("tiendas"))}
+Directorio del Paseo organizado por tipo de establecimiento y rubro:
+{_directorio(ctx)}
+Para localizar un establecimiento, busca primero su tipo (Negocio, Oficina o
+Emprendimiento) y después su rubro.
+Electrónica incluye tecnología; Ropa incluye moda y calzado; Cosméticos incluye
+belleza y cuidado personal. Otros conserva las especialidades en la descripción.
+No confundas oficinas con negocios de servicios ni inventes establecimientos en rubros vacíos.
+Si el usuario cuenta cómo se siente o tiene un antojo (por ejemplo "estoy triste, ¿qué puedo comer?"),
+acompáñalo con empatía y recomienda uno o dos platos concretos del Menú con su precio, el nombre exacto
+del local y su piso. Los platos también se pueden pedir desde la sección Comer de la app y se recogen
+en el local con un código.
 
 Ofertas vigentes hoy:
 {_lista(ctx.get("ofertas"))}

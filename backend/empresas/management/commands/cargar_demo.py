@@ -4,16 +4,17 @@ Uso: python manage.py cargar_demo
 Todas las cuentas de demo usan la contraseña "Paseo2026!".
 """
 
-from datetime import datetime, time, timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
 from empresas.models import Categoria, Empresa, Horario, Oferta, Producto
 from empresas.services import rol_responsable
-from entretenimiento.models import Evento, Funcion, Pelicula
+from empresas.rubros import rubro_comercial
 from fidelizacion.models import ConfiguracionPuntos, PuntoEscaneo, RangoCompra, Recompensa
 from usuarios.models import Usuario
 
@@ -87,29 +88,10 @@ PUNTOS_ESCANEO = [
     ("Cine Paseo", "ACTIVIDAD", Decimal("15"), "Escanea al entrar a la función."),
 ]
 
-# Cartelera de demostración (títulos ficticios).
-PELICULAS = [
-    ("Guardianes del Illimani", "Aventura", "+7", 112, True,
-     "Tres amigos suben a la montaña para salvar un tesoro andino de unos cazadores furtivos."),
-    ("Galaxia Lejana", "Ciencia ficción", "+13", 125, True,
-     "Una piloto boliviana lidera la primera misión tripulada a una luna habitable."),
-    ("Risas en Cochabamba", "Comedia", "ATP", 95, False,
-     "Una familia intenta organizar la boda perfecta en plena Fiesta de Urkupiña."),
-    ("La Última Función", "Drama", "+13", 98, False,
-     "El dueño de un viejo cine de barrio se niega a cerrar sus puertas."),
-]
-HORARIOS = [(15, 0), (17, 30), (20, 0)]
-
-# Eventos: (título, categoría, días desde hoy, hora, duración h, lugar, precio, destacado, descripción)
-EVENTOS = [
-    ("Noche de música en vivo", "MUSICA", 2, 20, 3, "Terraza, piso 4", None, True,
-     "Bandas locales de rock y folclore fusión bajo las estrellas."),
-    ("Taller de pintura infantil", "INFANTIL", 3, 10, 2, "Piso 2, junto a juegos", 20, False,
-     "Para niños de 5 a 10 años. Materiales incluidos."),
-    ("Feria gastronómica", "GASTRONOMIA", 4, 12, 6, "Planta baja", None, False,
-     "Lo mejor de la comida cochabambina en un solo lugar."),
-    ("Exposición de arte local", "CULTURA", 0, 10, 24 * 7, "Piso 1, hall central", None, False,
-     "Obras de artistas emergentes de Cochabamba. Toda la semana."),
+# Cartelera y eventos ficticios de versiones anteriores: importar_agenda_paseo los retira de la app.
+PELICULAS_FICTICIAS = ["Guardianes del Illimani", "Galaxia Lejana", "Risas en Cochabamba", "La Última Función"]
+EVENTOS_FICTICIOS = [
+    "Noche de música en vivo", "Taller de pintura infantil", "Feria gastronómica", "Exposición de arte local",
 ]
 
 
@@ -137,6 +119,8 @@ class Command(BaseCommand):
         Usuario.objects.filter(username="cliente@paseo.bo", procedencia="").update(procedencia="CERCADO")
 
         for nombre, tipo, categoria, piso, local, productos in EMPRESAS:
+            if tipo != Empresa.Tipo.OFICINA:
+                categoria = rubro_comercial(categoria, nombre)
             cat, _ = Categoria.objects.get_or_create(nombre=categoria)
             slug = nombre.lower().replace(" ", "").replace("é", "e")
             empresa, creada = Empresa.objects.get_or_create(
@@ -200,46 +184,14 @@ class Command(BaseCommand):
             puntos.append(punto)
         self._usuario("caja.cafe@paseo.bo", email="caja.cafe@paseo.bo", rol=Usuario.Rol.CAJERO, empresa=cafe)
 
-        self._diversion()
+        # Cartelera y eventos reales del Paseo (retira los ficticios de versiones anteriores).
+        call_command("importar_agenda_paseo", stdout=self.stdout)
         self._visita_demo()
 
         self.stdout.write(self.style.SUCCESS(f"Datos de demo listos. Contraseña de todas las cuentas: {PASSWORD}"))
         self.stdout.write(f"Código QR/NFC de Café Aranjuez: {cafe.codigo_fidelizacion}")
         for punto in puntos:
             self.stdout.write(f"{punto.nombre} ({punto.monedas} monedas): paseo360://f/{punto.codigo}")
-
-    def _diversion(self):
-        """Cartelera y eventos con fechas relativas a hoy (se regeneran en cada corrida)."""
-        zona = timezone.get_current_timezone()
-        hoy = timezone.localdate()
-
-        def momento(dias, hora, minuto=0):
-            return timezone.make_aware(datetime.combine(hoy + timedelta(days=dias), time(hora, minuto)), zona)
-
-        for i, (titulo, genero, clasif, duracion, estreno, sinopsis) in enumerate(PELICULAS):
-            pelicula, _ = Pelicula.objects.update_or_create(
-                titulo=titulo,
-                defaults=dict(genero=genero, clasificacion=clasif, duracion_min=duracion,
-                              estreno=estreno, sinopsis=sinopsis, activo=True),
-            )
-            pelicula.funciones.filter(inicio__gte=momento(0, 0)).delete()
-            for dia in range(4):
-                for j, (hora, minuto) in enumerate(HORARIOS):
-                    tres_d = estreno and j == 2
-                    Funcion.objects.create(
-                        pelicula=pelicula, inicio=momento(dia, hora, minuto), sala=f"Sala {i + 1}",
-                        formato="3D" if tres_d else "2D", idioma="SUB" if j == 2 else "DOB",
-                        precio=Decimal("45") if tres_d else Decimal("35"),
-                    )
-
-        for titulo, categoria, dias, hora, horas, lugar, precio, destacado, descripcion in EVENTOS:
-            inicio = momento(dias, hora)
-            Evento.objects.update_or_create(
-                titulo=titulo,
-                defaults=dict(categoria=categoria, inicio=inicio, fin=inicio + timedelta(hours=horas),
-                              lugar=lugar, precio=precio, destacado=destacado, descripcion=descripcion,
-                              activo=True),
-            )
 
     def _visita_demo(self):
         """Una solicitud de visita pendiente del cliente demo al estudio legal (para probar la bandeja)."""

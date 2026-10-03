@@ -32,3 +32,5 @@ La app y la web muestran solo empresas **activas**, con horarios, productos acti
 
 ## Archivos clave
 `backend/empresas/` (models, services, views) · `web/src/pages/Empresas.jsx`
+
+Directorio organizado por tipo y rubro, con las 70 tiendas reales → [[Directorio y rubros]] · Menús y pedidos → [[Comer y pedidos (PaseoYa)]]

@@ -17,6 +17,7 @@ from usuarios.permissions import EsAdmin, EsEmpresa
 
 from . import services
 from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
+from .rubros import ALIAS, RUBROS, normalizar
 from .serializers import (
     RegistroEmpresaSerializer,
     AceptarInvitacionSerializer,
@@ -31,6 +32,7 @@ from .serializers import (
     EmpresaPublicaListSerializer,
     HorarioSerializer,
     OfertaSerializer,
+    ProductoPublicoSerializer,
     ProductoSerializer,
 )
 
@@ -206,9 +208,13 @@ class EmpresaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
         if params.get("tipo"):
             qs = qs.filter(tipo__in=[t.strip().upper() for t in params["tipo"].split(",") if t.strip()])
         if params.get("rubro"):
-            qs = qs.filter(categoria__nombre__icontains=params["rubro"])
+            rubro = params["rubro"]
+            qs = qs.filter(Q(categoria__nombre__icontains=rubro)
+                           | Q(categoria__nombre=ALIAS.get(normalizar(rubro), rubro)))
         if params.get("excluir_rubro"):
-            qs = qs.exclude(categoria__nombre__icontains=params["excluir_rubro"])
+            rubro = params["excluir_rubro"]
+            qs = qs.exclude(Q(categoria__nombre__icontains=rubro)
+                            | Q(categoria__nombre=ALIAS.get(normalizar(rubro), rubro)))
         if params.get("piso"):
             qs = qs.filter(piso__iexact=params["piso"])
         if params.get("buscar"):
@@ -216,6 +222,7 @@ class EmpresaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(
                 Q(nombre__icontains=texto) | Q(descripcion__icontains=texto) | Q(lema__icontains=texto)
                 | Q(categoria__nombre__icontains=texto)
+                | Q(categoria__nombre=ALIAS.get(normalizar(texto), texto))
                 | Q(productos__nombre__icontains=texto, productos__activo=True)
             ).distinct()
         return qs
@@ -242,8 +249,40 @@ class OfertaPublicaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         )
 
 
+class ProductoPublicoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Marketplace (PaseoYa): productos activos de negocios activos.
+
+    Filtros: ?rubro=comida · ?empresa=<id> · ?buscar=texto (producto, sección o negocio).
+    """
+
+    serializer_class = ProductoPublicoSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PaginacionDirectorio
+
+    def get_queryset(self):
+        qs = (
+            Producto.objects.filter(activo=True, empresa__activo=True)
+            .select_related("empresa")
+            .order_by("empresa__nombre", "seccion", "nombre")
+        )
+        params = self.request.query_params
+        if params.get("rubro"):
+            rubro = params["rubro"]
+            qs = qs.filter(Q(empresa__categoria__nombre__icontains=rubro)
+                           | Q(empresa__categoria__nombre=ALIAS.get(normalizar(rubro), rubro)))
+        if params.get("empresa"):
+            qs = qs.filter(empresa_id=params["empresa"])
+        if params.get("buscar"):
+            texto = params["buscar"].strip()
+            qs = qs.filter(Q(nombre__icontains=texto) | Q(descripcion__icontains=texto)
+                           | Q(seccion__icontains=texto) | Q(empresa__nombre__icontains=texto))
+        return qs
+
+
 class CategoriaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Categoria.objects.all()
+    queryset = Categoria.objects.filter(
+        Q(nombre__in=RUBROS) | Q(pk__in=Empresa.objects.filter(activo=True).values("categoria_id"))
+    )
     serializer_class = CategoriaSerializer
     permission_classes = [AllowAny]
     pagination_class = None

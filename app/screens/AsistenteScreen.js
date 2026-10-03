@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -96,6 +98,7 @@ export default function AsistenteScreen({ navigation, route }) {
         agregar(mensaje("jarvis", respuesta, {
           voz: conEmocion,
           accion: data.accion ? { ...data.accion, estado: "pendiente" } : null,
+          empresas: data.empresas || [],
         }));
         // Solo responde en voz alta si le hablaste (nota de voz o modo voz), no al escribir.
         if (data.transcripcion) hablar(conEmocion);
@@ -247,7 +250,8 @@ export default function AsistenteScreen({ navigation, route }) {
           onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)}
-              onConfirmar={confirmar} onCancelar={cancelar} />
+              onConfirmar={confirmar} onCancelar={cancelar}
+              onAbrirEmpresa={(id) => navigation.navigate("Empresa", { id })} />
           )}
           ListFooterComponent={pensando ? (
             <View style={[styles.burbuja, styles.jarvis, styles.pensando]}>
@@ -314,7 +318,7 @@ export default function AsistenteScreen({ navigation, route }) {
   );
 }
 
-function Burbuja({ item, onEscuchar, onConfirmar, onCancelar }) {
+function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa }) {
   if (item.rol === "error") {
     return (
       <View style={styles.error}>
@@ -340,6 +344,26 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar }) {
         </View>
       ) : null}
       {item.accion ? <TarjetaAccion accion={item.accion} onConfirmar={onConfirmar} onCancelar={onCancelar} /> : null}
+      {item.empresas?.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
+          {item.empresas.map((e) => (
+            <TouchableOpacity key={e.id} style={styles.ficha} onPress={() => onAbrirEmpresa(e.id)}
+              accessibilityLabel={`Ver ${e.nombre}`}>
+              {e.logo ? <Image source={{ uri: e.logo }} style={styles.fichaLogo} /> : (
+                <View style={[styles.fichaLogo, styles.fichaLogoVacio]}>
+                  <Text style={styles.fichaLetra}>{e.nombre.slice(0, 2).toUpperCase()}</Text>
+                </View>
+              )}
+              <View style={styles.fichaTexto}>
+                <Text style={styles.fichaNombre} numberOfLines={1}>{e.nombre}</Text>
+                <Text style={styles.textoMuted} numberOfLines={1}>
+                  {e.piso ? (e.piso === "PB" ? "Planta baja" : `Piso ${e.piso}`) : e.categoria_nombre || "Ver ficha"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : null}
       {!esUsuario ? (
         <TouchableOpacity onPress={onEscuchar} style={styles.escuchar} accessibilityLabel="Escuchar respuesta">
           <Ionicons name="play-circle-outline" size={16} color={COLORS.muted} />
@@ -352,6 +376,14 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
+  fichas: { gap: 8, paddingTop: 10 },
+  ficha: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.white, borderRadius: 12,
+    padding: 8, borderWidth: 1, borderColor: "#E2E8F0", maxWidth: 210 },
+  fichaLogo: { width: 40, height: 40, borderRadius: 10 },
+  fichaLogoVacio: { backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
+  fichaLetra: { color: COLORS.white, fontWeight: "800" },
+  fichaTexto: { flexShrink: 1 },
+  fichaNombre: { fontSize: 14, fontWeight: "700", color: COLORS.text },
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10,
     backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },

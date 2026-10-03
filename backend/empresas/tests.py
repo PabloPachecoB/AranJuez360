@@ -288,3 +288,18 @@ class DirectorioPublicoTests(APITestCase):
         self.assertEqual([r["nombre"] for r in ficha["recompensas"]], ["Capuchino"])
         self.assertNotIn("valor_bs", ficha["recompensas"][0])
         self.assertIsNone(self.client.get(f"/api/v1/empresas/{self.ropa.id}/").data["abierto_ahora"])
+
+
+class MarketplaceTests(APITestCase):
+    def test_catalogo_publico_filtra_por_rubro_y_trae_datos_del_local(self):
+        comida = Categoria.objects.create(nombre="Comida")
+        pizzas = Empresa.objects.create(nombre="Almacén de Pizzas", categoria=comida, piso="3", email_contacto="a@a.com")
+        ropa = Empresa.objects.create(nombre="Moda", email_contacto="m@m.com")
+        Producto.objects.create(empresa=pizzas, nombre="Pizza personal", precio=38, seccion="Pizzas")
+        Producto.objects.create(empresa=pizzas, nombre="Vieja", precio=10, activo=False)
+        Producto.objects.create(empresa=ropa, nombre="Camisa", precio=180)
+
+        data = self.client.get("/api/v1/productos/?rubro=comida").data["results"]
+        self.assertEqual([p["nombre"] for p in data], ["Pizza personal"])
+        self.assertEqual((data[0]["empresa_nombre"], data[0]["piso"]), ("Almacén de Pizzas", "3"))
+        self.assertEqual(len(self.client.get("/api/v1/productos/?buscar=camisa").data["results"]), 1)

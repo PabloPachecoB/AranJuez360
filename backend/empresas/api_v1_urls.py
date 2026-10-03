@@ -16,6 +16,7 @@ router.register(r"mi-empresa/fotos", views.MisFotosViewSet, basename="mis-fotos"
 router.register(r"empresas", views.EmpresaPublicaViewSet, basename="empresas")
 router.register(r"categorias", views.CategoriaPublicaViewSet, basename="categorias")
 router.register(r"ofertas", views.OfertaPublicaViewSet, basename="ofertas")
+router.register(r"productos", views.ProductoPublicoViewSet, basename="productos")
 
 mi_empresa = views.MiEmpresaViewSet
 

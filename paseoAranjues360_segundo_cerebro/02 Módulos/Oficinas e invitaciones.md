@@ -27,3 +27,6 @@ Invitados por día y por oficina · invitaciones generadas vs. usadas · horas d
 - ¿Aviso a la oficina cuando llega su invitado?
 
 Ver [[Pendientes]].
+
+## Oficinas reales encontradas (2026-10-03)
+CONSESO (seguros, Torre II piso 6) elegida como primera ficha real; otras 6 halladas en internet y "Patiño" sin confirmar → [[Fuentes de datos reales]]

@@ -5,6 +5,7 @@ cliente móvil/web, y SQLite en local (USE_LOCAL_DB=True) o Postgres por
 DATABASE_URL en producción.
 """
 
+import mimetypes
 from pathlib import Path
 
 import environ
@@ -122,6 +123,8 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "mediafiles"
+# Windows no siempre registra .webp (los logos de paseoaranjuez.com): sin esto se sirven como octet-stream.
+mimetypes.add_type("image/webp", ".webp")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

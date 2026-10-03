@@ -1,6 +1,6 @@
 ---
 tags: [modulos, estado]
-actualizado: 2026-10-02
+actualizado: 2026-10-03
 ---
 
 # Mapa de módulos
@@ -33,6 +33,7 @@ actualizado: 2026-10-02
 | Validar canjes | ⏳ |
 | Mis cajeros | ⏳ |
 | Invitaciones QR (oficinas) | ⏳ |
+| Pedidos PaseoYa (avanzar, cancelar, validar retiro) | ✅ `web/src/empleado/pages/PedidosPage.tsx` |
 
 ## 📱 App — cliente
 | Módulo | Estado |
@@ -43,8 +44,11 @@ actualizado: 2026-10-02
 | Sumar compra (escanear QR/NFC de caja) | 🟡 |
 | Historial de puntos | 🟡 |
 | Recompensas y canje | 🟡 catálogo · ⏳ canje |
-| Directorio de tiendas y ofertas | 🟡 |
-| Asistente IA | ⏳ |
+| Directorio de tiendas y ofertas (lista, por piso, ficha con galería) | ✅ [[Directorio y rubros]] |
+| Comer: menús, carrito, pedido con código, mis pedidos | ✅ [[Comer y pedidos (PaseoYa)]] |
+| Diversión: cartelera y eventos reales | ✅ [[Diversión (cartelera y eventos)]] |
+| Asistente IA (Jarvis) con datos reales y fichas | ✅ [[Jarvis (asistente IA)]] |
+| Notificaciones push (pedido listo) | ⏳ |
 
 ## 📱 App — portero
 | Módulo | Estado |
