@@ -8,6 +8,10 @@ export interface Usuario {
   first_name: string;
   last_name: string;
   email: string;
+  celular?: string;
+  ci?: string | null;
+  nit?: string;
+  fecha_nacimiento?: string | null;
   rol: Rol;
   empresa: number | null;
   empresa_nombre: string | null;
@@ -48,6 +52,26 @@ export interface RegistroNegocioInput {
   telefono?: string;
   password: string;
   password_confirmacion: string;
+}
+
+export interface RegistroClienteInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  celular: string;
+  ci: string;
+  fecha_nacimiento?: string;
+  password: string;
+  password_confirmacion: string;
+  acepta_terminos: true;
+}
+
+export function registrarCliente(datos: RegistroClienteInput) {
+  return api<LoginResponse>("/auth/registro/", {
+    method: "POST",
+    body: datos,
+    auth: false,
+  });
 }
 
 // Autorregistro de negocio/emprendimiento: misma respuesta que /auth/login/

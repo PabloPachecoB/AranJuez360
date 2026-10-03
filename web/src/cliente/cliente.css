@@ -1,0 +1,21 @@
+@keyframes cliente-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-cliente-in {
+  animation: cliente-reveal 360ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-cliente-in {
+    animation: none;
+  }
+}

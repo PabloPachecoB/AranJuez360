@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { iniciarLogin, registrarNegocio, verificarCodigo, type TipoEmpresa } from "../api/auth";
+import { iniciarLogin, registrarCliente, registrarNegocio, verificarCodigo, type TipoEmpresa } from "../api/auth";
 import { listarCategorias, type CategoriaApi } from "../api/categorias";
 import { ApiError } from "../api/client";
 import { useAuth } from "./AuthContext";
@@ -8,7 +8,7 @@ const inputClase =
   "h-12 px-4 bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all";
 const labelClase = "flex flex-col gap-1.5 font-label-md text-label-md text-on-surface font-semibold";
 
-type Paso = "credenciales" | "registro" | "codigo";
+type Paso = "credenciales" | "registro" | "registroCliente" | "codigo";
 
 export function LoginPage() {
   const { setUsuario } = useAuth();
@@ -26,6 +26,13 @@ export function LoginPage() {
   const [telefono, setTelefono] = useState("");
   const [passwordReg, setPasswordReg] = useState("");
   const [passwordConfirmacion, setPasswordConfirmacion] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
+  const [apellidoCliente, setApellidoCliente] = useState("");
+  const [celularCliente, setCelularCliente] = useState("");
+  const [ciCliente, setCiCliente] = useState("");
+  const [cumpleCliente, setCumpleCliente] = useState("");
+  const [passwordCliente, setPasswordCliente] = useState("");
+  const [confirmacionCliente, setConfirmacionCliente] = useState("");
 
   // Código (compartido por login y registro)
   const [emailPendiente, setEmailPendiente] = useState("");
@@ -87,6 +94,32 @@ export function LoginPage() {
     }
   }
 
+  async function enviarRegistroCliente(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setCargando(true);
+    try {
+      const resp = await registrarCliente({
+        first_name: nombreCliente,
+        last_name: apellidoCliente,
+        email,
+        celular: celularCliente,
+        ci: ciCliente,
+        ...(cumpleCliente ? { fecha_nacimiento: cumpleCliente } : {}),
+        password: passwordCliente,
+        password_confirmacion: confirmacionCliente,
+        acepta_terminos: true,
+      });
+      setDesafio(resp.desafio);
+      setEmailPendiente(resp.email);
+      setPaso("codigo");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo crear la cuenta de cliente.");
+    } finally {
+      setCargando(false);
+    }
+  }
+
   async function enviarCodigo(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -103,11 +136,11 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-space-md py-space-lg">
-      <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-lg p-space-lg flex flex-col gap-space-md">
+      <div className="w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto bg-surface-container-lowest rounded-2xl shadow-lg p-space-lg flex flex-col gap-space-md">
         <div className="flex flex-col items-center gap-1 mb-space-sm">
           <span className="material-symbols-outlined text-primary text-[32px]">storefront</span>
           <h1 className="font-headline-lg text-headline-lg text-primary">PaseoYa</h1>
-          <p className="font-body-sm text-body-sm text-on-surface-variant">Portal Locatarios</p>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">Clientes y establecimientos</p>
         </div>
 
         {paso === "credenciales" && (
@@ -142,15 +175,11 @@ export function LoginPage() {
             >
               {cargando ? "Enviando..." : "Continuar"}
             </button>
-            <button
-              type="button"
-              className="font-label-md text-label-md text-on-surface-variant hover:underline text-center"
-              onClick={() => {
-                setError(null);
-                setPaso("registro");
-              }}
-            >
-              ¿Nuevo en Paseo Aranjuez? Crea tu cuenta
+            <button type="button" className="min-h-11 border border-secondary px-4 font-label-md text-label-md font-bold text-secondary hover:bg-[#edf5ee]" onClick={() => { setError(null); setPaso("registroCliente"); }}>
+              Crear cuenta de cliente
+            </button>
+            <button type="button" className="font-label-md text-label-md text-on-surface-variant hover:underline" onClick={() => { setError(null); setPaso("registro"); }}>
+              Registrar un negocio
             </button>
           </form>
         )}
@@ -294,6 +323,28 @@ export function LoginPage() {
             >
               Ya tengo cuenta — volver
             </button>
+          </form>
+        )}
+
+        {paso === "registroCliente" && (
+          <form onSubmit={enviarRegistroCliente} className="flex flex-col gap-space-md">
+            <div><h2 className="font-headline-md text-headline-md">Crea tu cuenta</h2><p className="mt-1 font-body-sm text-body-sm text-on-surface-variant">Regístrate en PaseoYa y empieza a sumar puntos.</p></div>
+            <div className="grid gap-space-sm sm:grid-cols-2">
+              <label className={labelClase}>Nombre<input required maxLength={60} className={inputClase} value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} autoComplete="given-name" /></label>
+              <label className={labelClase}>Apellido<input required maxLength={60} className={inputClase} value={apellidoCliente} onChange={(e) => setApellidoCliente(e.target.value)} autoComplete="family-name" /></label>
+            </div>
+            <label className={labelClase}>Correo<input type="email" required className={inputClase} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
+            <div className="grid gap-space-sm sm:grid-cols-2">
+              <label className={labelClase}>Celular boliviano<input type="tel" required pattern="(\\+591)?[67][0-9]{7}" title="8 dígitos, empieza con 6 o 7" className={inputClase} value={celularCliente} onChange={(e) => setCelularCliente(e.target.value)} placeholder="71234567" autoComplete="tel" /></label>
+              <label className={labelClase}>Carnet de identidad<input required pattern="[0-9]{5,10}(-[0-9A-Za-z]{1,2})?" title="5 a 10 dígitos; complemento opcional" className={inputClase} value={ciCliente} onChange={(e) => setCiCliente(e.target.value)} /></label>
+            </div>
+            <label className={labelClase}>Fecha de cumpleaños <span className="font-normal text-on-surface-variant">(opcional)</span><input type="date" className={inputClase} value={cumpleCliente} onChange={(e) => setCumpleCliente(e.target.value)} /></label>
+            <label className={labelClase}>Contraseña<input type="password" required minLength={8} className={inputClase} value={passwordCliente} onChange={(e) => setPasswordCliente(e.target.value)} autoComplete="new-password" /></label>
+            <label className={labelClase}>Repetir contraseña<input type="password" required minLength={8} className={inputClase} value={confirmacionCliente} onChange={(e) => setConfirmacionCliente(e.target.value)} autoComplete="new-password" /></label>
+            <label className="flex items-start gap-3 font-body-sm text-body-sm text-on-surface-variant"><input type="checkbox" required className="mt-0.5 h-4 w-4 accent-[#006c4c]" /><span>Acepto los términos y condiciones de PaseoYa.</span></label>
+            {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
+            <button type="submit" disabled={cargando} className="h-12 bg-primary font-headline-sm text-headline-sm text-on-primary disabled:opacity-60">{cargando ? "Creando cuenta…" : "Crear cuenta de cliente"}</button>
+            <button type="button" className="font-label-md text-label-md text-on-surface-variant hover:underline" onClick={() => { setError(null); setPaso("credenciales"); }}>Ya tengo cuenta — volver</button>
           </form>
         )}
 
