@@ -1,8 +1,10 @@
 import Paseo360 from "../Paseo360";
 import { Estado, useApi } from "../ui";
+import Caja from "./Caja";
 import { Fotos, Ofertas } from "./Catalogo";
 import Horarios from "./Horarios";
 import MiFicha from "./MiFicha";
+import MiQR from "./MiQR";
 
 /**
  * Pantallas de Paseo 360 dentro del panel del negocio (PaseoYa): lo que ese panel no
@@ -44,4 +46,12 @@ export function FichaNegocio() {
       )}
     </ConEmpresa>
   );
+}
+
+export function CajaNegocio() {
+  return <Paseo360><Caja /></Paseo360>;
+}
+
+export function QRNegocio() {
+  return <Paseo360><MiQR /></Paseo360>;
 }

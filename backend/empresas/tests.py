@@ -106,7 +106,7 @@ class PanelEmpresaTests(APITestCase):
     def test_codigo_qr_nfc(self):
         resp = self.client.get("/api/v1/mi-empresa/codigo/")
         self.assertEqual(resp.data["codigo"], self.empresa.codigo_fidelizacion)
-        self.assertTrue(resp.data["enlace"].endswith(f"/puntos/{self.empresa.codigo_fidelizacion}"))
+        self.assertEqual(resp.data["enlace"], f"paseo360://f/{self.empresa.codigo_fidelizacion}")
 
         nuevo = self.client.post("/api/v1/mi-empresa/codigo/regenerar/").data["codigo"]
         self.assertNotEqual(nuevo, resp.data["codigo"])

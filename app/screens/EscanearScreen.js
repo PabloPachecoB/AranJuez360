@@ -24,7 +24,8 @@ const ORO = "#F5B301";
 // El QR/NFC puede traer solo el código o un enlace "paseo360://f/<código>" (o https://…/f/<código>).
 export function extraerCodigo(texto) {
   const limpio = (texto || "").trim();
-  const enlace = limpio.match(/\/f\/([A-Za-z0-9_-]{6,32})/);
+  // /f/<código> (formato actual) o /puntos/<código> (QR de caja impresos antes del cambio).
+  const enlace = limpio.match(/\/(?:f|puntos)\/([A-Za-z0-9_-]{6,32})/);
   if (enlace) return enlace[1];
   return /^[A-Za-z0-9_-]{6,32}$/.test(limpio) ? limpio : null;
 }

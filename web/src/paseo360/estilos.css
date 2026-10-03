@@ -186,3 +186,26 @@
 
 
 .p360 { background: var(--page); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; min-height: 100vh; }
+
+/* Mi QR de caja */
+.p360 .qr-caja { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.p360 .qr-cartel { text-align: center; padding: 28px 20px; }
+.p360 .qr-cartel canvas { margin: 14px auto 8px; display: block; }
+.p360 .qr-marca { color: #b7791f; font-weight: 800; letter-spacing: 1px; font-size: 12px; }
+.p360 .qr-cartel h2 { font-size: 24px; margin: 6px 0 2px; }
+.p360 .qr-instruccion { color: var(--ink-2); margin: 0; }
+.p360 .qr-codigo { font-weight: 800; letter-spacing: 4px; font-size: 18px; color: var(--brand); }
+.p360 .qr-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.p360 hr { border: 0; border-top: 1px solid var(--grid); margin: 16px 0; }
+@media (max-width: 760px) { .p360 .qr-caja { grid-template-columns: 1fr; } }
+
+/* Panel del cajero */
+.p360 .cajero-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px;
+  background: var(--surface); border-bottom: 1px solid var(--border); }
+
+/* Al imprimir el QR de caja solo sale el cartel. */
+@media print {
+  body * { visibility: hidden !important; }
+  .qr-cartel, .qr-cartel * { visibility: visible !important; }
+  .qr-cartel { position: absolute; inset: 0 auto auto 0; width: 100%; border: 0 !important; }
+}

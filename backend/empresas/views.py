@@ -125,7 +125,8 @@ class MiEmpresaViewSet(viewsets.GenericViewSet):
     def _codigo_response(empresa):
         return Response({
             "codigo": empresa.codigo_fidelizacion,
-            "enlace": f"{settings.APP_DEEP_LINK}/puntos/{empresa.codigo_fidelizacion}",
+            # Mismo formato que los NFC/QR del Paseo: el escáner de la app lee paseo360://f/<código>.
+            "enlace": f"{settings.APP_DEEP_LINK.rstrip('/')}//f/{empresa.codigo_fidelizacion}",
         })
 
     @action(detail=False, methods=["get"])

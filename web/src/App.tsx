@@ -15,7 +15,8 @@ import Paseo360 from "./paseo360/Paseo360";
 import Sitio from "./paseo360/empresa/Sitio";
 import EmpresaApp from "./paseo360/empresa/EmpresaApp";
 import Activar from "./paseo360/pages/Activar";
-import { FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio } from "./paseo360/empresa/ParaNegocio";
+import CajeroApp from "./paseo360/empresa/CajeroApp";
+import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio } from "./paseo360/empresa/ParaNegocio";
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -34,6 +35,8 @@ function PanelAutenticado() {
                 <Route path="/pedidos" element={<PedidosPage />} />
                 <Route path="/negocio" element={<NegocioPage />} />
                 {/* Paseo 360: lo que se ve en la app del Paseo y en la página pública del negocio */}
+                <Route path="/caja" element={<CajaNegocio />} />
+                <Route path="/mi-qr" element={<QRNegocio />} />
                 <Route path="/horarios" element={<HorariosNegocio />} />
                 <Route path="/ofertas" element={<OfertasNegocio />} />
                 <Route path="/fotos" element={<FotosNegocio />} />
@@ -72,6 +75,8 @@ function Contenido() {
   if (usuario.rol === "NEGOCIO") return <PanelAutenticado />;
   // Oficinas: ficha, horario de atención, servicios, fotos y visitas (Paseo 360).
   if (usuario.rol === "OFICINA") return <Paseo360><EmpresaApp /></Paseo360>;
+  // Cajeros: aprueban o rechazan las compras que los clientes registran con el QR de caja.
+  if (usuario.rol === "CAJERO") return <CajeroApp />;
   if (usuario.rol === "CLIENTE") return <ClienteApp />;
 
   return (
