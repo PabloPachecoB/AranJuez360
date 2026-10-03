@@ -78,15 +78,15 @@ export function ProductosPage() {
     setModalAbierto(true);
   }
 
-  async function guardarProducto(datos: ProductoInput) {
+  async function guardarProducto(datos: ProductoInput, foto: File | null) {
     setGuardando(true);
     setErrorModal(null);
     try {
       if (productoEnEdicion) {
-        const actualizado = await actualizarProducto(productoEnEdicion.id, datos);
+        const actualizado = await actualizarProducto(productoEnEdicion.id, datos, foto);
         setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)));
       } else {
-        const creado = await crearProducto(datos);
+        const creado = await crearProducto(datos, foto);
         setProductos((prev) => [...prev, creado]);
       }
       setModalAbierto(false);
@@ -206,6 +206,7 @@ export function ProductosPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+                <th className="py-3.5 pl-6 pr-3 w-16 text-center">Foto</th>
                 <th className="py-3.5 px-4">Producto y Detalle</th>
                 <th className="py-3.5 px-4">Precio</th>
                 <th className="py-3.5 px-4">Existencias</th>
@@ -217,7 +218,7 @@ export function ProductosPage() {
             <tbody className="divide-y divide-surface-container">
               {cargando && (
                 <tr>
-                  <td colSpan={6} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
+                  <td colSpan={7} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
                     Cargando productos...
                   </td>
                 </tr>
@@ -228,6 +229,21 @@ export function ProductosPage() {
                   const sinStock = producto.stock === 0;
                   return (
                     <tr key={producto.id} className="hover:bg-surface-container-low/60 transition-colors group">
+                      <td className="py-3.5 pl-6 pr-3 text-center">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-high shadow-inner mx-auto">
+                          {producto.foto ? (
+                            <img
+                              src={producto.foto}
+                              alt={producto.nombre}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-on-surface-variant">
+                              <span className="material-symbols-outlined text-[20px]">image</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col min-w-0">
                           <span className="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">
@@ -312,7 +328,7 @@ export function ProductosPage() {
                 })}
               {!cargando && productosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
+                  <td colSpan={7} className="py-space-lg text-center text-on-surface-variant font-body-md text-body-md">
                     No se encontraron productos.
                   </td>
                 </tr>

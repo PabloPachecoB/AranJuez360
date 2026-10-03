@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useRef, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { usePedidos } from "../context/PedidosContext";
 import { useNegocio } from "../context/NegocioContext";
 import { ApiError } from "../api/client";
@@ -9,12 +9,19 @@ const inputClase =
   "w-full h-12 px-4 bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all";
 const labelClase = "font-label-md text-label-md text-on-surface font-semibold";
 
+const FORMATOS_ACEPTADOS = ["image/jpeg", "image/png", "image/webp"];
+const TAMANO_MAXIMO_MB = 5;
+
 export function NegocioPage() {
   const { pedidos } = usePedidos();
   const { negocio, cargando, guardar } = useNegocio();
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [errorLogo, setErrorLogo] = useState<string | null>(null);
+  const inputLogoRef = useRef<HTMLInputElement>(null);
 
   const resumenVentas = useMemo(() => {
     const entregados = pedidos.filter((p) => p.estado === "ENTREGADO");
@@ -54,13 +61,30 @@ export function NegocioPage() {
     setError(null);
     setGuardado(false);
     try {
-      await guardar(datos);
+      await guardar(datos, logo);
       setGuardado(true);
+      setLogo(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo guardar.");
     } finally {
       setGuardando(false);
     }
+  }
+
+  function seleccionarLogo(e: ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    if (!FORMATOS_ACEPTADOS.includes(archivo.type)) {
+      setErrorLogo("Formato no soportado. Usa JPG, PNG o WEBP.");
+      return;
+    }
+    if (archivo.size > TAMANO_MAXIMO_MB * 1024 * 1024) {
+      setErrorLogo(`El logo supera ${TAMANO_MAXIMO_MB}MB.`);
+      return;
+    }
+    setErrorLogo(null);
+    setLogo(archivo);
+    setLogoPreview(URL.createObjectURL(archivo));
   }
 
   async function alternarActivo(activo: boolean) {
@@ -174,6 +198,41 @@ export function NegocioPage() {
                 </p>
               </div>
               <span className="material-symbols-outlined text-primary text-[24px]">edit_document</span>
+            </div>
+
+            <div className="flex items-center gap-space-md">
+              <button
+                type="button"
+                onClick={() => inputLogoRef.current?.click()}
+                className="w-16 h-16 rounded-xl bg-surface-container-low overflow-hidden flex items-center justify-center shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                title="Cambiar logo"
+              >
+                {logoPreview || negocio.logo ? (
+                  <img src={logoPreview ?? negocio.logo ?? undefined} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-surface-variant text-[24px]">storefront</span>
+                )}
+              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => inputLogoRef.current?.click()}
+                  className="font-label-md text-label-md text-primary font-bold hover:underline text-left w-fit"
+                >
+                  {negocio.logo || logoPreview ? "Cambiar logo" : "Subir logo"}
+                </button>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">
+                  JPG, PNG o WEBP, máx. {TAMANO_MAXIMO_MB}MB
+                </span>
+                {errorLogo && <span className="font-body-sm text-body-sm text-error">{errorLogo}</span>}
+                <input
+                  ref={inputLogoRef}
+                  type="file"
+                  accept={FORMATOS_ACEPTADOS.join(",")}
+                  hidden
+                  onChange={seleccionarLogo}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
@@ -291,8 +350,12 @@ export function NegocioPage() {
             </div>
             <div className="p-space-md flex flex-col gap-space-sm">
               <div className="flex items-center gap-space-sm">
-                <div className="w-14 h-14 rounded-xl bg-primary-fixed text-on-primary-fixed-variant flex items-center justify-center font-headline-md text-headline-md shadow-sm">
-                  {negocio.nombre.charAt(0)}
+                <div className="w-14 h-14 rounded-xl bg-primary-fixed text-on-primary-fixed-variant flex items-center justify-center font-headline-md text-headline-md shadow-sm overflow-hidden shrink-0">
+                  {logoPreview || negocio.logo ? (
+                    <img src={logoPreview ?? negocio.logo ?? undefined} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    negocio.nombre.charAt(0)
+                  )}
                 </div>
                 <div className="flex flex-col">
                   <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">{negocio.nombre}</h4>

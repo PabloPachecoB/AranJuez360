@@ -5,7 +5,7 @@ import { useAuth } from "./AuthContext";
 interface NegocioContextValue {
   negocio: NegocioApi | null;
   cargando: boolean;
-  guardar: (datos: NegocioInput) => Promise<void>;
+  guardar: (datos: NegocioInput, logo?: File | null) => Promise<void>;
 }
 
 const NegocioContext = createContext<NegocioContextValue | null>(null);
@@ -26,8 +26,8 @@ export function NegocioProvider({ children }: { children: ReactNode }) {
       .finally(() => setCargando(false));
   }, [usuario]);
 
-  async function guardar(datos: NegocioInput) {
-    const actualizado = await actualizarMiEmpresa(datos);
+  async function guardar(datos: NegocioInput, logo?: File | null) {
+    const actualizado = await actualizarMiEmpresa(datos, logo);
     setNegocio(actualizado);
   }
 

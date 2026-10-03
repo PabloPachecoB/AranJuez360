@@ -1,14 +1,17 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import type { ProductoApi, ProductoInput } from "../api/productos";
 import { Switch } from "./Switch";
 
 interface Props {
   productoExistente: ProductoApi | null;
-  onGuardar: (datos: ProductoInput) => void;
+  onGuardar: (datos: ProductoInput, foto: File | null) => void;
   onCerrar: () => void;
   guardando: boolean;
   error: string | null;
 }
+
+const FORMATOS_ACEPTADOS = ["image/jpeg", "image/png", "image/webp"];
+const TAMANO_MAXIMO_MB = 5;
 
 const vacio: ProductoInput = {
   nombre: "",
@@ -39,6 +42,11 @@ const labelClase = "font-label-md text-label-md text-on-surface font-semibold";
 
 export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guardando, error }: Props) {
   const [datos, setDatos] = useState<ProductoInput>(aInput(productoExistente));
+  const [foto, setFoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(productoExistente?.foto ?? null);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+  const [arrastrando, setArrastrando] = useState(false);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
 
   const descuentoPct =
     datos.en_promocion && datos.precio > 0 && datos.precio_promocion != null && datos.precio_promocion < datos.precio
@@ -49,12 +57,48 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
     setDatos((prev) => ({ ...prev, [campo]: valor }));
   }
 
+  function procesarArchivo(archivo: File | undefined) {
+    if (!archivo) return;
+    if (!FORMATOS_ACEPTADOS.includes(archivo.type)) {
+      setErrorFoto("Formato no soportado. Usa JPG, PNG o WEBP.");
+      return;
+    }
+    if (archivo.size > TAMANO_MAXIMO_MB * 1024 * 1024) {
+      setErrorFoto(`La foto supera ${TAMANO_MAXIMO_MB}MB.`);
+      return;
+    }
+    setErrorFoto(null);
+    setFoto(archivo);
+    // Solo para la vista previa en este formulario — lo que se sube de
+    // verdad al guardar es el archivo (multipart), no esta URL temporal.
+    setPreviewUrl(URL.createObjectURL(archivo));
+  }
+
+  function quitarFoto() {
+    setFoto(null);
+    setPreviewUrl(null);
+    setErrorFoto(null);
+  }
+
+  function onSoltar(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setArrastrando(false);
+    procesarArchivo(e.dataTransfer.files[0]);
+  }
+
+  function onSeleccionarArchivo(e: ChangeEvent<HTMLInputElement>) {
+    procesarArchivo(e.target.files?.[0]);
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    onGuardar({
-      ...datos,
-      precio_promocion: datos.en_promocion ? datos.precio_promocion : null,
-    });
+    onGuardar(
+      {
+        ...datos,
+        precio_promocion: datos.en_promocion ? datos.precio_promocion : null,
+      },
+      foto
+    );
   }
 
   return (
@@ -89,6 +133,61 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
         </div>
 
         <div className="overflow-y-auto px-space-lg py-space-md flex flex-col gap-space-lg text-on-surface">
+          <div className="p-space-md bg-surface-container-low rounded-xl">
+            <div className="flex items-center gap-space-xs mb-space-sm">
+              <span className="material-symbols-outlined text-primary text-[20px]">photo_camera</span>
+              <span className="font-headline-sm text-headline-sm font-bold text-on-surface">
+                Foto del producto
+              </span>
+            </div>
+            {previewUrl ? (
+              <div className="flex items-center gap-space-md bg-surface-container-lowest p-space-sm rounded-xl">
+                <img
+                  src={previewUrl}
+                  alt="Vista previa"
+                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="font-label-md text-label-md text-on-surface truncate">
+                    {foto ? foto.name : "Foto actual"}
+                  </span>
+                  <button type="button" className="font-label-sm text-label-sm text-error font-bold text-left hover:underline" onClick={quitarFoto}>
+                    Quitar foto
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className={`flex flex-col items-center justify-center gap-1 p-space-lg rounded-xl border-2 border-dashed cursor-pointer text-center transition-colors ${
+                  arrastrando ? "border-primary bg-primary-fixed/30" : "border-outline-variant bg-surface-container-lowest hover:bg-surface-container"
+                }`}
+                onClick={() => inputArchivoRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setArrastrando(true);
+                }}
+                onDragLeave={() => setArrastrando(false)}
+                onDrop={onSoltar}
+              >
+                <span className="material-symbols-outlined text-primary text-[28px]">cloud_upload</span>
+                <span className="font-label-md text-label-md font-semibold text-on-surface">
+                  Arrastra una foto aquí o haz clic para subir
+                </span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">
+                  JPG, PNG o WEBP, máx. {TAMANO_MAXIMO_MB}MB
+                </span>
+                <input
+                  ref={inputArchivoRef}
+                  type="file"
+                  accept={FORMATOS_ACEPTADOS.join(",")}
+                  hidden
+                  onChange={onSeleccionarArchivo}
+                />
+              </div>
+            )}
+            {errorFoto && <p className="font-body-sm text-body-sm text-error mt-2">{errorFoto}</p>}
+          </div>
+
           <div className="flex flex-col gap-space-md">
             <div className="flex flex-col gap-1.5">
               <label className={labelClase}>
