@@ -8,7 +8,7 @@ src/
   main.tsx                # Entrada
   api/                    # Cliente HTTP, autenticación y servicios compartidos
   auth/                   # Login y sesión compartida
-  admin/                  # Área de administración
+  admin/                  # Administración (TypeScript + Tailwind)
   empleado/               # Panel de negocio: páginas, componentes, contextos y API
   cliente/                # Área del usuario cliente
 ```

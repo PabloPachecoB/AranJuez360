@@ -10,8 +10,7 @@ import { PedidosProvider } from "./empleado/context/PedidosContext";
 import { NegocioProvider } from "./empleado/context/NegocioContext";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ClienteApp } from "./cliente/ClienteApp";
-// @ts-expect-error Admin screens are existing JSX modules.
-import AdminApp from "./admin/AdminApp.jsx";
+import AdminApp from "./admin/AdminApp";
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
