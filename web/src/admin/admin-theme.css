@@ -1,0 +1,187 @@
+/*
+ * Admin tokens mapped from the "Paseo Aranjuez Visitor App" design system
+ * in Stitch. Keep the admin prefix here; aliases below are scoped to
+ * .admin-shell so the employee panel keeps using the shared theme unchanged.
+ */
+@theme static {
+  --color-admin-primary: #00324b;
+  --color-admin-on-primary: #ffffff;
+  --color-admin-primary-container: #1b4965;
+  --color-admin-on-primary-container: #8eb8d8;
+  --color-admin-inverse-primary: #a1cced;
+  --color-admin-primary-fixed: #c9e6ff;
+  --color-admin-primary-fixed-dim: #a1cced;
+  --color-admin-on-primary-fixed: #001e2f;
+  --color-admin-on-primary-fixed-variant: #1d4b67;
+  --color-admin-secondary: #1c6586;
+  --color-admin-on-secondary: #ffffff;
+  --color-admin-secondary-container: #9bdaff;
+  --color-admin-on-secondary-container: #136081;
+  --color-admin-secondary-fixed: #c4e7ff;
+  --color-admin-secondary-fixed-dim: #8fcef4;
+  --color-admin-on-secondary-fixed: #001e2c;
+  --color-admin-on-secondary-fixed-variant: #004c69;
+  --color-admin-tertiary: #3e2c00;
+  --color-admin-on-tertiary: #ffffff;
+  --color-admin-tertiary-container: #5a4100;
+  --color-admin-on-tertiary-container: #e0aa26;
+  --color-admin-tertiary-fixed: #ffdea0;
+  --color-admin-tertiary-fixed-dim: #f6be3b;
+  --color-admin-on-tertiary-fixed: #261900;
+  --color-admin-on-tertiary-fixed-variant: #5c4300;
+  --color-admin-error: #ba1a1a;
+  --color-admin-on-error: #ffffff;
+  --color-admin-error-container: #ffdad6;
+  --color-admin-on-error-container: #93000a;
+  --color-admin-background: #f7f9ff;
+  --color-admin-on-background: #181c20;
+  --color-admin-surface: #f7f9ff;
+  --color-admin-surface-dim: #d7dadf;
+  --color-admin-surface-bright: #f7f9ff;
+  --color-admin-surface-tint: #386380;
+  --color-admin-surface-variant: #e0e3e8;
+  --color-admin-on-surface: #181c20;
+  --color-admin-on-surface-variant: #41474d;
+  --color-admin-inverse-surface: #2d3135;
+  --color-admin-inverse-on-surface: #eef1f6;
+  --color-admin-surface-container-lowest: #ffffff;
+  --color-admin-surface-container-low: #f1f4f9;
+  --color-admin-surface-container: #ebeef3;
+  --color-admin-surface-container-high: #e5e8ee;
+  --color-admin-surface-container-highest: #e0e3e8;
+  --color-admin-outline: #72787e;
+  --color-admin-outline-variant: #c1c7ce;
+  --color-admin-sidebar-bg: #212529;
+  --color-admin-sidebar-fg: #fcfaf6;
+  --color-admin-sidebar-muted: #b5b8ba;
+  --color-admin-sidebar-active: #1b4965;
+  --color-admin-sidebar-accent: #daa520;
+  --color-admin-sidebar-divider: #45494d;
+  --font-admin-display: "Manrope", sans-serif;
+  --font-admin-body: "Inter", sans-serif;
+  --spacing-admin-xs: 0.25rem;
+  --spacing-admin-sm: 0.5rem;
+  --spacing-admin-md: 1rem;
+  --spacing-admin-lg: 1.5rem;
+  --spacing-admin-xl: 2rem;
+  --spacing-admin-gutter: 1rem;
+  --spacing-admin-margin: 1.25rem;
+  --radius-admin-control: 0.5rem;
+  --radius-admin-card: 1rem;
+}
+
+.admin-shell {
+  color-scheme: light;
+  font-family: var(--font-admin-body);
+
+  /* Existing admin utility classes resolve through these scoped aliases. */
+  --color-primary: var(--color-admin-primary);
+  --color-on-primary: var(--color-admin-on-primary);
+  --color-primary-container: var(--color-admin-primary-container);
+  --color-on-primary-container: var(--color-admin-on-primary-container);
+  --color-secondary: var(--color-admin-secondary);
+  --color-on-secondary: var(--color-admin-on-secondary);
+  --color-secondary-container: var(--color-admin-secondary-container);
+  --color-on-secondary-container: var(--color-admin-on-secondary-container);
+  --color-tertiary: var(--color-admin-tertiary);
+  --color-on-tertiary: var(--color-admin-on-tertiary);
+  --color-tertiary-container: var(--color-admin-tertiary-container);
+  --color-on-tertiary-container: var(--color-admin-on-tertiary-container);
+  --color-error: var(--color-admin-error);
+  --color-on-error: var(--color-admin-on-error);
+  --color-error-container: var(--color-admin-error-container);
+  --color-on-error-container: var(--color-admin-on-error-container);
+  --color-background: var(--color-admin-background);
+  --color-on-background: var(--color-admin-on-background);
+  --color-surface: var(--color-admin-surface);
+  --color-surface-dim: var(--color-admin-surface-dim);
+  --color-surface-bright: var(--color-admin-surface-bright);
+  --color-surface-tint: var(--color-admin-surface-tint);
+  --color-surface-variant: var(--color-admin-surface-variant);
+  --color-on-surface: var(--color-admin-on-surface);
+  --color-on-surface-variant: var(--color-admin-on-surface-variant);
+  --color-inverse-surface: var(--color-admin-inverse-surface);
+  --color-inverse-on-surface: var(--color-admin-inverse-on-surface);
+  --color-surface-container-lowest: var(--color-admin-surface-container-lowest);
+  --color-surface-container-low: var(--color-admin-surface-container-low);
+  --color-surface-container: var(--color-admin-surface-container);
+  --color-surface-container-high: var(--color-admin-surface-container-high);
+  --color-surface-container-highest: var(--color-admin-surface-container-highest);
+  --color-outline: var(--color-admin-outline);
+  --color-outline-variant: var(--color-admin-outline-variant);
+
+  --font-display: var(--font-admin-display);
+  --font-headline-lg: var(--font-admin-display);
+  --font-headline-md: var(--font-admin-display);
+  --font-headline-sm: var(--font-admin-display);
+  --font-price-display: var(--font-admin-display);
+  --font-price-sm: var(--font-admin-display);
+  --font-body-lg: var(--font-admin-body);
+  --font-body-md: var(--font-admin-body);
+  --font-body-sm: var(--font-admin-body);
+  --font-label-sm: var(--font-admin-body);
+  --font-label-md: var(--font-admin-body);
+  --font-badge-code: var(--font-admin-body);
+
+  --text-display: 34px;
+  --text-display--line-height: 42px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+  --text-headline-lg: 26px;
+  --text-headline-lg--line-height: 34px;
+  --text-headline-lg--letter-spacing: -0.015em;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 21px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--letter-spacing: -0.01em;
+  --text-headline-md--font-weight: 600;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 24px;
+  --text-headline-sm--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 16px;
+  --text-body-sm--font-weight: 400;
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 18px;
+  --text-label-lg--letter-spacing: 0.01em;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 500;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.04em;
+  --text-label-sm--font-weight: 600;
+
+  /* Stitch uses 8px controls and 16px cards. */
+  --radius-lg: 0.5rem;
+  --radius-xl: 1rem;
+}
+
+.admin-shell :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.admin-shell :where(button:not(:disabled)) {
+  cursor: pointer;
+}
+
+.admin-shell :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-admin-secondary);
+  outline-offset: 2px;
+}
+
+.admin-shell tbody tr:hover {
+  background-color: var(--color-admin-surface-container-low);
+}
+
+.admin-shell tbody tr:last-child td {
+  border-bottom: 0;
+}
