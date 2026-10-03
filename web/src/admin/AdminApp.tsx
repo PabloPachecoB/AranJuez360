@@ -5,6 +5,7 @@ import { SidebarProvider } from "./components/SidebarContext";
 import ClienteHistorial from "./pages/ClienteHistorial";
 import Dashboard from "./pages/Dashboard";
 import Empresas from "./pages/Empresas";
+import MapaEspacios from "./pages/MapaInteractivoPage";
 import Usuarios from "./pages/Usuarios";
 import Paseo360 from "../paseo360/Paseo360";
 import Diversion from "../paseo360/pages/Diversion";
@@ -34,6 +35,7 @@ export default function AdminApp() {
         <Route index element={<Dashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="empresas" element={<Empresas />} />
+        <Route path="mapa-espacios" element={<MapaEspacios />} />
         <Route path="invitaciones" element={<Paseo360><Invitaciones /></Paseo360>} />
         <Route path="monedas" element={<Paseo360><Monedas /></Paseo360>} />
         <Route path="diversion" element={<Paseo360><Diversion /></Paseo360>} />

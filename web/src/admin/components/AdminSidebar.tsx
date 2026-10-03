@@ -21,7 +21,7 @@ const GRUPOS: GrupoNavegacion[] = [
     opciones: [
       { label: "Establecimientos", icono: "storefront", to: "/empresas" },
       { label: "Invitaciones", icono: "forward_to_inbox", to: "/invitaciones" },
-      { label: "Mapa y espacios", icono: "map" },
+      { label: "Mapa y espacios", icono: "map", to: "/mapa-espacios" },
       { label: "Categorías", icono: "category" },
     ],
   },
