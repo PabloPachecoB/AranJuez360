@@ -242,3 +242,49 @@ class AutorregistroNegocioTests(APITestCase):
         usuario = Usuario.objects.get(username="ana@saltenas.com")
         self.assertEqual(usuario.rol, "NEGOCIO")
         self.assertEqual(usuario.empresa.tipo, "EMPRENDIMIENTO")
+
+
+class DirectorioPublicoTests(APITestCase):
+    """Directorio de la app: negocios y emprendimientos con su ficha completa."""
+
+    def setUp(self):
+        from datetime import time
+
+        from fidelizacion.models import Recompensa
+
+        from .models import Horario, Oferta
+
+        comida = Categoria.objects.create(nombre="Comida")
+        moda = Categoria.objects.create(nombre="Moda")
+        self.cafe = Empresa.objects.create(nombre="Café X", categoria=comida, piso="1", email_contacto="c@x.com")
+        self.ropa = Empresa.objects.create(nombre="Moda Y", categoria=moda, piso="2", email_contacto="m@y.com")
+        self.empre = Empresa.objects.create(nombre="Dulces Z", tipo="EMPRENDIMIENTO", categoria=comida,
+                                            email_contacto="d@z.com")
+        Empresa.objects.create(nombre="Oficina", tipo="OFICINA", email_contacto="o@o.com")
+        Empresa.objects.create(nombre="Cerrada", activo=False, email_contacto="x@x.com")
+        Producto.objects.create(empresa=self.ropa, nombre="Camisa de lino", precio=180, seccion="Camisas")
+        hoy = timezone.localdate()
+        Oferta.objects.create(empresa=self.cafe, titulo="2x1", inicio=hoy, fin=hoy)
+        for dia in range(7):
+            Horario.objects.create(empresa=self.cafe, dia=dia, abre=time(0, 0), cierra=time(23, 59))
+        Recompensa.objects.create(nombre="Capuchino", costo_puntos=760, valor_bs=22, empresa=self.cafe)
+
+    def _nombres(self, query=""):
+        data = self.client.get(f"/api/v1/empresas/?page_size=200{query}").data
+        return [e["nombre"] for e in data["results"]]
+
+    def test_filtros(self):
+        self.assertEqual(self._nombres("&tipo=NEGOCIO,EMPRENDIMIENTO"), ["Café X", "Dulces Z", "Moda Y"])
+        self.assertEqual(self._nombres("&rubro=comida"), ["Café X", "Dulces Z"])
+        self.assertEqual(self._nombres("&tipo=NEGOCIO&excluir_rubro=comida"), ["Moda Y"])
+        self.assertEqual(self._nombres("&piso=2"), ["Moda Y"])
+        self.assertEqual(self._nombres("&buscar=lino"), ["Moda Y"])  # busca también en productos
+
+    def test_ficha_completa(self):
+        lista = self.client.get("/api/v1/empresas/?tipo=NEGOCIO&rubro=comida").data["results"][0]
+        self.assertEqual(lista["ofertas_vigentes"], 1)
+        self.assertTrue(lista["abierto_ahora"])
+        ficha = self.client.get(f"/api/v1/empresas/{self.cafe.id}/").data
+        self.assertEqual([r["nombre"] for r in ficha["recompensas"]], ["Capuchino"])
+        self.assertNotIn("valor_bs", ficha["recompensas"][0])
+        self.assertIsNone(self.client.get(f"/api/v1/empresas/{self.ropa.id}/").data["abierto_ahora"])

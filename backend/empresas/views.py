@@ -1,9 +1,11 @@
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -170,20 +172,52 @@ class MisOfertasViewSet(_DeMiEmpresaViewSet):
 
 # --- Público (app y web) --------------------------------------------------------
 
+class PaginacionDirectorio(PageNumberPagination):
+    """La app pide el directorio completo de una vez (?page_size=200)."""
+
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 300
+
+
 class EmpresaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
-    """Directorio del Paseo: solo empresas activas."""
+    """Directorio del Paseo: solo empresas activas.
+
+    Filtros: ?tipo=NEGOCIO,EMPRENDIMIENTO · ?categoria=<id> · ?rubro=comida (nombre de categoría)
+    · ?excluir_rubro=comida · ?piso=2 · ?buscar=texto (nombre, descripción, categoría o productos).
+    """
 
     permission_classes = [AllowAny]
+    pagination_class = PaginacionDirectorio
 
     def get_queryset(self):
-        qs = Empresa.objects.filter(activo=True).select_related("categoria")
+        hoy = timezone.localdate()
+        vigentes = Q(ofertas__activo=True, ofertas__inicio__lte=hoy, ofertas__fin__gte=hoy)
+        qs = (
+            Empresa.objects.filter(activo=True)
+            .select_related("categoria")
+            .prefetch_related("horarios")
+            .annotate(ofertas_vigentes=Count("ofertas", filter=vigentes, distinct=True))
+            .order_by("nombre")
+        )
         params = self.request.query_params
         if params.get("categoria"):
             qs = qs.filter(categoria_id=params["categoria"])
         if params.get("tipo"):
-            qs = qs.filter(tipo=params["tipo"])
+            qs = qs.filter(tipo__in=[t.strip().upper() for t in params["tipo"].split(",") if t.strip()])
+        if params.get("rubro"):
+            qs = qs.filter(categoria__nombre__icontains=params["rubro"])
+        if params.get("excluir_rubro"):
+            qs = qs.exclude(categoria__nombre__icontains=params["excluir_rubro"])
+        if params.get("piso"):
+            qs = qs.filter(piso__iexact=params["piso"])
         if params.get("buscar"):
-            qs = qs.filter(nombre__icontains=params["buscar"])
+            texto = params["buscar"].strip()
+            qs = qs.filter(
+                Q(nombre__icontains=texto) | Q(descripcion__icontains=texto) | Q(lema__icontains=texto)
+                | Q(categoria__nombre__icontains=texto)
+                | Q(productos__nombre__icontains=texto, productos__activo=True)
+            ).distinct()
         return qs
 
     def get_serializer_class(self):

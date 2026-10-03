@@ -191,12 +191,32 @@ class OfertaPublicaSerializer(OfertaSerializer):
         read_only_fields = fields
 
 
+def abierto_ahora(empresa) -> bool | None:
+    """Si está atendiendo ahora según sus horarios (None si no cargó horarios)."""
+    horarios = list(empresa.horarios.all())
+    if not horarios:
+        return None
+    ahora = timezone.localtime()
+    hoy = next((h for h in horarios if h.dia == ahora.weekday()), None)
+    if hoy is None or hoy.cerrado or not hoy.abre or not hoy.cierra:
+        return False
+    return hoy.abre <= ahora.time() < hoy.cierra
+
+
 class EmpresaPublicaListSerializer(serializers.ModelSerializer):
     categoria_nombre = serializers.CharField(source="categoria.nombre", read_only=True, default=None)
+    abierto_ahora = serializers.SerializerMethodField()
+    ofertas_vigentes = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Empresa
-        fields = ["id", "nombre", "tipo", "categoria", "categoria_nombre", "piso", "local", "logo"]
+        fields = [
+            "id", "nombre", "tipo", "categoria", "categoria_nombre", "piso", "local", "logo",
+            "lema", "portada", "abierto_ahora", "ofertas_vigentes",
+        ]
+
+    def get_abierto_ahora(self, obj):
+        return abierto_ahora(obj)
 
 
 class EmpresaPublicaDetalleSerializer(EmpresaPublicaListSerializer):
@@ -204,15 +224,23 @@ class EmpresaPublicaDetalleSerializer(EmpresaPublicaListSerializer):
     productos = serializers.SerializerMethodField()
     ofertas = serializers.SerializerMethodField()
     fotos = serializers.SerializerMethodField()
+    recompensas = serializers.SerializerMethodField()
 
     class Meta(EmpresaPublicaListSerializer.Meta):
         fields = EmpresaPublicaListSerializer.Meta.fields + [
             "descripcion", "referencia", "telefono", "horarios", "productos", "ofertas",
-            "lema", "portada", "whatsapp", "facebook", "instagram", "sitio_web", "fotos",
+            "whatsapp", "facebook", "instagram", "sitio_web", "fotos", "recompensas",
         ]
 
     def get_fotos(self, obj):
         return FotoEmpresaSerializer(obj.fotos.all(), many=True, context=self.context).data
+
+    def get_recompensas(self, obj):
+        """Premios que se canjean con monedas en este negocio (sin el valor en Bs)."""
+        from fidelizacion.serializers import RecompensaClienteSerializer
+
+        qs = obj.recompensas.filter(activo=True)
+        return RecompensaClienteSerializer(qs, many=True, context=self.context).data
 
     def get_productos(self, obj):
         qs = obj.productos.filter(activo=True)
