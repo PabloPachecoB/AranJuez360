@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { pedidosIniciales } from "../mockData";
+import { usePersistentState } from "../hooks/usePersistentState";
 import type { Pedido } from "../types";
 
 interface PedidosContextValue {
@@ -10,7 +11,7 @@ interface PedidosContextValue {
 const PedidosContext = createContext<PedidosContextValue | null>(null);
 
 export function PedidosProvider({ children }: { children: ReactNode }) {
-  const [pedidos, setPedidos] = useState<Pedido[]>(pedidosIniciales);
+  const [pedidos, setPedidos] = usePersistentState<Pedido[]>("paseoya_pedidos", pedidosIniciales);
   return (
     <PedidosContext.Provider value={{ pedidos, setPedidos }}>{children}</PedidosContext.Provider>
   );
