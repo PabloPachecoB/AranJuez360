@@ -2,8 +2,11 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from . import views
+from . import recompensas_api
 
 router = DefaultRouter()
+router.register(r"recompensas", recompensas_api.RecompensasViewSet, basename="recompensas")
+router.register(r"cupones", recompensas_api.CuponesViewSet, basename="cupones")
 # App del cliente
 router.register(r"puntos/solicitudes", views.MisSolicitudesViewSet, basename="mis-solicitudes")
 router.register(r"puntos/movimientos", views.MisMovimientosViewSet, basename="mis-movimientos")
@@ -16,6 +19,8 @@ router.register(r"admin/solicitudes", views.SolicitudesAdminViewSet, basename="a
 router.register(r"admin/visitas", views.VisitasAdminViewSet, basename="admin-visitas")
 
 urlpatterns = [
+    path("cupones/consultar/", recompensas_api.consultar, name="consultar-cupon"),
+    path("cupones/validar/", recompensas_api.validar, name="validar-cupon"),
     path("puntos/mi-qr/", views.mi_qr, name="puntos-mi-qr"),
     path("puntos/empresa/<str:codigo>/", views.empresa_escaneada, name="puntos-empresa"),
     path("admin/configuracion-puntos/", views.configuracion_puntos, name="admin-configuracion-puntos"),

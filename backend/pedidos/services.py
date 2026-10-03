@@ -118,6 +118,8 @@ def validar_retiro(empresa: Empresa, codigo_retiro: str) -> Pedido:
     )
     if pedido is None:
         raise ReglaNegocioError("No se encontró ningún pedido con ese código en tu negocio.")
+    if pedido.estado == Pedido.Estado.ENTREGADO:
+        return pedido  # Reintento tras perder la respuesta; no genera otro abono.
     if pedido.estado != Pedido.Estado.LISTO_PARA_RECOGER:
         raise ReglaNegocioError(
             f"El pedido {pedido.codigo_retiro} está '{pedido.get_estado_display()}', "
@@ -126,4 +128,6 @@ def validar_retiro(empresa: Empresa, codigo_retiro: str) -> Pedido:
     pedido.estado = Pedido.Estado.ENTREGADO
     pedido.entregado_en = timezone.now()
     pedido.save(update_fields=["estado", "entregado_en"])
+    from fidelizacion.canjes import acreditar_pedido
+    acreditar_pedido(pedido)
     return pedido

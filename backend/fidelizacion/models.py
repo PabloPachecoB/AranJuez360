@@ -1,4 +1,5 @@
 from decimal import Decimal
+import secrets
 
 from django.conf import settings
 from django.db import models
@@ -109,6 +110,10 @@ class MovimientoPuntos(models.Model):
     visita = models.OneToOneField(
         Visita, on_delete=models.SET_NULL, null=True, blank=True, related_name="movimiento"
     )
+    pedido = models.OneToOneField(
+        "pedidos.Pedido", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="movimiento_puntos",
+    )
     puntos = models.IntegerField(help_text="Positivo si gana, negativo si canjea.")
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     descripcion = models.CharField(max_length=200, blank=True)
@@ -119,3 +124,53 @@ class MovimientoPuntos(models.Model):
 
     def __str__(self):
         return f"{self.cliente} {self.puntos:+d} ({self.tipo})"
+
+
+class Recompensa(models.Model):
+    nombre = models.CharField(max_length=120)
+    descripcion = models.TextField(help_text="Beneficio exacto y condiciones de entrega.")
+    costo_puntos = models.PositiveIntegerField()
+    negocio = models.ForeignKey("empresas.Empresa", on_delete=models.PROTECT,
+                                null=True, blank=True, related_name="recompensas")
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["costo_puntos", "id"]
+        constraints = [models.CheckConstraint(check=models.Q(costo_puntos__gt=0),
+                                              name="recompensa_costo_positivo")]
+
+
+def nuevo_codigo_cupon():
+    return secrets.token_hex(12).upper()
+
+
+class Cupon(models.Model):
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        USADO = "usado", "Usado"
+        VENCIDO = "vencido", "Vencido"
+
+    cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                related_name="cupones")
+    recompensa = models.ForeignKey(Recompensa, on_delete=models.PROTECT, related_name="cupones")
+    codigo = models.CharField(max_length=24, unique=True, default=nuevo_codigo_cupon, editable=False)
+    # Copia de las condiciones al emitir: editar la recompensa no cambia lo ya adquirido.
+    nombre = models.CharField(max_length=120)
+    descripcion = models.TextField()
+    costo_puntos = models.PositiveIntegerField()
+    negocio = models.ForeignKey("empresas.Empresa", on_delete=models.PROTECT,
+                                null=True, blank=True, related_name="cupones")
+    movimiento = models.OneToOneField(MovimientoPuntos, on_delete=models.PROTECT,
+                                      related_name="cupon")
+    clave_operacion = models.UUIDField()
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ACTIVO)
+    usado_en = models.DateTimeField(null=True, blank=True)
+    validado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                     null=True, blank=True, related_name="cupones_validados")
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-creado_en", "-id"]
+        constraints = [models.UniqueConstraint(fields=["cliente", "clave_operacion"],
+                                               name="cupon_operacion_unica")]

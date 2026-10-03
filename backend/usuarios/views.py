@@ -60,8 +60,7 @@ def registro(request):
 @permission_classes([AllowAny])
 @throttle_classes([ScopedRateThrottle])
 def login(request):
-    """Paso 1: correo + contraseña. Si son correctos, envía un código al correo
-    (doble autenticación). No revela si el correo existe."""
+    """Acceso directo con correo y contraseña. No revela si el correo existe."""
     entrada = LoginSerializer(data=request.data)
     entrada.is_valid(raise_exception=True)
     user = authenticate(
@@ -71,11 +70,14 @@ def login(request):
     )
     if user is None:
         raise ValidationError({"detail": "Correo o contraseña incorrectos."})
-    if user.email_verificado:
-        codigo = verificacion.emitir_codigo(user, CodigoVerificacion.Proposito.LOGIN)
-        return Response(_paso_codigo(codigo, "codigo_login"))
-    codigo = verificacion.emitir_codigo(user, CodigoVerificacion.Proposito.VERIFICAR_EMAIL)
-    return Response(_paso_codigo(codigo, "verificar_correo"))
+    refresh = RefreshToken.for_user(user)
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    return Response({
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "usuario": UsuarioSerializer(user).data,
+    })
 
 
 @api_view(["POST"])

@@ -1,9 +1,9 @@
 import { api, ApiError } from "./apiClient";
 import { setTokens } from "./tokenStorage";
 
-// Flujo de acceso (todas las respuestas de paso 1 traen { paso, desafio, email }):
+// Registro verifica correo; login devuelve una sesión directamente.
 //   registro()  -> paso "verificar_correo"
-//   login()     -> paso "codigo_login" (o "verificar_correo" si el correo no está verificado)
+//   login()     -> guarda tokens y devuelve el usuario
 //   verificarCodigo(desafio, codigo) -> guarda tokens y devuelve el usuario
 
 async function post(url, body) {
@@ -19,8 +19,10 @@ export function registro(formulario) {
   return post("/auth/registro/", formulario);
 }
 
-export function login(email, password) {
-  return post("/auth/login/", { email: email.trim().toLowerCase(), password });
+export async function login(email, password) {
+  const data = await post("/auth/login/", { email: email.trim().toLowerCase(), password });
+  await setTokens({ access: data.access, refresh: data.refresh });
+  return data.usuario;
 }
 
 export async function verificarCodigo(desafio, codigo) {

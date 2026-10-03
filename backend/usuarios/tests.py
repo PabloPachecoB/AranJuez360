@@ -86,7 +86,7 @@ class RegistroTests(APITestCase):
         self.assertEqual(Usuario.objects.get().celular, "71234567")
 
 
-class LoginDosPasosTests(APITestCase):
+class LoginYVerificacionTests(APITestCase):
     def setUp(self):
         cache.clear()
         self.user = Usuario.objects.create_user(
@@ -102,13 +102,24 @@ class LoginDosPasosTests(APITestCase):
     def _verificar(self, desafio, codigo):
         return self.client.post("/api/v1/auth/verificar-codigo/", {"desafio": desafio, "codigo": codigo}, format="json")
 
-    def test_login_pide_codigo_y_luego_entrega_tokens(self):
+    def _desafio_registro(self):
+        from .verificacion import emitir_codigo
+        return str(emitir_codigo(self.user, CodigoVerificacion.Proposito.VERIFICAR_EMAIL).desafio)
+
+    def test_login_directo_sin_correo(self):
         resp = self._login()
-        self.assertEqual(resp.data["paso"], "codigo_login")
-        self.assertNotIn("access", resp.data)
-        resp = self._verificar(resp.data["desafio"], _codigo_del_correo())
         self.assertEqual(resp.status_code, 200)
         self.assertIn("refresh", resp.data)
+        self.assertNotIn("desafio", resp.data)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(CodigoVerificacion.objects.count(), 0)
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer " + resp.data["access"])
+        self.assertEqual(self.client.get("/api/v1/auth/yo/").status_code, 200)
+
+    def test_cuenta_inactiva_no_entra(self):
+        self.user.is_active = False
+        self.user.save()
+        self.assertEqual(self._login().status_code, 400)
 
     def test_password_incorrecta(self):
         resp = self._login(password="mal")
@@ -116,13 +127,13 @@ class LoginDosPasosTests(APITestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_codigo_no_se_reutiliza(self):
-        desafio = self._login().data["desafio"]
+        desafio = self._desafio_registro()
         codigo = _codigo_del_correo()
         self._verificar(desafio, codigo)
         self.assertEqual(self._verificar(desafio, codigo).status_code, 400)
 
     def test_intentos_limitados(self):
-        desafio = self._login().data["desafio"]
+        desafio = self._desafio_registro()
         codigo = _codigo_del_correo()
         malo = "000000" if codigo != "000000" else "111111"
         for _ in range(5):
@@ -131,12 +142,12 @@ class LoginDosPasosTests(APITestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_codigo_vencido(self):
-        desafio = self._login().data["desafio"]
+        desafio = self._desafio_registro()
         CodigoVerificacion.objects.update(expira_en=timezone.now() - timedelta(seconds=1))
         self.assertIn("venció", self._verificar(desafio, _codigo_del_correo()).data["detail"])
 
     def test_reenviar_respeta_espera_e_invalida_anterior(self):
-        desafio = self._login().data["desafio"]
+        desafio = self._desafio_registro()
         self.assertEqual(
             self.client.post("/api/v1/auth/reenviar-codigo/", {"desafio": desafio}, format="json").status_code, 400
         )
@@ -146,11 +157,14 @@ class LoginDosPasosTests(APITestCase):
         self.assertEqual(self._verificar(desafio, viejo).status_code, 400)
         self.assertEqual(self._verificar(nuevo["desafio"], _codigo_del_correo()).status_code, 200)
 
-    def test_cuenta_sin_verificar_recibe_verificacion_de_correo(self):
+    def test_login_sin_codigo_no_marca_correo_como_verificado(self):
         self.user.email_verificado = False
         self.user.save()
-        self.assertEqual(self._login().data["paso"], "verificar_correo")
+        self.assertIn("access", self._login().data)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.email_verificado)
+        self.assertEqual(len(mail.outbox), 0)
 
-    def test_login_antiguo_sin_doble_factor_no_existe(self):
+    def test_ruta_antigua_de_tokens_no_existe(self):
         resp = self.client.post("/auth/token/", {"username": "ana@correo.com", "password": "PaseoSeguro9"})
         self.assertEqual(resp.status_code, 404)

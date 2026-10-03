@@ -5,8 +5,10 @@ import FormField from "../components/FormField";
 import PrimaryButton from "../components/PrimaryButton";
 import { COLORS } from "../constants/colors";
 import { login } from "../services/authService";
+import { useUserContext } from "../context/UserContext";
 
 export default function LoginScreen({ navigation }) {
+  const { iniciarSesion } = useUserContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -20,8 +22,8 @@ export default function LoginScreen({ navigation }) {
     setError(null);
     setLoading(true);
     try {
-      const paso = await login(email, password);
-      navigation.navigate("VerificarCodigo", paso);
+      const usuario = await login(email, password);
+      iniciarSesion(usuario);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -56,8 +58,7 @@ export default function LoginScreen({ navigation }) {
           />
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <PrimaryButton title="Continuar" onPress={onSubmit} loading={loading} />
-          <Text style={styles.nota}>Te enviaremos un código a tu correo para confirmar que eres tú.</Text>
+          <PrimaryButton title="Entrar" onPress={onSubmit} loading={loading} />
 
           <TouchableOpacity style={styles.link} onPress={() => navigation.navigate("Registro")}>
             <Text style={styles.linkText}>

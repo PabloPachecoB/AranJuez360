@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Empresas from "./pages/Empresas";
 import Login from "./pages/Login";
 import Usuarios from "./pages/Usuarios";
+import Points from "./pages/Points";
 
 function Layout() {
   const { user, salir } = useAuth();
@@ -17,6 +18,7 @@ function Layout() {
           <NavLink to="/" end>Inicio</NavLink>
           <NavLink to="/usuarios">Usuarios</NavLink>
           <NavLink to="/empresas">Empresas</NavLink>
+          <NavLink to="/points">Paseo Points</NavLink>
         </nav>
         <div className="user">
           {user.first_name || user.email}
@@ -50,6 +52,7 @@ export default function App() {
   const { user, cargando } = useAuth();
   if (cargando) return <div className="empty">Cargando…</div>;
   if (!user) return <Login />;
+  if (["CLIENTE", "NEGOCIO", "CAJERO"].includes(user.rol)) return <Points />;
   if (user.rol !== "ADMIN") return <SoloAdmin />;
 
   return (
@@ -58,6 +61,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="empresas" element={<Empresas />} />
+        <Route path="points" element={<Points />} />
         <Route path="clientes/:id" element={<ClienteHistorial />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

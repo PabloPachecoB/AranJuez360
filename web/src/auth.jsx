@@ -24,16 +24,15 @@ export function AuthProvider({ children }) {
       .finally(() => setCargando(false));
   }, [salir]);
 
-  /** Paso 2 del login: valida el código y guarda la sesión. */
-  const verificar = useCallback(async (desafio, codigo) => {
-    const data = await api("/auth/verificar-codigo/", { method: "POST", body: { desafio, codigo } });
+  const iniciarSesion = useCallback(async (email, password) => {
+    const data = await api("/auth/login/", { method: "POST", body: { email, password } });
     tokens.set(data);
     setUser(data.usuario);
     return data.usuario;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, cargando, verificar, salir }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, cargando, iniciarSesion, salir }}>{children}</AuthContext.Provider>
   );
 }
 

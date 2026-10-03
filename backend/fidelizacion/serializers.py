@@ -50,6 +50,7 @@ class MovimientoSerializer(serializers.ModelSerializer):
 
 
 class ConfiguracionPuntosSerializer(serializers.ModelSerializer):
+    puntos_por_boliviano = serializers.DecimalField(max_digits=6, decimal_places=2, min_value=0)
     class Meta:
         model = ConfiguracionPuntos
         fields = [
