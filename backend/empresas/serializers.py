@@ -169,6 +169,22 @@ class EmpresaPublicaListSerializer(serializers.ModelSerializer):
         fields = ["id", "nombre", "tipo", "categoria", "categoria_nombre", "piso", "local", "logo"]
 
 
+class ProductoPublicoSerializer(serializers.ModelSerializer):
+    """Para el buscador global de PaseoYa: el producto con los datos del
+    negocio ya embebidos, para no tener que pedirlos aparte."""
+
+    empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True)
+    empresa_piso = serializers.CharField(source="empresa.piso", read_only=True)
+    empresa_local = serializers.CharField(source="empresa.local", read_only=True)
+
+    class Meta:
+        model = Producto
+        fields = [
+            "id", "nombre", "descripcion", "precio", "foto", "en_promocion", "precio_promocion",
+            "empresa", "empresa_nombre", "empresa_piso", "empresa_local",
+        ]
+
+
 class EmpresaPublicaDetalleSerializer(EmpresaPublicaListSerializer):
     horarios = HorarioSerializer(many=True, read_only=True)
     productos = serializers.SerializerMethodField()

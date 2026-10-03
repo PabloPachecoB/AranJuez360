@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 import { useUserContext } from "../context/UserContext";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const { user, cerrarSesion, recargarPerfil } = useUserContext();
   const [refrescando, setRefrescando] = useState(false);
   const nombre = user?.first_name || user?.username || "cliente";
@@ -32,9 +33,26 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        <TouchableOpacity style={styles.paseoYaCard} onPress={() => navigation.navigate("Directorio")}>
+          <View style={styles.paseoYaIcono}>
+            <Ionicons name="storefront" size={22} color={COLORS.white} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.paseoYaTitulo}>Explorar PaseoYa</Text>
+            <Text style={styles.paseoYaSub}>Compra en el Paseo, recoge en persona</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.muted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.pedidosCard} onPress={() => navigation.navigate("MisPedidos")}>
+          <Ionicons name="receipt-outline" size={20} color={COLORS.text} />
+          <Text style={styles.pedidosTexto}>Mis pedidos</Text>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.muted} style={{ marginLeft: "auto" }} />
+        </TouchableOpacity>
+
         <Text style={styles.todo}>
           Pantallas por construir: Mi QR, Escanear negocio, Historial de
-          movimientos, Directorio de empresas, Asistente.
+          movimientos, Asistente.
         </Text>
 
         <TouchableOpacity style={styles.logout} onPress={cerrarSesion}>
@@ -58,6 +76,35 @@ const styles = StyleSheet.create({
   cardLabel: { color: COLORS.secondary, fontSize: 14, fontWeight: "600" },
   points: { color: COLORS.white, fontSize: 48, fontWeight: "800", marginVertical: 8 },
   cardHint: { color: "#CBD5E1", fontSize: 13 },
+  paseoYaCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  paseoYaIcono: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paseoYaTitulo: { fontWeight: "700", color: COLORS.text, fontSize: 15 },
+  paseoYaSub: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
+  pedidosCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  pedidosTexto: { fontWeight: "600", color: COLORS.text, fontSize: 14 },
   todo: { color: COLORS.muted, fontSize: 13, lineHeight: 20 },
   logout: {
     marginTop: "auto",

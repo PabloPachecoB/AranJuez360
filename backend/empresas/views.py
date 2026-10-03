@@ -22,6 +22,7 @@ from .serializers import (
     EmpresaPublicaListSerializer,
     HorarioSerializer,
     OfertaSerializer,
+    ProductoPublicoSerializer,
     ProductoSerializer,
     RegistroEmpresaSerializer,
 )
@@ -218,3 +219,20 @@ class CategoriaPublicaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CategoriaSerializer
     permission_classes = [AllowAny]
     pagination_class = None
+
+
+class ProductoPublicoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Buscador global de PaseoYa (Reto 3, sección 5.11): un producto puede
+    buscarse sin importar a qué negocio pertenece."""
+
+    serializer_class = ProductoPublicoSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        qs = Producto.objects.filter(activo=True, empresa__activo=True).select_related("empresa")
+        params = self.request.query_params
+        if params.get("buscar"):
+            qs = qs.filter(nombre__icontains=params["buscar"])
+        if params.get("empresa"):
+            qs = qs.filter(empresa_id=params["empresa"])
+        return qs

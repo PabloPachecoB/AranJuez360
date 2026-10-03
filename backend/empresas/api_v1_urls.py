@@ -13,6 +13,7 @@ router.register(r"mi-empresa/ofertas", views.MisOfertasViewSet, basename="mis-of
 # Público (app y web)
 router.register(r"empresas", views.EmpresaPublicaViewSet, basename="empresas")
 router.register(r"categorias", views.CategoriaPublicaViewSet, basename="categorias")
+router.register(r"productos", views.ProductoPublicoViewSet, basename="productos-publicos")
 
 mi_empresa = views.MiEmpresaViewSet
 

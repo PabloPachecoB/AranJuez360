@@ -7,6 +7,11 @@ import HomeScreen from "../screens/HomeScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegistroScreen from "../screens/RegistroScreen";
 import VerificarCodigoScreen from "../screens/VerificarCodigoScreen";
+import DirectorioScreen from "../screens/DirectorioScreen";
+import NegocioDetalleScreen from "../screens/NegocioDetalleScreen";
+import CarritoScreen from "../screens/CarritoScreen";
+import MisPedidosScreen from "../screens/MisPedidosScreen";
+import PedidoDetalleScreen from "../screens/PedidoDetalleScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -24,7 +29,14 @@ export default function StackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {estado === "autenticado" ? (
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <>
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Directorio" component={DirectorioScreen} />
+          <Stack.Screen name="NegocioDetalle" component={NegocioDetalleScreen} />
+          <Stack.Screen name="Carrito" component={CarritoScreen} />
+          <Stack.Screen name="MisPedidos" component={MisPedidosScreen} />
+          <Stack.Screen name="PedidoDetalle" component={PedidoDetalleScreen} />
+        </>
       ) : estado === "bloqueado" ? (
         <Stack.Screen name="Desbloqueo" component={DesbloqueoScreen} />
       ) : (
