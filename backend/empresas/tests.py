@@ -55,7 +55,7 @@ class AltaEmpresaTests(APITestCase):
             "/api/v1/auth/login/", {"email": "cafe@ejemplo.com", "password": password}, format="json"
         )
         self.assertEqual(resp.status_code, 200, resp.data)
-        self.assertEqual(resp.data["paso"], "verificar_correo")  # primer ingreso: verifica el correo
+        self.assertIn("access", resp.data)  # acceso directo acordado por el equipo Points
 
 
 class PanelEmpresaTests(APITestCase):

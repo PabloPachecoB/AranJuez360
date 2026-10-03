@@ -4,7 +4,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from usuarios.models import Usuario
-from .models import ConfiguracionPuntos, Cupon, MovimientoPuntos, Recompensa
+from .models import Canje, ConfiguracionPuntos, Cupon, MovimientoPuntos, Recompensa
 from .services import ReglaNegocioError, calcular_puntos
 
 
@@ -45,31 +45,36 @@ def emitir_cupon(cliente, recompensa_id, clave_operacion):
     recompensa = Recompensa.objects.select_for_update().filter(pk=recompensa_id).first()
     if not recompensa or not recompensa.activo:
         raise ReglaNegocioError("Esta recompensa no está disponible.")
-    if recompensa.negocio_id and (not recompensa.negocio.activo or recompensa.negocio.tipo == "OFICINA"):
+    if recompensa.empresa_id and (not recompensa.empresa.activo or recompensa.empresa.tipo == "OFICINA"):
         raise ReglaNegocioError("El establecimiento no está disponible.")
-    # No se activan premios globales antes de definir quién los acepta/financia.
-    if not recompensa.negocio_id:
-        raise ReglaNegocioError("Esta recompensa necesita un establecimiento responsable.")
     actualizado = Usuario.objects.filter(pk=cliente.pk, puntos_saldo__gte=recompensa.costo_puntos).update(
         puntos_saldo=F("puntos_saldo") - recompensa.costo_puntos
     )
     if not actualizado:
         raise ReglaNegocioError("No tienes suficientes puntos para este beneficio.")
     movimiento = MovimientoPuntos.objects.create(
-        cliente=cliente, empresa_id=recompensa.negocio_id,
+        cliente=cliente, empresa_id=recompensa.empresa_id,
         puntos=-recompensa.costo_puntos, tipo=MovimientoPuntos.Tipo.CANJE,
         descripcion=f"Cupón: {recompensa.nombre}"[:200],
     )
     cupon = Cupon.objects.create(
-        cliente=cliente, recompensa=recompensa, negocio_id=recompensa.negocio_id,
+        cliente=cliente, recompensa=recompensa, negocio_id=recompensa.empresa_id,
         nombre=recompensa.nombre, descripcion=recompensa.descripcion,
         costo_puntos=recompensa.costo_puntos, movimiento=movimiento,
         clave_operacion=clave_operacion,
     )
+    Canje.objects.create(cliente=cliente, recompensa=recompensa, monedas=cupon.costo_puntos,
+                         codigo=cupon.codigo, cupon=cupon)
     return cupon, True
 
 
 def _cupon_de_caja(codigo, cajero, bloquear=False):
+    if cajero.rol == Usuario.Rol.ADMIN:
+        qs = Cupon.objects.select_for_update() if bloquear else Cupon.objects
+        cupon = qs.filter(codigo=codigo.strip().upper()).first()
+        if not cupon:
+            raise ReglaNegocioError("Cupón no encontrado.")
+        return cupon
     if (cajero.rol not in (Usuario.Rol.NEGOCIO, Usuario.Rol.CAJERO)
             or not cajero.empresa_id or not cajero.empresa.activo):
         raise ReglaNegocioError("Se requiere una caja de negocio activa.")
@@ -93,5 +98,6 @@ def validar_cupon(codigo, cajero):
     cupon.usado_en = timezone.now()
     cupon.validado_por = cajero
     cupon.save(update_fields=["estado", "usado_en", "validado_por"])
+    Canje.objects.filter(cupon=cupon).update(estado=Canje.Estado.USADO, usado_en=cupon.usado_en)
     # El débito ocurrió al emitir; validar solo registra la entrega del beneficio.
     return cupon

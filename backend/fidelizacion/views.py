@@ -7,13 +7,28 @@ from rest_framework.response import Response
 from usuarios.permissions import EsAdmin, EsCaja, EsCliente, EsPortero
 
 from . import services
-from .models import ConfiguracionPuntos, MovimientoPuntos, SolicitudPuntos, Visita
+from .models import (
+    Canje,
+    ConfiguracionPuntos,
+    MovimientoPuntos,
+    PuntoEscaneo,
+    RangoCompra,
+    Recompensa,
+    SolicitudPuntos,
+    Visita,
+)
 from .serializers import (
+    CanjeSerializer,
     ConfiguracionPuntosSerializer,
     CrearSolicitudSerializer,
     EmpresaEscaneadaSerializer,
+    EscanearSerializer,
     MovimientoSerializer,
+    PuntoEscaneadoSerializer,
+    PuntoEscaneoSerializer,
+    RangoCompraSerializer,
     RechazoSerializer,
+    RecompensaSerializer,
     RegistrarVisitaSerializer,
     SolicitudSerializer,
     VisitaSerializer,
@@ -34,6 +49,41 @@ def _regla(fn, *args, **kwargs):
 
 @api_view(["GET"])
 @permission_classes([EsCliente])
+def mi_monedero(request):
+    """Monedero de la app: saldo y cuánto falta para la siguiente recompensa."""
+    return Response(services.monedero(request.user))
+
+
+class RecompensasClienteViewSet(viewsets.ReadOnlyModelViewSet):
+    """Catálogo de recompensas activas para el cliente."""
+
+    serializer_class = RecompensaSerializer
+    permission_classes = [EsCliente]
+    queryset = Recompensa.objects.filter(activo=True).select_related("empresa")
+
+    @action(detail=True, methods=["post"])
+    def canjear(self, request, pk=None):
+        """Descuenta las monedas y devuelve el cupón con su código."""
+        from rest_framework import serializers
+        class Entrada(serializers.Serializer):
+            clave_operacion = serializers.UUIDField(required=False)
+        entrada = Entrada(data=request.data)
+        entrada.is_valid(raise_exception=True)
+        canje = _regla(services.canjear_recompensa, request.user, pk,
+                       entrada.validated_data.get("clave_operacion"))
+        return Response(CanjeSerializer(canje).data, status=status.HTTP_201_CREATED)
+
+
+class MisCanjesViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    serializer_class = CanjeSerializer
+    permission_classes = [EsCliente]
+
+    def get_queryset(self):
+        return Canje.objects.filter(cliente=self.request.user).select_related("recompensa__empresa")
+
+
+@api_view(["GET"])
+@permission_classes([EsCliente])
 def mi_qr(request):
     """QR personal que el cliente muestra al portero. La app lo renueva antes de vencer."""
     return Response(services.generar_qr_cliente(request.user))
@@ -45,6 +95,28 @@ def empresa_escaneada(request, codigo):
     """Paso 1: el cliente escaneó el QR/NFC; mostrar nombre y logo de la empresa."""
     empresa = _regla(services.empresa_por_codigo, codigo)
     return Response(EmpresaEscaneadaSerializer(empresa, context={"request": request}).data)
+
+
+@api_view(["GET"])
+@permission_classes([EsCliente])
+def resolver_codigo(request, codigo):
+    """El escáner único de la app: dice si el código es la caja de un negocio (compra)
+    o un punto de escaneo del Paseo (puerta, juegos…)."""
+    resultado = _regla(services.resolver_codigo, codigo)
+    if resultado["tipo"] == "COMPRA":
+        empresa = EmpresaEscaneadaSerializer(resultado["empresa"], context={"request": request}).data
+        return Response({"tipo": "COMPRA", "empresa": empresa})
+    return Response({"tipo": resultado["tipo"], "punto": PuntoEscaneadoSerializer(resultado["punto"]).data})
+
+
+@api_view(["POST"])
+@permission_classes([EsCliente])
+def escanear(request):
+    """Acredita las monedas de la puerta (visita) o de una actividad."""
+    entrada = EscanearSerializer(data=request.data)
+    entrada.is_valid(raise_exception=True)
+    resultado = _regla(services.escanear_punto, request.user, entrada.validated_data["codigo"])
+    return Response(resultado, status=status.HTTP_201_CREATED)
 
 
 class MisSolicitudesViewSet(
@@ -131,8 +203,8 @@ class PorteriaVisitasViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         visita = _regla(services.registrar_visita, entrada.validated_data["token"], request.user)
         data = VisitaSerializer(visita).data
         data["mensaje"] = (
-            f"+{visita.puntos} punto(s) acreditado(s)." if visita.puntos
-            else "Ingreso registrado. Ya sumó sus puntos de visita de hoy."
+            f"+{visita.puntos} monedas acreditadas." if visita.puntos
+            else "Ingreso registrado. Ya sumó su visita en las últimas horas."
         )
         return Response(data, status=status.HTTP_201_CREATED)
 
@@ -179,3 +251,28 @@ class VisitasAdminViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         if fecha:
             qs = qs.filter(creado_en__date=fecha)
         return qs
+
+
+class RecompensasAdminViewSet(viewsets.ModelViewSet):
+    """Catálogo de recompensas (lo administra el Paseo)."""
+
+    serializer_class = RecompensaSerializer
+    permission_classes = [EsAdmin]
+    queryset = Recompensa.objects.select_related("empresa")
+
+
+class PuntosEscaneoAdminViewSet(viewsets.ModelViewSet):
+    """NFC/QR del Paseo que dan monedas: puerta principal, juegos, cine…"""
+
+    serializer_class = PuntoEscaneoSerializer
+    permission_classes = [EsAdmin]
+    queryset = PuntoEscaneo.objects.select_related("empresa")
+
+
+class RangosCompraAdminViewSet(viewsets.ModelViewSet):
+    """Monedas por compra según el rango del monto."""
+
+    serializer_class = RangoCompraSerializer
+    permission_classes = [EsAdmin]
+    queryset = RangoCompra.objects.all()
+    pagination_class = None

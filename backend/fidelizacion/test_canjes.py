@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import uuid4
 from unittest.mock import patch
 from django.core.cache import cache
@@ -17,7 +18,7 @@ class CanjesTests(APITestCase):
         self.cliente = Usuario.objects.create_user('cliente', rol='CLIENTE', puntos_saldo=150)
         self.caja = Usuario.objects.create_user('caja', rol='CAJERO', empresa=self.negocio)
         self.caja_otra = Usuario.objects.create_user('otra', rol='CAJERO', empresa=self.otro)
-        self.premio = Recompensa.objects.create(nombre='Beneficio de prueba', costo_puntos=100, negocio=self.negocio)
+        self.premio = Recompensa.objects.create(nombre='Beneficio de prueba', costo_puntos=100, empresa=self.negocio)
         self.client.force_authenticate(self.cliente)
 
     def canjear(self, clave=None):
@@ -81,7 +82,7 @@ class CanjesTests(APITestCase):
         validar_retiro(self.negocio, pedido.codigo_retiro)
         validar_retiro(self.negocio, pedido.codigo_retiro)
         self.cliente.refresh_from_db()
-        self.assertEqual(self.cliente.puntos_saldo, 175)
+        self.assertEqual(self.cliente.puntos_saldo, Decimal("175.90"))
         self.assertEqual(MovimientoPuntos.objects.filter(pedido=pedido).count(), 1)
 
     def test_fallo_abono_revierte_entrega(self):
@@ -96,3 +97,48 @@ class CanjesTests(APITestCase):
     def test_sin_autenticacion_no_accede(self):
         self.client.force_authenticate(None)
         self.assertEqual(self.client.get('/api/v1/cupones/').status_code, 401)
+
+
+    def test_misma_operacion_desde_app_y_web_no_duplica_cargo(self):
+        clave = uuid4()
+        self.premio.costo_puntos = Decimal("1.25")
+        self.premio.save()
+        app = self.client.post(f"/api/v1/puntos/recompensas/{self.premio.pk}/canjear/",
+                               {"clave_operacion": str(clave)}, format="json")
+        web = self.canjear(clave)
+        self.assertEqual(app.status_code, 201, app.data)
+        self.assertEqual(web.status_code, 200, web.data)
+        self.assertEqual(app.data["codigo"], web.data["codigo"])
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.puntos_saldo, Decimal("148.75"))
+        self.assertEqual(MovimientoPuntos.objects.count(), 1)
+
+    def test_caja_sincroniza_estado_y_conserva_condiciones_en_app(self):
+        response = self.canjear()
+        self.premio.nombre = "Otro premio"
+        self.premio.save()
+        self.client.force_authenticate(self.caja)
+        self.assertEqual(self.client.post('/api/v1/cupones/validar/', {'codigo': response.data['codigo']}).status_code, 200)
+        self.client.force_authenticate(self.cliente)
+        canje = self.client.get('/api/v1/puntos/canjes/').data['results'][0]
+        self.assertEqual(canje['estado'], 'USADO')
+        self.assertEqual(canje['recompensa_nombre'], 'Beneficio de prueba')
+
+    def test_beneficio_global_se_valida_en_administracion(self):
+        self.premio.empresa = None
+        self.premio.save()
+        response = self.canjear()
+        self.assertEqual(response.status_code, 201, response.data)
+        self.client.force_authenticate(self.caja)
+        self.assertEqual(self.client.post('/api/v1/cupones/validar/', {'codigo': response.data['codigo']}).status_code, 400)
+        admin = Usuario.objects.create_user('admin', rol='ADMIN')
+        self.client.force_authenticate(admin)
+        self.assertEqual(self.client.post('/api/v1/cupones/validar/', {'codigo': response.data['codigo']}).status_code, 200)
+
+    def test_pedido_utiliza_rangos_de_main(self):
+        from .models import RangoCompra
+        RangoCompra.objects.create(monto_minimo=0, monto_maximo=None, monedas=Decimal('2.50'))
+        pedido = Pedido.objects.create(cliente=self.cliente, empresa=self.negocio, total='25.90', estado='LISTO_PARA_RECOGER')
+        validar_retiro(self.negocio, pedido.codigo_retiro)
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.puntos_saldo, Decimal('152.50'))

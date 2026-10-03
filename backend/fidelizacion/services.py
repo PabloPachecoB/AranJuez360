@@ -1,17 +1,28 @@
-"""Lógica de Paseo Points: visitas registradas por portería y compras aprobadas en caja."""
+"""Lógica de las monedas de Paseo: visitas (NFC de la puerta o portería), actividades
+escaneadas (juegos, cine…) y compras aprobadas en caja."""
 
-from decimal import ROUND_DOWN, Decimal
+from datetime import timedelta
+from decimal import ROUND_DOWN, ROUND_UP, Decimal
 
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from empresas.models import Empresa
 from usuarios.models import Usuario
 
-from .models import ConfiguracionPuntos, MovimientoPuntos, SolicitudPuntos, Visita
+from .models import (
+    Canje,
+    ConfiguracionPuntos,
+    MovimientoPuntos,
+    PuntoEscaneo,
+    RangoCompra,
+    Recompensa,
+    SolicitudPuntos,
+    Visita,
+)
 
 _QR_SALT = "fidelizacion.qr-cliente"
 
@@ -29,8 +40,34 @@ def empresa_por_codigo(codigo: str) -> Empresa:
         raise ReglaNegocioError("Código no válido o establecimiento inactivo.")
 
 
-def calcular_puntos(monto, config: ConfiguracionPuntos) -> int:
-    return int((monto * config.puntos_por_boliviano).quantize(Decimal("1"), rounding=ROUND_DOWN))
+CENTAVO = Decimal("0.01")
+
+
+def calcular_puntos(monto, config: ConfiguracionPuntos) -> Decimal:
+    """Monedas de una compra: según el rango de montos que definió el admin
+    o, si no hay rangos, `puntos_por_boliviano` × monto."""
+    monto = Decimal(monto)
+    rango = (
+        RangoCompra.objects.filter(activo=True, monto_minimo__lte=monto)
+        .filter(Q(monto_maximo__isnull=True) | Q(monto_maximo__gte=monto))
+        .order_by("-monto_minimo")
+        .first()
+    )
+    if rango:
+        return rango.monedas
+    if RangoCompra.objects.filter(activo=True).exists():
+        return Decimal("0")  # hay rangos pero el monto no entra en ninguno
+    return (monto * config.puntos_por_boliviano).quantize(CENTAVO, rounding=ROUND_DOWN)
+
+
+def _acreditar(cliente_id: int, monedas: Decimal):
+    Usuario.objects.filter(pk=cliente_id).update(puntos_saldo=F("puntos_saldo") + monedas)
+
+
+def _formato_espera(hasta) -> str:
+    minutos = max(1, int((hasta - timezone.now()).total_seconds() // 60))
+    horas, minutos = divmod(minutos, 60)
+    return f"{horas} h {minutos} min" if horas else f"{minutos} min"
 
 
 @transaction.atomic
@@ -90,7 +127,7 @@ def aprobar_solicitud(solicitud_id: int, cajero: Usuario) -> SolicitudPuntos:
         tipo=MovimientoPuntos.Tipo.COMPRA,
         descripcion=f"Compra de Bs {solicitud.monto}",
     )
-    Usuario.objects.filter(pk=solicitud.cliente_id).update(puntos_saldo=F("puntos_saldo") + puntos)
+    _acreditar(solicitud.cliente_id, puntos)
     return solicitud
 
 
@@ -129,27 +166,181 @@ def cliente_por_qr(token: str) -> Usuario:
     return cliente
 
 
+def _ultima_visita_con_monedas(cliente: Usuario, config: ConfiguracionPuntos):
+    if not config.horas_entre_visitas:
+        return None  # 0 horas = sin límite entre visitas
+    desde = timezone.now() - timedelta(hours=config.horas_entre_visitas)
+    return (
+        Visita.objects.filter(cliente=cliente, puntos__gt=0, creado_en__gte=desde)
+        .order_by("-creado_en")
+        .first()
+    )
+
+
+def _crear_visita(cliente, config, monedas: Decimal, portero=None, punto=None) -> Visita:
+    """Registra el ingreso; da monedas solo si no sumó otra visita en las últimas horas."""
+    if _ultima_visita_con_monedas(cliente, config):
+        monedas = Decimal("0")
+    visita = Visita.objects.create(cliente=cliente, portero=portero, punto=punto, puntos=monedas)
+    if monedas:
+        MovimientoPuntos.objects.create(
+            cliente=cliente, visita=visita, punto=punto, puntos=monedas,
+            tipo=MovimientoPuntos.Tipo.VISITA, descripcion="Visita al Paseo",
+        )
+        _acreditar(cliente.pk, monedas)
+    return visita
+
+
 @transaction.atomic
 def registrar_visita(token: str, portero: Usuario) -> Visita:
-    """El portero escanea el QR del cliente: se registra el ingreso y, si no superó
-    el cupo diario, se acreditan los puntos de visita."""
+    """El portero escanea el QR del cliente: se registra el ingreso y, si no sumó
+    otra visita en las últimas `horas_entre_visitas`, se acreditan las monedas."""
     cliente = cliente_por_qr(token)
     cliente = Usuario.objects.select_for_update().get(pk=cliente.pk)
     config = ConfiguracionPuntos.actual()
+    return _crear_visita(cliente, config, config.puntos_por_visita, portero=portero)
 
-    con_puntos_hoy = Visita.objects.filter(
-        cliente=cliente, creado_en__date=timezone.localdate(), puntos__gt=0
-    ).count()
-    puntos = config.puntos_por_visita if con_puntos_hoy < config.visitas_con_puntos_por_dia else 0
 
-    visita = Visita.objects.create(cliente=cliente, portero=portero, puntos=puntos)
-    if puntos:
-        MovimientoPuntos.objects.create(
-            cliente=cliente,
-            visita=visita,
-            puntos=puntos,
-            tipo=MovimientoPuntos.Tipo.VISITA,
-            descripcion="Visita al Paseo",
+# --- Puntos de escaneo (NFC/QR de la puerta, juegos, cine…) ---------------------
+
+def punto_por_codigo(codigo: str):
+    return PuntoEscaneo.objects.filter(codigo=codigo, activo=True).first()
+
+
+def resolver_codigo(codigo: str) -> dict:
+    """Qué es un código escaneado: la caja de una empresa (compra) o un punto de escaneo."""
+    punto = punto_por_codigo(codigo)
+    if punto:
+        return {"tipo": punto.tipo, "punto": punto}
+    return {"tipo": "COMPRA", "empresa": empresa_por_codigo(codigo)}
+
+
+@transaction.atomic
+def escanear_punto(cliente: Usuario, codigo: str) -> dict:
+    """El cliente escaneó el NFC/QR de la puerta o de una actividad: acredita sus monedas
+    si no lo hizo dentro del tiempo de espera."""
+    punto = punto_por_codigo(codigo)
+    if punto is None:
+        raise ReglaNegocioError(
+            "Este código no da monedas al escanearlo. Si es una caja, registra tu compra."
         )
-        Usuario.objects.filter(pk=cliente.pk).update(puntos_saldo=F("puntos_saldo") + puntos)
-    return visita
+    cliente = Usuario.objects.select_for_update().get(pk=cliente.pk)
+    config = ConfiguracionPuntos.actual()
+
+    if punto.tipo == PuntoEscaneo.Tipo.ENTRADA:
+        previa = _ultima_visita_con_monedas(cliente, config)
+        if previa:
+            hasta = previa.creado_en + timedelta(hours=config.horas_entre_visitas)
+            raise ReglaNegocioError(
+                f"Ya registraste tu visita. Podrás volver a ganar en {_formato_espera(hasta)}."
+            )
+        visita = _crear_visita(cliente, config, punto.monedas, punto=punto)
+        monedas = visita.puntos
+        mensaje = f"¡Bienvenido al Paseo! Ganaste {monedas} monedas."
+        hasta = visita.creado_en + timedelta(hours=config.horas_entre_visitas)
+    else:
+        desde = timezone.now() - timedelta(hours=punto.horas_espera)
+        previo = punto.horas_espera and (
+            MovimientoPuntos.objects.filter(cliente=cliente, punto=punto, creado_en__gte=desde).first()
+        )
+        if previo:
+            hasta = previo.creado_en + timedelta(hours=punto.horas_espera)
+            raise ReglaNegocioError(f"Ya ganaste aquí. Vuelve en {_formato_espera(hasta)}.")
+        mov = MovimientoPuntos.objects.create(
+            cliente=cliente, punto=punto, empresa=punto.empresa, puntos=punto.monedas,
+            tipo=MovimientoPuntos.Tipo.ACTIVIDAD, descripcion=punto.nombre,
+        )
+        _acreditar(cliente.pk, punto.monedas)
+        monedas = punto.monedas
+        mensaje = f"¡Ganaste {monedas} monedas en {punto.nombre}!"
+        hasta = mov.creado_en + timedelta(hours=punto.horas_espera)
+
+    saldo = Usuario.objects.values_list("puntos_saldo", flat=True).get(pk=cliente.pk)
+    return {
+        "tipo": punto.tipo,
+        "punto": punto.nombre,
+        "monedas": monedas,
+        "saldo": saldo,
+        "mensaje": mensaje,
+        "disponible_de_nuevo": hasta,
+    }
+
+
+# --- Monedero (app) -------------------------------------------------------------
+
+def monedero(cliente: Usuario) -> dict:
+    """Saldo, recompensas alcanzables y cuánto falta para la siguiente.
+
+    `faltan_bs` estima cuánto debe comprar el cliente para llegar, según la regla
+    vigente de puntos por boliviano.
+    """
+    # Saldo fresco de la base (el objeto del request puede estar desactualizado).
+    saldo = Usuario.objects.values_list("puntos_saldo", flat=True).get(pk=cliente.pk)
+    activas = Recompensa.objects.filter(activo=True).select_related("empresa")
+    siguiente = activas.filter(costo_puntos__gt=saldo).first()
+    config = ConfiguracionPuntos.actual()
+
+    data = {
+        "saldo": saldo,
+        "saldo_bs": (saldo * config.valor_moneda_bs).quantize(CENTAVO),
+        "valor_moneda_bs": config.valor_moneda_bs,
+        "recompensas_disponibles": activas.filter(costo_puntos__lte=saldo).count(),
+        "siguiente": None,
+        "puntos_por_boliviano": config.puntos_por_boliviano,
+        "puntos_por_visita": config.puntos_por_visita,
+    }
+    if siguiente:
+        faltan = siguiente.costo_puntos - saldo
+        anterior = activas.filter(costo_puntos__lte=saldo).order_by("-costo_puntos").first()
+        base = anterior.costo_puntos if anterior else 0
+        tramo = siguiente.costo_puntos - base
+        data["siguiente"] = {
+            "id": siguiente.id,
+            "nombre": siguiente.nombre,
+            "costo_puntos": siguiente.costo_puntos,
+            "empresa": siguiente.empresa.nombre if siguiente.empresa else None,
+            "faltan_puntos": faltan,
+            # Estimación de compra necesaria; con rangos de compra no hay una tasa fija.
+            "faltan_bs": None if RangoCompra.objects.filter(activo=True).exists() or not config.puntos_por_boliviano
+            else int((Decimal(faltan) / config.puntos_por_boliviano).to_integral_value(rounding=ROUND_UP)),
+            # Progreso dentro del tramo actual (desde la última recompensa alcanzada).
+            "progreso": round(float((saldo - base) / tramo), 3) if tramo else 1,
+        }
+    return data
+
+
+# --- Canje de recompensas ---------------------------------------------------------
+
+def cobrar_monedas(cliente_id: int, monedas: Decimal, descripcion: str, empresa=None) -> Decimal:
+    """Descuenta monedas del saldo (con el usuario ya bloqueado por select_for_update)."""
+    saldo = Usuario.objects.values_list("puntos_saldo", flat=True).get(pk=cliente_id)
+    if saldo < monedas:
+        raise ReglaNegocioError(f"No te alcanzan las monedas: tienes {saldo:.2f} y necesitas {monedas:.2f}.")
+    MovimientoPuntos.objects.create(
+        cliente_id=cliente_id, empresa=empresa, puntos=-monedas,
+        tipo=MovimientoPuntos.Tipo.CANJE, descripcion=descripcion[:200],
+    )
+    _acreditar(cliente_id, -monedas)
+    return saldo - monedas
+
+
+def devolver_monedas(cliente_id: int, monedas: Decimal, descripcion: str):
+    MovimientoPuntos.objects.create(
+        cliente_id=cliente_id, puntos=monedas, tipo=MovimientoPuntos.Tipo.CANJE, descripcion=descripcion[:200],
+    )
+    _acreditar(cliente_id, monedas)
+
+
+def recompensa_activa(recompensa_id) -> Recompensa:
+    recompensa = Recompensa.objects.filter(pk=recompensa_id, activo=True).select_related("empresa").first()
+    if recompensa is None:
+        raise ReglaNegocioError("Esa recompensa no existe o ya no está disponible.")
+    return recompensa
+
+
+@transaction.atomic
+def canjear_recompensa(cliente: Usuario, recompensa_id, clave_operacion=None) -> Canje:
+    from uuid import uuid4
+    from .canjes import emitir_cupon
+    cupon, _ = emitir_cupon(cliente, int(recompensa_id), clave_operacion or uuid4())
+    return Canje.objects.get(cupon=cupon)

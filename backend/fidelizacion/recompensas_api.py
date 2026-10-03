@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import ValidationError
@@ -17,12 +18,12 @@ class OperacionThrottle(UserRateThrottle):
 
 class RecompensaSerializer(serializers.ModelSerializer):
     negocio_id = serializers.PrimaryKeyRelatedField(
-        source="negocio", queryset=Recompensa._meta.get_field("negocio").remote_field.model.objects.filter(
+        source="empresa", queryset=Recompensa._meta.get_field("empresa").remote_field.model.objects.filter(
             activo=True
         ), allow_null=True, required=False,
     )
-    negocio_nombre = serializers.CharField(source="negocio.nombre", read_only=True, default=None)
-    costo_puntos = serializers.IntegerField(min_value=1, max_value=1000000)
+    negocio_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+    costo_puntos = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
 
     class Meta:
         model = Recompensa
@@ -31,11 +32,11 @@ class RecompensaSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "creado_en"]
 
     def validate(self, attrs):
-        negocio = attrs.get("negocio", getattr(self.instance, "negocio", None))
-        activo = attrs.get("activo", getattr(self.instance, "activo", True))
-        if activo and (not negocio or not negocio.activo or negocio.tipo == "OFICINA"):
-            raise serializers.ValidationError("Asigna un negocio activo responsable antes de activar el beneficio.")
+        negocio = attrs.get("empresa", getattr(self.instance, "empresa", None))
+        if attrs.get("activo", getattr(self.instance, "activo", True)) and negocio and (not negocio.activo or negocio.tipo == "OFICINA"):
+            raise serializers.ValidationError("Elige un negocio activo o un beneficio del Paseo.")
         return attrs
+
 
 
 class CuponSerializer(serializers.ModelSerializer):
@@ -54,7 +55,7 @@ class EmisionSerializer(serializers.Serializer):
 
 
 class CodigoSerializer(serializers.Serializer):
-    codigo = serializers.RegexField(r"^[a-fA-F0-9]{24}$")
+    codigo = serializers.RegexField(r"^(?:[a-fA-F0-9]{24}|[A-HJ-NP-Z2-9]{8})$")
 
 
 def ejecutar(fn, *args):
@@ -76,9 +77,9 @@ class RecompensasViewSet(viewsets.GenericViewSet):
         return [permiso()]
 
     def get_queryset(self):
-        qs = Recompensa.objects.select_related("negocio")
+        qs = Recompensa.objects.select_related("empresa")
         if self.request.user.rol != "ADMIN":
-            qs = qs.filter(activo=True, negocio__activo=True).exclude(negocio__tipo="OFICINA")
+            qs = qs.filter(activo=True).exclude(empresa__activo=False).exclude(empresa__tipo="OFICINA")
         return qs
 
     def list(self, request):
@@ -121,7 +122,7 @@ class CuponesViewSet(viewsets.GenericViewSet):
 
 
 @api_view(["POST"])
-@permission_classes([EsCaja])
+@permission_classes([IsAuthenticated])
 @throttle_classes([OperacionThrottle])
 def consultar(request):
     entrada = CodigoSerializer(data=request.data)
@@ -131,7 +132,7 @@ def consultar(request):
 
 
 @api_view(["POST"])
-@permission_classes([EsCaja])
+@permission_classes([IsAuthenticated])
 @throttle_classes([OperacionThrottle])
 def validar(request):
     entrada = CodigoSerializer(data=request.data)

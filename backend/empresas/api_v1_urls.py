@@ -10,9 +10,11 @@ router.register(r"admin/categorias", views.CategoriaAdminViewSet, basename="admi
 # Panel de la empresa
 router.register(r"mi-empresa/productos", views.MisProductosViewSet, basename="mis-productos")
 router.register(r"mi-empresa/ofertas", views.MisOfertasViewSet, basename="mis-ofertas")
+router.register(r"mi-empresa/fotos", views.MisFotosViewSet, basename="mis-fotos")
 # Público (app y web)
 router.register(r"empresas", views.EmpresaPublicaViewSet, basename="empresas")
 router.register(r"categorias", views.CategoriaPublicaViewSet, basename="categorias")
+router.register(r"ofertas", views.OfertaPublicaViewSet, basename="ofertas")
 
 mi_empresa = views.MiEmpresaViewSet
 

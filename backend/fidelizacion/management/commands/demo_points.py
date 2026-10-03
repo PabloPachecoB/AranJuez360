@@ -33,7 +33,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'{email}: existente, conserva contraseña.')
             users[rol] = user
         for nombre, costo in [('DEMO — Café de cortesía', 100), ('DEMO — Merienda para compartir', 250)]:
-            Recompensa.objects.get_or_create(nombre=nombre, negocio=negocio, defaults={
+            Recompensa.objects.get_or_create(nombre=nombre, empresa=negocio, defaults={
                 'costo_puntos': costo, 'activo': True,
                 'descripcion': 'Beneficio ficticio para demostrar el flujo. No válido en ningún negocio real.',
             })
@@ -41,4 +41,4 @@ class Command(BaseCommand):
             'cliente': users['CLIENTE'], 'empresa': negocio, 'total': '500.00', 'estado': 'LISTO_PARA_RECOGER',
         })
         validar_retiro(negocio, pedido.codigo_retiro)
-        self.stdout.write(self.style.SUCCESS('Demo creada. Los códigos de acceso aparecen en la consola del backend.'))
+        self.stdout.write(self.style.SUCCESS('Demo creada. Accede con correo y contraseña.'))

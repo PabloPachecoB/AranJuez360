@@ -1,5 +1,7 @@
 # Prototipo 1 — Paseo Points
 
+Actualización: integrado con main 30ed7aa. Consulta INTEGRACION_MAIN.md para el modelo compartido de monedas, canjes y las migraciones. Las secciones siguientes describen la primera versión previa a esa integración.
+
 Base: rama reto3-paseoya, commit ac1c745. Trabajo local en codex/paseo-points-prototipo; no publicado en GitHub.
 
 ## Ejecutar en Windows

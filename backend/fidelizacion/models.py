@@ -1,14 +1,27 @@
-from decimal import Decimal
 import secrets
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+
+# Las "monedas" de Paseo admiten decimales (p. ej. 0,75 por visita). 1 moneda = Bs 0,10 por defecto.
+MONEDA_CERO = Decimal("0")
+
+
+def _nuevo_codigo_escaneo():
+    return secrets.token_urlsafe(12)
 
 
 class ConfiguracionPuntos(models.Model):
     """Reglas globales de Paseo Points (una sola fila, la edita el admin)."""
 
-    puntos_por_boliviano = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("1"))
+    puntos_por_boliviano = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("1"),
+        help_text="Monedas por Bs de compra; solo se usa si no hay rangos de compra configurados.",
+    )
+    valor_moneda_bs = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("0.10"), help_text="Cuántos Bs vale 1 moneda.",
+    )
     monto_maximo_solicitud = models.DecimalField(
         max_digits=10, decimal_places=2, default=Decimal("5000"),
         help_text="Montos mayores se rechazan al crear la solicitud.",
@@ -16,11 +29,12 @@ class ConfiguracionPuntos(models.Model):
     solicitudes_diarias_por_empresa = models.PositiveSmallIntegerField(
         default=3, help_text="Máximo de solicitudes de un cliente en una misma empresa por día.",
     )
-    puntos_por_visita = models.PositiveIntegerField(
-        default=1, help_text="Puntos que gana el cliente cuando el portero registra su ingreso.",
+    puntos_por_visita = models.DecimalField(
+        max_digits=6, decimal_places=2, default=Decimal("0.75"),
+        help_text="Monedas por visita (NFC de la puerta o registro del portero).",
     )
-    visitas_con_puntos_por_dia = models.PositiveSmallIntegerField(
-        default=1, help_text="Cuántos ingresos por día suman puntos (los demás solo se registran).",
+    horas_entre_visitas = models.PositiveSmallIntegerField(
+        default=24, help_text="Tras una visita con monedas, no vuelve a sumar hasta que pasen estas horas.",
     )
     actualizado_en = models.DateTimeField(auto_now=True)
 
@@ -34,7 +48,57 @@ class ConfiguracionPuntos(models.Model):
         return obj
 
     def __str__(self):
-        return f"Bs 1 = {self.puntos_por_boliviano} puntos"
+        return f"1 moneda = Bs {self.valor_moneda_bs}"
+
+
+class RangoCompra(models.Model):
+    """Monedas que da una compra según su monto (el admin define los rangos)."""
+
+    monto_minimo = models.DecimalField(max_digits=10, decimal_places=2)
+    monto_maximo = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Vacío = sin tope.",
+    )
+    monedas = models.DecimalField(max_digits=10, decimal_places=2)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["monto_minimo"]
+
+    def __str__(self):
+        tope = f"Bs {self.monto_maximo}" if self.monto_maximo is not None else "más"
+        return f"Bs {self.monto_minimo} – {tope}: {self.monedas} monedas"
+
+
+class PuntoEscaneo(models.Model):
+    """QR/NFC del Paseo que da monedas al escanearlo (puerta principal, juegos, cine…).
+
+    Las compras no van aquí: usan el código propio de cada empresa y pasan por caja.
+    """
+
+    class Tipo(models.TextChoices):
+        ENTRADA = "ENTRADA", "Entrada al Paseo"
+        ACTIVIDAD = "ACTIVIDAD", "Actividad"
+
+    nombre = models.CharField(max_length=120)
+    tipo = models.CharField(max_length=20, choices=Tipo.choices)
+    descripcion = models.CharField(max_length=200, blank=True)
+    monedas = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.50"))
+    horas_espera = models.PositiveSmallIntegerField(
+        default=24, help_text="Horas antes de poder volver a ganar en este punto (Entrada usa la regla de visitas).",
+    )
+    empresa = models.ForeignKey(
+        "empresas.Empresa", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="puntos_escaneo", help_text="Opcional: negocio que opera la actividad.",
+    )
+    codigo = models.CharField(max_length=32, unique=True, default=_nuevo_codigo_escaneo, editable=False)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tipo", "nombre"]
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_tipo_display()}, {self.monedas} monedas)"
 
 
 class SolicitudPuntos(models.Model):
@@ -55,7 +119,7 @@ class SolicitudPuntos(models.Model):
     nit = models.CharField(max_length=20)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE)
-    puntos = models.PositiveIntegerField(default=0, help_text="Puntos acreditados al aprobar.")
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=MONEDA_CERO, help_text="Monedas acreditadas al aprobar.")
     atendida_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="solicitudes_atendidas",
@@ -73,7 +137,7 @@ class SolicitudPuntos(models.Model):
 
 
 class Visita(models.Model):
-    """Ingreso de un cliente al Paseo registrado por el portero."""
+    """Ingreso de un cliente al Paseo: lo registra el portero o el propio cliente con el NFC de la puerta."""
 
     cliente = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="visitas"
@@ -81,7 +145,11 @@ class Visita(models.Model):
     portero = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="visitas_registradas"
     )
-    puntos = models.PositiveIntegerField(default=0, help_text="0 si ya superó el cupo diario.")
+    punto = models.ForeignKey(
+        PuntoEscaneo, on_delete=models.SET_NULL, null=True, blank=True, related_name="visitas",
+        help_text="NFC/QR de la puerta, si la registró el propio cliente.",
+    )
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, default=MONEDA_CERO, help_text="0 si ya sumó una visita en las últimas horas.")
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -95,6 +163,7 @@ class MovimientoPuntos(models.Model):
     class Tipo(models.TextChoices):
         COMPRA = "COMPRA", "Compra"
         VISITA = "VISITA", "Visita"
+        ACTIVIDAD = "ACTIVIDAD", "Actividad"
         CANJE = "CANJE", "Canje"
 
     cliente = models.ForeignKey(
@@ -110,11 +179,12 @@ class MovimientoPuntos(models.Model):
     visita = models.OneToOneField(
         Visita, on_delete=models.SET_NULL, null=True, blank=True, related_name="movimiento"
     )
-    pedido = models.OneToOneField(
-        "pedidos.Pedido", on_delete=models.PROTECT, null=True, blank=True,
-        related_name="movimiento_puntos",
+    punto = models.ForeignKey(
+        PuntoEscaneo, on_delete=models.SET_NULL, null=True, blank=True, related_name="movimientos",
     )
-    puntos = models.IntegerField(help_text="Positivo si gana, negativo si canjea.")
+    pedido = models.OneToOneField("pedidos.Pedido", on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name="movimiento_puntos")
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, help_text="Monedas: positivo si gana, negativo si canjea.")
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
     descripcion = models.CharField(max_length=200, blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -123,22 +193,67 @@ class MovimientoPuntos(models.Model):
         ordering = ["-creado_en"]
 
     def __str__(self):
-        return f"{self.cliente} {self.puntos:+d} ({self.tipo})"
+        return f"{self.cliente} {self.puntos:+} ({self.tipo})"
 
 
 class Recompensa(models.Model):
+    """Beneficio que el cliente puede canjear con sus monedas (lo administra el Paseo)."""
+
+    class Categoria(models.TextChoices):
+        PARQUEO = "PARQUEO", "Parqueo"
+        CINE = "CINE", "Cine"
+        DESCUENTO = "DESCUENTO", "Descuento"
+        PRODUCTO = "PRODUCTO", "Producto"
+        OTRO = "OTRO", "Otro"
+
     nombre = models.CharField(max_length=120)
-    descripcion = models.TextField(help_text="Beneficio exacto y condiciones de entrega.")
-    costo_puntos = models.PositiveIntegerField()
-    negocio = models.ForeignKey("empresas.Empresa", on_delete=models.PROTECT,
-                                null=True, blank=True, related_name="recompensas")
+    descripcion = models.TextField(blank=True)
+    categoria = models.CharField(max_length=20, choices=Categoria.choices, default=Categoria.OTRO)
+    costo_puntos = models.DecimalField(max_digits=10, decimal_places=2, help_text="Costo en monedas.")
+    empresa = models.ForeignKey(
+        "empresas.Empresa", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="recompensas", help_text="Vacío si aplica en todo el Paseo.",
+    )
+    imagen = models.ImageField(upload_to="recompensas/", blank=True)
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["costo_puntos", "id"]
-        constraints = [models.CheckConstraint(check=models.Q(costo_puntos__gt=0),
-                                              name="recompensa_costo_positivo")]
+        ordering = ["costo_puntos", "nombre"]
+        constraints = [models.CheckConstraint(check=models.Q(costo_puntos__gt=0), name="recompensa_costo_positivo")]
+
+    def __str__(self):
+        return f"{self.nombre} ({self.costo_puntos} monedas)"
+
+
+def _nuevo_codigo_canje():
+    # Corto y fácil de dictar en caja: 8 caracteres sin letras confusas.
+    alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alfabeto) for _ in range(8))
+
+
+class Canje(models.Model):
+    """Recompensa canjeada: el cliente muestra el código en el negocio o en el Paseo."""
+
+    class Estado(models.TextChoices):
+        ACTIVO = "ACTIVO", "Por usar"
+        USADO = "USADO", "Usado"
+        ANULADO = "ANULADO", "Anulado"
+
+    cliente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="canjes")
+    recompensa = models.ForeignKey(Recompensa, on_delete=models.PROTECT, related_name="canjes")
+    monedas = models.DecimalField(max_digits=10, decimal_places=2)
+    codigo = models.CharField(max_length=24, unique=True, default=_nuevo_codigo_canje, editable=False)
+    cupon = models.OneToOneField("Cupon", on_delete=models.PROTECT, null=True, blank=True, related_name="canje")
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ACTIVO)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    usado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-creado_en"]
+
+    def __str__(self):
+        return f"{self.codigo} · {self.recompensa} · {self.cliente}"
 
 
 def nuevo_codigo_cupon():
@@ -158,11 +273,11 @@ class Cupon(models.Model):
     # Copia de las condiciones al emitir: editar la recompensa no cambia lo ya adquirido.
     nombre = models.CharField(max_length=120)
     descripcion = models.TextField()
-    costo_puntos = models.PositiveIntegerField()
+    costo_puntos = models.DecimalField(max_digits=10, decimal_places=2)
     negocio = models.ForeignKey("empresas.Empresa", on_delete=models.PROTECT,
                                 null=True, blank=True, related_name="cupones")
     movimiento = models.OneToOneField(MovimientoPuntos, on_delete=models.PROTECT,
-                                      related_name="cupon")
+                                      related_name="cupon", null=True, blank=True)
     clave_operacion = models.UUIDField()
     estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ACTIVO)
     usado_en = models.DateTimeField(null=True, blank=True)
