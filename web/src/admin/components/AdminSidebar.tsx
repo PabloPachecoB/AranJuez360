@@ -20,7 +20,7 @@ const GRUPOS: GrupoNavegacion[] = [
     titulo: "Directorio",
     opciones: [
       { label: "Establecimientos", icono: "storefront", to: "/empresas" },
-      { label: "Mapa y espacios", icono: "map" },
+      { label: "Mapa y espacios", icono: "map", to: "/mapa-espacios" },
       { label: "Categorías", icono: "category" },
     ],
   },
