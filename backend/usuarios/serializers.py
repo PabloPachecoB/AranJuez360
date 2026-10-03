@@ -6,7 +6,18 @@ from rest_framework import serializers
 from .models import Usuario
 
 
+def _validar_procedencia(attrs):
+    """Si es de fuera de Cochabamba (OTRO) debe escribir la ciudad; si no, la ciudad se limpia."""
+    procedencia = attrs.get("procedencia")
+    ciudad = (attrs.get("ciudad_otra") or "").strip()
+    if procedencia == Usuario.Procedencia.OTRO and not ciudad:
+        raise serializers.ValidationError({"ciudad_otra": "Escribe tu ciudad."})
+    attrs["ciudad_otra"] = ciudad if procedencia == Usuario.Procedencia.OTRO else ""
+    return attrs
+
+
 class UsuarioSerializer(serializers.ModelSerializer):
+    procedencia_texto = serializers.CharField(read_only=True)
     empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
 
     class Meta:
@@ -14,7 +25,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = [
             "id", "username", "first_name", "last_name", "email", "celular", "ci", "nit",
             "fecha_nacimiento", "email_verificado", "rol", "empresa", "empresa_nombre",
-            "puntos_saldo", "debe_cambiar_password",
+            "puntos_saldo", "debe_cambiar_password", "procedencia", "ciudad_otra", "procedencia_texto",
         ]
         read_only_fields = fields
 
@@ -40,6 +51,11 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
         error_messages={"invalid": "El NIT debe tener solo números."},
     )
     fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
+    procedencia = serializers.ChoiceField(
+        choices=Usuario.Procedencia.choices,
+        error_messages={"required": "Indica de dónde eres.", "invalid_choice": "Elige una opción de la lista."},
+    )
+    ciudad_otra = serializers.CharField(max_length=80, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
     password_confirmacion = serializers.CharField(write_only=True, style={"input_type": "password"})
     acepta_terminos = serializers.BooleanField(write_only=True)
@@ -48,7 +64,7 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             "first_name", "last_name", "email", "celular", "ci", "nit", "fecha_nacimiento",
-            "password", "password_confirmacion", "acepta_terminos",
+            "procedencia", "ciudad_otra", "password", "password_confirmacion", "acepta_terminos",
         ]
         extra_kwargs = {"email": {"required": True}}
 
@@ -88,7 +104,7 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
             validate_password(attrs["password"], candidato)
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"password": list(exc.messages)})
-        return attrs
+        return _validar_procedencia(attrs)
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -165,3 +181,18 @@ class UsuarioAdminSerializer(serializers.ModelSerializer):
 
     def get_nombre(self, obj):
         return obj.get_full_name() or obj.username
+
+
+
+class ProcedenciaSerializer(serializers.ModelSerializer):
+    """El cliente completa o corrige de dónde es (desde la app)."""
+
+    procedencia = serializers.ChoiceField(choices=Usuario.Procedencia.choices)
+    ciudad_otra = serializers.CharField(max_length=80, required=False, allow_blank=True)
+
+    class Meta:
+        model = Usuario
+        fields = ["procedencia", "ciudad_otra"]
+
+    def validate(self, attrs):
+        return _validar_procedencia(attrs)

@@ -120,6 +120,34 @@ class ReportesTests(APITestCase):
         dormidos = self.client.get(f"{BASE}/clientes/dormidos/?dias=30").data
         self.assertEqual([c["first_name"] for c in dormidos], ["Beto"])
 
+    def test_clientes_por_procedencia_y_top(self):
+        Usuario.objects.filter(pk=self.ana.pk).update(procedencia="QUILLACOLLO")
+        Usuario.objects.filter(pk=self.beto.pk).update(procedencia="OTRO", ciudad_otra="La Paz")
+        self._compra(self.ana, self.cafe, self.cajero_cafe, "100")
+        self._compra(self.ana, self.tienda, self.cajero_tienda, "50")
+        self._compra(self.beto, self.cafe, self.cajero_cafe, "300")
+        self._visita(self.ana)
+        self._visita(self.ana, hace_dias=2)
+
+        data = self.client.get("/api/v1/admin/reportes/clientes/procedencia/").data
+        por = {p["procedencia"]: p for p in data["procedencias"]}
+        self.assertEqual(por["QUILLACOLLO"]["compras"], 2)
+        self.assertEqual(por["QUILLACOLLO"]["monto"], Decimal("150"))
+        self.assertEqual(por["QUILLACOLLO"]["visitas"], 2)
+        self.assertEqual(por["OTRO"]["monto"], Decimal("300"))
+        self.assertEqual(data["procedencias"][0]["procedencia"], "OTRO")  # ordenado por monto
+        self.assertEqual(data["ciudades"], [{"ciudad": "La Paz", "clientes": 1, "monedas": por["OTRO"]["monedas"]}])
+
+        top = self.client.get("/api/v1/admin/reportes/clientes/frecuentes/?orden=monto").data
+        self.assertEqual([c["first_name"] for c in top], ["Beto", "Ana"])
+        self.assertEqual(top[1]["total_monto"], Decimal("150"))  # sin inflar por las 2 visitas
+        self.assertEqual(top[0]["procedencia_nombre"], "Otro: La Paz")
+
+        solo = self.client.get("/api/v1/admin/reportes/compras-por-dia/?procedencia=QUILLACOLLO").data
+        self.assertEqual(sum(f["compras"] for f in solo), 2)
+        dias = self.client.get("/api/v1/admin/reportes/clientes/procedencia-por-dia/").data
+        self.assertEqual({f["procedencia"] for f in dias}, {"QUILLACOLLO", "OTRO"})
+
     def test_fecha_invalida(self):
         self.assertEqual(self.client.get(f"{BASE}/resumen/?desde=ayer").status_code, 400)
 

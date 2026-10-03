@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import CarteraPuntos from "../components/CarteraPuntos";
 import JarvisMini from "../components/JarvisMini";
+import ProcedenciaSelector from "../components/ProcedenciaSelector";
+import { actualizarProcedencia } from "../services/authService";
 import Monedero from "../components/Monedero";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { useUserContext } from "../context/UserContext";
@@ -64,6 +68,27 @@ export default function HomeScreen({ navigation }) {
   const [diversion, setDiversion] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [refrescando, setRefrescando] = useState(false);
+  // Clientes que se registraron antes de pedir la procedencia: se les pregunta una vez.
+  const [procedencia, setProcedencia] = useState({ procedencia: "", ciudad_otra: "" });
+  const [erroresProcedencia, setErroresProcedencia] = useState({});
+  const [guardandoProcedencia, setGuardandoProcedencia] = useState(false);
+  const faltaProcedencia = user?.rol === "CLIENTE" && !user?.procedencia;
+
+  const guardarProcedencia = async () => {
+    if (!procedencia.procedencia) return setErroresProcedencia({ procedencia: "Elige de dónde eres." });
+    if (procedencia.procedencia === "OTRO" && !procedencia.ciudad_otra.trim()) {
+      return setErroresProcedencia({ ciudad_otra: "Escribe tu ciudad." });
+    }
+    setGuardandoProcedencia(true);
+    try {
+      await actualizarProcedencia(procedencia);
+      await recargarPerfil();
+    } catch (err) {
+      setErroresProcedencia({ ...(err.fieldErrors || {}), procedencia: err.fieldErrors?.procedencia || err.message });
+    } finally {
+      setGuardandoProcedencia(false);
+    }
+  };
   const scroll = useRef(null);
   const yPuntos = useRef(0);
   const nombre = user?.first_name || user?.username || "cliente";
@@ -386,6 +411,20 @@ export default function HomeScreen({ navigation }) {
         )}
       </ScrollView>
 
+      <Modal visible={faltaProcedencia} transparent animationType="fade">
+        <View style={styles.procFondo}>
+          <View style={styles.procTarjeta}>
+            <Text style={styles.procTitulo}>Un dato rápido</Text>
+            <Text style={styles.procTexto}>Cuéntanos de dónde eres para mostrarte lo mejor del Paseo.</Text>
+            <ProcedenciaSelector value={procedencia} onChange={setProcedencia} errores={erroresProcedencia} />
+            <TouchableOpacity style={styles.procBoton} onPress={guardarProcedencia} disabled={guardandoProcedencia}>
+              {guardandoProcedencia ? <ActivityIndicator color={STITCH.white} />
+                : <Text style={styles.procBotonTexto}>Guardar</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Barra inferior */}
       <SafeAreaView edges={["bottom"]} style={styles.tabs}>
         {TABS.map((tab) =>
@@ -505,6 +544,12 @@ const styles = StyleSheet.create({
   explorarTextoActivo: { color: STITCH.white },
 
   monedero: { marginTop: 12 },
+  procFondo: { flex: 1, backgroundColor: "rgba(0,20,35,0.55)", justifyContent: "center", padding: 20 },
+  procTarjeta: { backgroundColor: STITCH.white, borderRadius: 20, padding: 20 },
+  procTitulo: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 20 },
+  procTexto: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 14, marginTop: 4, marginBottom: 14 },
+  procBoton: { backgroundColor: STITCH.primary, borderRadius: 999, paddingVertical: 14, alignItems: "center", marginTop: 14 },
+  procBotonTexto: { color: STITCH.white, fontFamily: FUENTES.tituloBold, fontSize: 15 },
   flex1: { flex: 1 },
 
   evento: { marginTop: 12, backgroundColor: "#3f1d5c", borderRadius: 20, padding: 18, overflow: "hidden" },

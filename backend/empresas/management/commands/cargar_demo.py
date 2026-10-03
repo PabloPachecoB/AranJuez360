@@ -126,7 +126,10 @@ class Command(BaseCommand):
         self._usuario("portero@paseo.bo", email="portero@paseo.bo", rol=Usuario.Rol.PORTERO,
                       first_name="Portero", last_name="Demo")
         self._usuario("cliente@paseo.bo", email="cliente@paseo.bo", rol=Usuario.Rol.CLIENTE,
-                      first_name="Cliente", last_name="Demo", ci="1234567", celular="71234567")
+                      first_name="Cliente", last_name="Demo", ci="1234567", celular="71234567",
+                      procedencia="CERCADO")
+        # Si la cuenta ya existía (de una carga anterior), se completa su procedencia.
+        Usuario.objects.filter(username="cliente@paseo.bo", procedencia="").update(procedencia="CERCADO")
 
         for nombre, tipo, categoria, piso, local, productos in EMPRESAS:
             cat, _ = Categoria.objects.get_or_create(nombre=categoria)

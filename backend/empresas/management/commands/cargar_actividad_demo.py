@@ -23,6 +23,10 @@ NOMBRES = ["Ana", "Luis", "María", "Jorge", "Camila", "Diego", "Valeria", "Andr
            "Lucía", "Gabriel", "Daniela", "Sebastián", "Paola", "Rodrigo", "Fernanda", "Marco", "Natalia", "Iván"]
 APELLIDOS = ["Rojas", "Mamani", "Quispe", "Gutiérrez", "Flores", "Vargas", "Choque", "Pérez", "López", "Salazar"]
 DOMINIO = "demo.paseo.bo"
+# De dónde vienen los clientes (peso aproximado): la mayoría de la ciudad y alrededores.
+PROCEDENCIAS = [("CERCADO", 46), ("QUILLACOLLO", 18), ("CHAPARE", 12), ("GERMAN_JORDAN", 4), ("PUNATA", 4),
+                ("ESTEBAN_ARCE", 3), ("CAPINOTA", 2), ("CARRASCO", 2), ("OTRO", 9)]
+CIUDADES_FUERA = ["La Paz", "Santa Cruz", "Oruro", "Sucre", "Potosí", "Tarija"]
 # Peso de cada hora del día (10 a 21): picos al mediodía y por la tarde-noche.
 PESO_HORA = {10: 2, 11: 3, 12: 6, 13: 8, 14: 5, 15: 3, 16: 3, 17: 5, 18: 8, 19: 9, 20: 6, 21: 2}
 # Peso por día de la semana (0 = lunes): más movimiento el fin de semana.
@@ -68,6 +72,9 @@ class Command(BaseCommand):
                 ci=str(4_000_000 + i * 7919), celular=f"7{rnd.randint(1_000_000, 9_999_999)}",
                 email_verificado=True,
             )
+            c.procedencia = rnd.choices([p for p, _ in PROCEDENCIAS], weights=[w for _, w in PROCEDENCIAS])[0]
+            if c.procedencia == "OTRO":
+                c.ciudad_otra = rnd.choice(CIUDADES_FUERA)
             c.set_unusable_password()
             clientes.append(c)
         Usuario.objects.bulk_create(clientes)

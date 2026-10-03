@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import FormField from "../components/FormField";
 import PrimaryButton from "../components/PrimaryButton";
+import ProcedenciaSelector from "../components/ProcedenciaSelector";
 import { COLORS } from "../constants/colors";
 import { registro } from "../services/authService";
 
@@ -24,6 +25,8 @@ const INICIAL = {
   ci: "",
   nit: "",
   fecha_nacimiento: "",
+  procedencia: "",
+  ciudad_otra: "",
   password: "",
   password_confirmacion: "",
   acepta_terminos: false,
@@ -39,6 +42,8 @@ function validar(f) {
   if (!/^\d{5,10}(-[0-9A-Za-z]{1,2})?$/.test(f.ci.trim())) e.ci = "Solo números; complemento opcional (ej. 1234567-1A).";
   if (f.nit && !/^\d{5,20}$/.test(f.nit.trim())) e.nit = "El NIT debe tener solo números.";
   if (f.fecha_nacimiento && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_nacimiento)) e.fecha_nacimiento = "Usa el formato AAAA-MM-DD.";
+  if (!f.procedencia) e.procedencia = "Elige de dónde eres.";
+  else if (f.procedencia === "OTRO" && !f.ciudad_otra.trim()) e.ciudad_otra = "Escribe tu ciudad.";
   if (f.password.length < 8) e.password = "Mínimo 8 caracteres.";
   else if (!/[A-Za-z]/.test(f.password) || !/\d/.test(f.password)) e.password = "Usa letras y números.";
   if (f.password !== f.password_confirmacion) e.password_confirmacion = "Las contraseñas no coinciden.";
@@ -82,6 +87,7 @@ export default function RegistroScreen({ navigation }) {
         ci: form.ci.trim().toUpperCase(),
         nit: form.nit.trim(),
         fecha_nacimiento: form.fecha_nacimiento || null,
+        ciudad_otra: form.procedencia === "OTRO" ? form.ciudad_otra.trim() : "",
       });
       navigation.replace("VerificarCodigo", paso);
     } catch (err) {
@@ -121,6 +127,13 @@ export default function RegistroScreen({ navigation }) {
             hint="Te enviaremos un código para verificarlo." />
           <FormField label="Celular" placeholder="71234567" value={form.celular} onChangeText={set("celular")}
             error={errores.celular} keyboardType="phone-pad" autoComplete="tel" maxLength={12} />
+
+          <Text style={styles.seccion}>Procedencia</Text>
+          <ProcedenciaSelector
+            value={{ procedencia: form.procedencia, ciudad_otra: form.ciudad_otra }}
+            onChange={(v) => setForm({ ...form, ...v })}
+            errores={errores}
+          />
 
           <Text style={styles.seccion}>Identidad</Text>
           <View style={styles.aviso}>

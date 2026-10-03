@@ -65,13 +65,13 @@ def usuarios_por_rol(request):
 @api_view(["GET"])
 @permission_classes([EsAdmin])
 def visitas_por_dia(request):
-    return Response(services.visitas_por_dia(*_periodo(request)))
+    return Response(services.visitas_por_dia(*_periodo(request), request.query_params.get("procedencia")))
 
 
 @api_view(["GET"])
 @permission_classes([EsAdmin])
 def compras_por_dia(request):
-    return Response(services.compras_por_dia(*_periodo(request)))
+    return Response(services.compras_por_dia(*_periodo(request), request.query_params.get("procedencia")))
 
 
 @api_view(["GET"])
@@ -104,8 +104,23 @@ def empresas_sin_actividad(request):
 def clientes_frecuentes(request):
     orden = request.query_params.get("orden", "visitas")
     return Response(services.clientes_frecuentes(
-        *_periodo(request), orden=orden, limite=_entero(request, "limite", 20)
+        *_periodo(request), orden=orden, limite=_entero(request, "limite", 20),
+        procedencia=request.query_params.get("procedencia"),
     ))
+
+
+@api_view(["GET"])
+@permission_classes([EsAdmin])
+def clientes_por_procedencia(request):
+    """De dónde son los clientes: cantidad, compras, monto, visitas y monedas por procedencia."""
+    return Response(services.clientes_por_procedencia(*_periodo(request)))
+
+
+@api_view(["GET"])
+@permission_classes([EsAdmin])
+def volumen_por_procedencia(request):
+    """Compras por día y procedencia."""
+    return Response(services.volumen_diario_por_procedencia(*_periodo(request)))
 
 
 @api_view(["GET"])

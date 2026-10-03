@@ -13,5 +13,7 @@ urlpatterns = [
     path("empresas/sin-actividad/", views.empresas_sin_actividad, name="reporte-empresas-sin-actividad"),
     path("clientes/frecuentes/", views.clientes_frecuentes, name="reporte-clientes-frecuentes"),
     path("clientes/dormidos/", views.clientes_dormidos, name="reporte-clientes-dormidos"),
+    path("clientes/procedencia/", views.clientes_por_procedencia, name="reporte-clientes-procedencia"),
+    path("clientes/procedencia-por-dia/", views.volumen_por_procedencia, name="reporte-procedencia-por-dia"),
     path("clientes/<int:pk>/historial/", views.historial_cliente, name="reporte-historial-cliente"),
 ]

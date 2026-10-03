@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 
 def _es_demo(direccion: str) -> bool:
     dominio = direccion.rsplit("@", 1)[-1].strip(" >").lower()
-    return dominio in settings.EMAIL_DOMINIOS_DEMO
+    # También los subdominios (cliente1@demo.paseo.bo de cargar_actividad_demo).
+    return any(dominio == d or dominio.endswith(f".{d}") for d in settings.EMAIL_DOMINIOS_DEMO)
 
 
 class SmtpSinDemoBackend(EmailBackend):

@@ -15,6 +15,7 @@ from . import services, verificacion
 from .models import CodigoVerificacion, Usuario
 from .permissions import EsAdmin
 from .serializers import (
+    ProcedenciaSerializer,
     CambiarPasswordSerializer,
     DesafioSerializer,
     LoginSerializer,
@@ -113,10 +114,22 @@ for _vista in (registro, login, verificar_codigo, reenviar_codigo):
     _vista.cls.throttle_scope = "auth"
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def yo(request):
+    """GET: perfil. PATCH: el cliente completa de dónde es (procedencia y ciudad)."""
+    if request.method == "PATCH":
+        serializer = ProcedenciaSerializer(request.user, data=request.data, partial=False)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
     return Response(UsuarioSerializer(request.user).data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def procedencias(request):
+    """Opciones de procedencia para el registro de la app: provincias de Cochabamba u Otro."""
+    return Response([{"valor": v, "nombre": n} for v, n in Usuario.Procedencia.choices])
 
 
 @api_view(["POST"])

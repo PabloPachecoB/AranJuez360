@@ -12,6 +12,7 @@ interface HistorialCliente {
     registrado_en: string;
     activo: boolean;
     puntos_saldo: number;
+    procedencia_texto?: string;
   };
   totales: {
     visitas: number;
@@ -61,13 +62,13 @@ export default function ClienteHistorial() {
             <header className="mb-space-md">
               <h1 className="font-headline-lg text-headline-lg text-on-surface">{data.cliente.nombre}</h1>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                {data.cliente.email} · {data.cliente.celular || "sin celular"} · cliente desde {fecha(data.cliente.registrado_en)}
+                {data.cliente.email} · {data.cliente.celular || "sin celular"} · {data.cliente.procedencia_texto || "procedencia sin indicar"} · cliente desde {fecha(data.cliente.registrado_en)}
                 {!data.cliente.activo && " · cuenta inactiva"}
               </p>
             </header>
 
             <div className="mb-space-md grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-space-md">
-              <StatTile label="Puntos actuales" value={data.cliente.puntos_saldo} />
+              <StatTile label="Monedas actuales" value={data.cliente.puntos_saldo} />
               <StatTile label="Visitas" value={data.totales.visitas} />
               <StatTile label="Tickets de fidelización" value={data.totales.tickets} />
               <StatTile label="Monto registrado" value={data.totales.monto_total} formato={bs} />

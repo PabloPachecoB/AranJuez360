@@ -16,6 +16,7 @@ REGISTRO = {
     "celular": "71234567",
     "ci": "1234567-1a",
     "nit": "",
+    "procedencia": "QUILLACOLLO",
     "password": "PaseoSeguro9",
     "password_confirmacion": "PaseoSeguro9",
     "acepta_terminos": True,
@@ -191,3 +192,42 @@ class CorreoSinDemoTests(SimpleTestCase):
         enviado = smtp.call_args.args[0][0]
         self.assertEqual(enviado.to, ["yo@gmail.com"])
         self.assertEqual(enviado.subject, "[Demo: admin@paseo.bo] Tu código")
+
+
+
+class ProcedenciaTests(APITestCase):
+    """De dónde es el cliente: provincia de Cochabamba u Otro + ciudad."""
+
+    def test_registro_otro_exige_ciudad(self):
+        datos = {**REGISTRO, "procedencia": "OTRO", "ciudad_otra": ""}
+        resp = self.client.post("/api/v1/auth/registro/", datos, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ciudad_otra", resp.data)
+        datos["ciudad_otra"] = " Santa Cruz "
+        self.assertEqual(self.client.post("/api/v1/auth/registro/", datos, format="json").status_code, 201)
+        u = Usuario.objects.get(username="ana@correo.com")
+        self.assertEqual((u.procedencia, u.ciudad_otra, u.procedencia_texto), ("OTRO", "Santa Cruz", "Otro: Santa Cruz"))
+
+    def test_registro_sin_procedencia_rechazado(self):
+        datos = {k: v for k, v in REGISTRO.items() if k != "procedencia"}
+        resp = self.client.post("/api/v1/auth/registro/", datos, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("procedencia", resp.data)
+
+    def test_provincia_limpia_la_ciudad(self):
+        self.client.post("/api/v1/auth/registro/", {**REGISTRO, "ciudad_otra": "La Paz"}, format="json")
+        u = Usuario.objects.get(username="ana@correo.com")
+        self.assertEqual((u.procedencia, u.ciudad_otra, u.procedencia_texto), ("QUILLACOLLO", "", "Quillacollo"))
+
+    def test_cliente_existente_completa_su_procedencia(self):
+        u = Usuario.objects.create_user("viejo", password="x", rol=Usuario.Rol.CLIENTE)
+        self.client.force_authenticate(u)
+        self.assertEqual(self.client.get("/api/v1/auth/yo/").data["procedencia"], "")
+        resp = self.client.patch("/api/v1/auth/yo/", {"procedencia": "CHAPARE"}, format="json")
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data["procedencia_texto"], "Chapare")
+
+    def test_lista_de_opciones(self):
+        opciones = self.client.get("/api/v1/auth/procedencias/").data
+        self.assertEqual(len(opciones), 17)  # 16 provincias + Otro
+        self.assertEqual(opciones[-1]["valor"], "OTRO")

@@ -41,3 +41,23 @@ export async function getMe() {
     throw new ApiError(err);
   }
 }
+
+// Opciones de "¿De dónde eres?": provincias de Cochabamba u Otro (vienen del backend).
+export async function getProcedencias() {
+  try {
+    const { data } = await api.get("/auth/procedencias/");
+    return data;
+  } catch (err) {
+    throw new ApiError(err);
+  }
+}
+
+/** El cliente completa o corrige de dónde es: { procedencia, ciudad_otra }. */
+export async function actualizarProcedencia({ procedencia, ciudad_otra }) {
+  try {
+    const { data } = await api.patch("/auth/yo/", { procedencia, ciudad_otra: ciudad_otra || "" });
+    return data;
+  } catch (err) {
+    throw new ApiError(err);
+  }
+}

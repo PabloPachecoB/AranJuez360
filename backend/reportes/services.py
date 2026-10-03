@@ -7,8 +7,8 @@ totales de cada tienda, que viven en sus propios sistemas).
 
 from datetime import date, timedelta
 
-from django.db.models import Count, Max, Q, Sum
-from django.db.models.functions import ExtractHour, ExtractIsoWeekDay, TruncDate
+from django.db.models import Count, DecimalField, Max, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce, ExtractHour, ExtractIsoWeekDay, TruncDate
 from django.utils import timezone
 
 from empresas.models import Empresa
@@ -23,6 +23,10 @@ DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", 
 def _rango(desde: date, hasta: date) -> dict:
     """Filtro de fechas inclusivo para campos `creado_en`."""
     return {"creado_en__date__gte": desde, "creado_en__date__lte": hasta}
+
+
+def _rango_texto(desde: date, hasta: date) -> dict:
+    return {"desde": desde.isoformat(), "hasta": hasta.isoformat()}
 
 
 def _indicadores(desde: date, hasta: date) -> dict:
@@ -69,9 +73,25 @@ def resumen(desde: date, hasta: date) -> dict:
     }
 
 
-def visitas_por_dia(desde: date, hasta: date) -> list:
+SIN_DATO = "SIN_DATO"
+
+
+def _de_procedencia(procedencia: str | None, campo: str = "cliente__procedencia") -> dict:
+    """Filtro opcional ?procedencia=QUILLACOLLO (SIN_DATO = clientes que no la indicaron)."""
+    if not procedencia:
+        return {}
+    return {campo: "" if procedencia == SIN_DATO else procedencia}
+
+
+def _nombre_procedencia(codigo: str) -> str:
+    if not codigo:
+        return "Sin indicar"
+    return dict(Usuario.Procedencia.choices).get(codigo, codigo).split(" (")[0]
+
+
+def visitas_por_dia(desde: date, hasta: date, procedencia: str | None = None) -> list:
     filas = (
-        Visita.objects.filter(**_rango(desde, hasta))
+        Visita.objects.filter(**_rango(desde, hasta), **_de_procedencia(procedencia))
         .annotate(fecha=TruncDate("creado_en"))
         .values("fecha")
         .annotate(visitas=Count("id"), clientes=Count("cliente", distinct=True), puntos=Sum("puntos"))
@@ -80,9 +100,9 @@ def visitas_por_dia(desde: date, hasta: date) -> list:
     return list(filas)
 
 
-def compras_por_dia(desde: date, hasta: date) -> list:
+def compras_por_dia(desde: date, hasta: date, procedencia: str | None = None) -> list:
     filas = (
-        SolicitudPuntos.objects.filter(estado=APROBADA, **_rango(desde, hasta))
+        SolicitudPuntos.objects.filter(estado=APROBADA, **_rango(desde, hasta), **_de_procedencia(procedencia))
         .annotate(fecha=TruncDate("creado_en"))
         .values("fecha")
         .annotate(compras=Count("id"), monto=Sum("monto"), puntos=Sum("puntos"))
@@ -161,8 +181,28 @@ def empresas_sin_actividad(dias: int) -> list:
     )
 
 
-def clientes_frecuentes(desde: date, hasta: date, orden: str = "visitas", limite: int = 20) -> list:
-    clientes = Usuario.objects.filter(rol=Usuario.Rol.CLIENTE).annotate(
+ORDENES_CLIENTES = {
+    "visitas": "total_visitas", "compras": "total_compras", "monto": "total_monto", "monedas": "puntos_saldo",
+}
+
+
+def clientes_frecuentes(
+    desde: date, hasta: date, orden: str = "visitas", limite: int = 20, procedencia: str | None = None,
+) -> list:
+    """Top de clientes por visitas, compras, monto gastado o monedas en su saldo, con su procedencia."""
+    # El monto va en subconsulta: sumarlo junto al conteo de visitas multiplicaría las filas.
+    monto = (
+        SolicitudPuntos.objects.filter(
+            cliente=OuterRef("pk"), estado=APROBADA, creado_en__date__gte=desde, creado_en__date__lte=hasta,
+        )
+        .values("cliente")
+        .annotate(total=Sum("monto"))
+        .values("total")
+    )
+    clientes = Usuario.objects.filter(
+        rol=Usuario.Rol.CLIENTE, **_de_procedencia(procedencia, "procedencia")
+    ).annotate(
+        total_monto=Coalesce(Subquery(monto), Value(0), output_field=DecimalField(max_digits=12, decimal_places=2)),
         total_visitas=Count(
             "visitas", distinct=True,
             filter=Q(visitas__creado_en__date__gte=desde, visitas__creado_en__date__lte=hasta),
@@ -176,13 +216,87 @@ def clientes_frecuentes(desde: date, hasta: date, orden: str = "visitas", limite
             ),
         ),
     )
-    campo = "total_compras" if orden == "compras" else "total_visitas"
+    campo = ORDENES_CLIENTES.get(orden, "total_visitas")
     filas = (
         clientes.filter(**{f"{campo}__gt": 0})
         .order_by(f"-{campo}", "username")
-        .values("id", "first_name", "last_name", "email", "puntos_saldo", "total_visitas", "total_compras")
+        .values(
+            "id", "first_name", "last_name", "email", "puntos_saldo", "total_visitas", "total_compras",
+            "total_monto", "procedencia", "ciudad_otra",
+        )[:limite]
     )
-    return list(filas[:limite])
+    resultado = []
+    for fila in filas:
+        fila["procedencia_nombre"] = (
+            f"Otro: {fila['ciudad_otra']}" if fila["procedencia"] == "OTRO" and fila["ciudad_otra"]
+            else _nombre_procedencia(fila["procedencia"])
+        )
+        resultado.append(fila)
+    return resultado
+
+
+def clientes_por_procedencia(desde: date, hasta: date) -> dict:
+    """De dónde son los clientes: cuántos hay, cuánto compran y cuántas monedas tienen, por procedencia.
+
+    `ciudades` desglosa a los que vienen de fuera de Cochabamba (procedencia OTRO).
+    """
+    clientes = Usuario.objects.filter(rol=Usuario.Rol.CLIENTE)
+    base = {
+        f["procedencia"]: {
+            "procedencia": f["procedencia"] or SIN_DATO,
+            "nombre": _nombre_procedencia(f["procedencia"]),
+            "clientes": f["clientes"],
+            "monedas": f["monedas"] or 0,
+            "compras": 0, "monto": 0, "visitas": 0, "clientes_con_compras": 0,
+        }
+        for f in clientes.values("procedencia").annotate(clientes=Count("id"), monedas=Sum("puntos_saldo"))
+    }
+    compras = (
+        SolicitudPuntos.objects.filter(estado=APROBADA, **_rango(desde, hasta))
+        .values("cliente__procedencia")
+        .annotate(compras=Count("id"), monto=Sum("monto"), compradores=Count("cliente", distinct=True))
+    )
+    for f in compras:
+        fila = base.get(f["cliente__procedencia"])
+        if fila:
+            fila.update(compras=f["compras"], monto=f["monto"] or 0, clientes_con_compras=f["compradores"])
+    for f in Visita.objects.filter(**_rango(desde, hasta)).values("cliente__procedencia").annotate(n=Count("id")):
+        if f["cliente__procedencia"] in base:
+            base[f["cliente__procedencia"]]["visitas"] = f["n"]
+
+    ciudades = (
+        clientes.filter(procedencia=Usuario.Procedencia.OTRO)
+        .exclude(ciudad_otra="")
+        .values("ciudad_otra")
+        .annotate(clientes=Count("id"), monedas=Sum("puntos_saldo"))
+        .order_by("-clientes", "ciudad_otra")
+    )
+    return {
+        **_rango_texto(desde, hasta),
+        "procedencias": sorted(base.values(), key=lambda f: (-f["monto"], -f["clientes"])),
+        "ciudades": [
+            {"ciudad": c["ciudad_otra"], "clientes": c["clientes"], "monedas": c["monedas"] or 0} for c in ciudades
+        ],
+    }
+
+
+def volumen_diario_por_procedencia(desde: date, hasta: date) -> list:
+    """Compras aprobadas por día y procedencia (para un gráfico apilado)."""
+    filas = (
+        SolicitudPuntos.objects.filter(estado=APROBADA, **_rango(desde, hasta))
+        .annotate(fecha=TruncDate("creado_en"))
+        .values("fecha", "cliente__procedencia")
+        .annotate(compras=Count("id"), monto=Sum("monto"), puntos=Sum("puntos"))
+        .order_by("fecha", "cliente__procedencia")
+    )
+    return [
+        {
+            "fecha": f["fecha"], "procedencia": f["cliente__procedencia"] or SIN_DATO,
+            "nombre": _nombre_procedencia(f["cliente__procedencia"]),
+            "compras": f["compras"], "monto": f["monto"] or 0, "monedas": f["puntos"] or 0,
+        }
+        for f in filas
+    ]
 
 
 def clientes_dormidos(dias: int) -> list:
@@ -222,6 +336,9 @@ def historial_cliente(cliente: Usuario) -> dict:
             "activo": cliente.is_active,
             "registrado_en": cliente.date_joined,
             "puntos_saldo": cliente.puntos_saldo,
+            "procedencia_texto": cliente.procedencia_texto,
+        "procedencia": cliente.procedencia,
+        "procedencia_texto": cliente.procedencia_texto,
         },
         "totales": {
             "visitas": visitas.count(),

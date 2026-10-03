@@ -13,5 +13,6 @@ urlpatterns = [
     path("auth/verificar-codigo/", views.verificar_codigo, name="verificar-codigo"),
     path("auth/reenviar-codigo/", views.reenviar_codigo, name="reenviar-codigo"),
     path("auth/yo/", views.yo, name="yo"),
+    path("auth/procedencias/", views.procedencias, name="procedencias"),
     path("auth/cambiar-password/", views.cambiar_password, name="cambiar-password"),
 ] + router.urls
