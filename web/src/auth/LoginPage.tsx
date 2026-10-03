@@ -154,13 +154,13 @@ export function LoginPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: reducirMovimiento ? 0 : 0.35 }}
-      className="grid min-h-svh min-w-0 bg-[#f5f6f1] font-sans text-[#19182d] tracking-normal lg:grid-cols-[minmax(300px,0.92fr)_minmax(440px,1.08fr)]"
+      className="grid h-svh min-w-0 overflow-hidden bg-[#f5f6f1] font-sans text-[#19182d] tracking-normal lg:grid-cols-[minmax(300px,0.92fr)_minmax(440px,1.08fr)]"
     >
       <motion.aside
         initial={reducirMovimiento ? false : { opacity: 0, x: -18 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: reducirMovimiento ? 0 : 0.45, ease: "easeOut" }}
-        className="relative hidden min-h-svh flex-col justify-between overflow-hidden bg-[#091734] p-12 text-white lg:flex xl:p-20"
+        className="relative hidden min-h-svh flex-col overflow-hidden bg-[#091734] p-8 text-white lg:flex xl:p-12"
         aria-label="Paseo Aranjuez 360"
       >
         {!reducirMovimiento && (
@@ -177,29 +177,29 @@ export function LoginPage() {
           </video>
         )}
         <div className="pointer-events-none absolute inset-0 bg-[#091734]/35" aria-hidden="true" />
-        <div className="relative z-10 flex w-full justify-center">
+        <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center">
           <img src="/logo-paseo-aranjuez.svg" alt="Paseo Aranjuez" className="size-48 object-contain" />
+          <div className="w-full max-w-xl text-center">
+            <img src="/icon-label.svg" alt="Paseo Aranjuez 360" className="mx-auto -mt-32 h-auto max-h-[340px] w-full max-w-[560px] object-contain invert mix-blend-screen" />
+            <p className="mx-auto -mt-20 max-w-md font-body-lg text-base leading-7 text-[#dfdeeb]">Un mundo de experiencias, al alcance de tus manos.</p>
+          </div>
         </div>
-        <div className="relative z-10 my-20 max-w-xl">
-          <h2 className="justify-center  font-headline-lg text-5xl leading-[1.06] font-extrabold xl:text-6xl">Paseo Aaranjuez<br />360°<br /></h2>
-          <p className="mt-5 max-w-md font-body-lg text-base leading-7 text-[#dfdeeb]">Tu comunidad de compras, sabores y experiencias favoritas.</p>
-        </div>
-        <div className="relative z-10 flex flex-wrap justify-between gap-3 border-t border-white/50 pt-5 font-label-sm text-[0.64rem] font-bold text-[#d2d1e0]"><span>SUCRE · BOLIVIA</span><span>COMUNIDAD PASEO ARANJUEZ</span></div>
+        <div className="relative z-10 mt-auto flex flex-col items-center gap-1.5 border-t border-white/50 pt-3 text-center font-label-sm text-[0.64rem] font-bold text-[#d2d1e0]"><span>COCHABAMBA · BOLIVIA</span><span>COMUNIDAD PASEO ARANJUEZ</span></div>
       </motion.aside>
 
-      <section className="grid min-h-svh min-w-0 place-items-center px-4 py-6 sm:px-8 lg:px-16 lg:py-8">
+      <section className="grid h-full min-h-0 min-w-0 overflow-hidden place-items-center px-4 py-4 sm:px-8 lg:px-16 lg:py-8">
         <motion.div
           initial={reducirMovimiento ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reducirMovimiento ? 0 : 0.35, delay: reducirMovimiento ? 0 : 0.08, ease: "easeOut" }}
-          className={`max-h-[calc(100svh-2rem)] w-full overflow-y-auto border border-[#e1e0e9] bg-white p-6 shadow-[0_18px_56px_rgba(9,23,52,0.08)] sm:p-10 lg:max-h-[calc(100svh-4rem)] ${paso === "registro" || paso === "registroCliente" ? "max-w-[620px]" : "max-w-[520px]"}`}
+          className={`min-h-0 max-h-full w-full overflow-y-auto overscroll-contain border border-[#e1e0e9] bg-white p-6 shadow-[0_18px_56px_rgba(9,23,52,0.08)] sm:p-10 ${paso === "registro" || paso === "registroCliente" ? "max-w-[620px]" : "max-w-[520px]"}`}
         >
           <div className="mb-8 flex justify-center lg:hidden">
             <span className="grid size-36 place-items-center bg-[#091734] p-4"><img src="/logo-paseo-aranjuez.svg" alt="Paseo Aranjuez" className="size-full object-contain" /></span>
           </div>
           <header className="mb-7">
             <span className="font-label-sm text-xs font-bold uppercase tracking-[0.08em] text-[#091734]">{paso === "credenciales" ? "Bienvenido de nuevo" : paso === "codigo" ? "Verificación segura" : "Registro"}</span>
-            <h1 className="mt-2 font-headline-lg text-[1.85rem] leading-tight font-extrabold text-[#19182d] sm:text-[2.2rem]">{paso === "credenciales" ? "Inicia sesión" : paso === "codigo" ? "Confirma tu acceso" : paso === "registroCliente" ? "Únete al Paseo" : "Registra tu negocio"}</h1>
+            <h1 className="mt-2 font-headline-lg text-[1.85rem] leading-tight font-extrabold text-[#19182d] sm:text-[2.2rem]">{paso === "credenciales" ? "Inicia sesión" : paso === "codigo" ? "Confirma tu acceso" : paso === "registroCliente" ? "Registro" : "Registra tu negocio"}</h1>
             <p className="mt-2 font-body-md text-sm leading-6 text-[#686779]">{paso === "credenciales" ? "Ingresa tus datos para continuar." : paso === "codigo" ? "Un paso más y estarás dentro." : paso === "registroCliente" ? "Crea tu cuenta de cliente en unos minutos." : "Completa los datos de tu establecimiento."}</p>
           </header>
 
@@ -266,7 +266,7 @@ export function LoginPage() {
                   <label className={labelClase}>Repetir contraseña<input type={mostrarPassword ? "text" : "password"} required minLength={8} className={`${inputClase} pr-12`} value={confirmacionCliente} onChange={(e) => setConfirmacionCliente(e.target.value)} autoComplete="new-password" /><button type="button" className="absolute right-2 bottom-[0.45rem] grid size-10 place-items-center text-[#686779] hover:text-[#091734]" aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setMostrarPassword((visible) => !visible)}><AuthIcon name={mostrarPassword ? "eyeOff" : "eye"} className="h-5 w-5" /></button></label>
                   <label className="flex items-start gap-3 text-xs leading-5 text-[#686779]"><input type="checkbox" required className="mt-1 h-4 w-4 accent-[#091734]" /><span>Acepto los términos y condiciones de PaseoYa.</span></label>
                   {error && <p role="alert" className="border-l-[3px] border-[#ae352b] bg-[#fff1ed] px-3 py-2.5 text-[0.82rem] leading-5 text-[#842b24]">{error}</p>}
-                  <motion.button type="submit" disabled={cargando} whileHover={whileHover} whileTap={whileTap} className="flex min-h-[54px] items-center justify-between gap-4 bg-[#091734] px-4 py-3 font-headline-sm text-[0.92rem] font-bold text-white transition-colors hover:bg-[#050d20] disabled:cursor-wait disabled:opacity-65">{cargando ? "Creando cuenta…" : "Crear cuenta de cliente"}<AuthIcon name="arrow" className="h-5 w-5 text-[#f4c95d]" /></motion.button>
+                  <motion.button type="submit" disabled={cargando} whileHover={whileHover} whileTap={whileTap} className="flex min-h-[54px] items-center justify-center gap-4 bg-[#091734] px-4 py-3 text-center font-headline-sm text-[0.92rem] font-bold text-white transition-colors hover:bg-[#050d20] disabled:cursor-wait disabled:opacity-65">{cargando ? "Creando cuenta…" : "Crear cuenta"}</motion.button>
                   <button type="button" className="self-center text-[0.8rem] font-bold text-[#686779] hover:text-[#091734] hover:underline" onClick={() => { setError(null); setPaso("credenciales"); }}>Ya tengo cuenta — volver</button>
                 </form>
               )}
