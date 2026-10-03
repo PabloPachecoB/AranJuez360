@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { listarPedidosEmpresa, type PedidoApi } from "../api/pedidos";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../../auth/AuthContext";
 
 interface PedidosContextValue {
   pedidos: PedidoApi[];

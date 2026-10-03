@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { usePedidos } from "../context/PedidosContext";
 import { useNegocio } from "../context/NegocioContext";
-import { ApiError } from "../api/client";
+import { ApiError } from "../../api/client";
 import type { NegocioInput } from "../api/negocio";
 import { Switch } from "../components/Switch";
 

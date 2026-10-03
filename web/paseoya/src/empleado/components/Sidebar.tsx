@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useNegocio } from "../context/NegocioContext";
 import { usePedidos } from "../context/PedidosContext";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../auth/AuthContext";
 
 const ENLACES = [
   { to: "/productos", etiqueta: "Productos", icono: "inventory_2" },

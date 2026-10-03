@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { Sidebar } from "./components/Sidebar";
-import { Header } from "./components/Header";
-import { ProductosPage } from "./pages/ProductosPage";
-import { PedidosPage } from "./pages/PedidosPage";
-import { NegocioPage } from "./pages/NegocioPage";
-import { LoginPage } from "./pages/LoginPage";
-import { PedidosProvider } from "./context/PedidosContext";
-import { NegocioProvider } from "./context/NegocioContext";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Sidebar } from "./empleado/components/Sidebar";
+import { Header } from "./empleado/components/Header";
+import { ProductosPage } from "./empleado/pages/ProductosPage";
+import { PedidosPage } from "./empleado/pages/PedidosPage";
+import { NegocioPage } from "./empleado/pages/NegocioPage";
+import { LoginPage } from "./auth/LoginPage";
+import { PedidosProvider } from "./empleado/context/PedidosContext";
+import { NegocioProvider } from "./empleado/context/NegocioContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);

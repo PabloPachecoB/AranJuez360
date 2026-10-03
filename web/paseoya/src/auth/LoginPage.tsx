@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { iniciarLogin, registrarNegocio, verificarCodigo, type TipoEmpresa } from "../api/auth";
 import { listarCategorias, type CategoriaApi } from "../api/categorias";
 import { ApiError } from "../api/client";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "./AuthContext";
 
 const inputClase =
   "h-12 px-4 bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all";

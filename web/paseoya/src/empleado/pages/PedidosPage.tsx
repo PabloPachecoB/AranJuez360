@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { usePedidos } from "../context/PedidosContext";
 import { useNegocio } from "../context/NegocioContext";
 import { avanzarPedido, cancelarPedido, validarRetiro, type EstadoPedidoApi, type PedidoApi } from "../api/pedidos";
-import { ApiError } from "../api/client";
+import { ApiError } from "../../api/client";
 
 const ETIQUETA_ACCION: Partial<Record<EstadoPedidoApi, string>> = {
   RECIBIDO: "Confirmar pedido",

@@ -7,7 +7,7 @@ import {
   type ProductoApi,
   type ProductoInput,
 } from "../api/productos";
-import { ApiError } from "../api/client";
+import { ApiError } from "../../api/client";
 import { ProductoFormModal } from "../components/ProductoFormModal";
 import { Switch } from "../components/Switch";
 

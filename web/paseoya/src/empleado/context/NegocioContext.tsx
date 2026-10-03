@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { obtenerMiEmpresa, actualizarMiEmpresa, type NegocioApi, type NegocioInput } from "../api/negocio";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../../auth/AuthContext";
 
 interface NegocioContextValue {
   negocio: NegocioApi | null;
