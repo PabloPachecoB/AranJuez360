@@ -28,13 +28,31 @@ class HorarioSerializer(serializers.ModelSerializer):
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
-        fields = ["id", "nombre", "descripcion", "precio", "foto", "activo", "creado_en"]
+        fields = [
+            "id", "nombre", "descripcion", "precio", "foto", "stock",
+            "en_promocion", "precio_promocion", "activo", "creado_en",
+        ]
         read_only_fields = ["creado_en"]
 
     def validate_precio(self, value):
         if value <= 0:
             raise serializers.ValidationError("El precio debe ser mayor a 0.")
         return value
+
+    def validate(self, attrs):
+        en_promocion = attrs.get("en_promocion", getattr(self.instance, "en_promocion", False))
+        precio_promocion = attrs.get("precio_promocion", getattr(self.instance, "precio_promocion", None))
+        precio = attrs.get("precio", getattr(self.instance, "precio", None))
+        if en_promocion:
+            if precio_promocion is None:
+                raise serializers.ValidationError(
+                    {"precio_promocion": "Requerido cuando el producto está en promoción."}
+                )
+            if precio is not None and precio_promocion >= precio:
+                raise serializers.ValidationError(
+                    {"precio_promocion": "Debe ser menor al precio regular."}
+                )
+        return attrs
 
 
 class OfertaSerializer(serializers.ModelSerializer):

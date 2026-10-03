@@ -89,6 +89,15 @@ class Producto(models.Model):
     descripcion = models.TextField(blank=True)
     precio = models.DecimalField(max_digits=10, decimal_places=2, help_text="En bolivianos.")
     foto = models.ImageField(upload_to="empresas/productos/", blank=True)
+    # Campos de PaseoYa (Reto 3): el reto oficial pide "administrar inventario"
+    # y valora promociones, por eso viven en el Producto compartido y no en un
+    # modelo aparte.
+    stock = models.PositiveIntegerField(default=0)
+    en_promocion = models.BooleanField(default=False)
+    precio_promocion = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Solo si en_promocion es verdadero; debe ser menor al precio regular.",
+    )
     activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
