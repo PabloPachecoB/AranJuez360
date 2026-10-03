@@ -175,7 +175,9 @@ class Command(BaseCommand):
             Recompensa.objects.update_or_create(
                 nombre=nombre,
                 defaults={"categoria": categoria, "costo_puntos": costo, "empresa": empresa, "activo": True,
-                          "valor_bs": valor},
+                          "valor_bs": valor,
+                          # Parqueo gratis: además de las monedas, venir 15 días seguidos.
+                          "racha_minima_dias": 15 if categoria == "PARQUEO" else 0},
             )
         config = ConfiguracionPuntos.actual()
         config.valor_moneda_bs, config.puntos_por_visita = Decimal("0.03"), Decimal("20")

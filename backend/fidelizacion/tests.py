@@ -440,3 +440,42 @@ class RecompensasNegocioTests(APITestCase):
         self.assertEqual(self.client.post(f"/api/v1/canjes/validar/{codigo}/").status_code, 400)
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.post(f"/api/v1/canjes/validar/{codigo}/").data["estado"], "USADO")
+
+
+class RachaParqueoTests(APITestCase):
+    """Parqueo gratis: además de las monedas, venir 15 días seguidos (y la racha se reinicia al canjear)."""
+
+    def setUp(self):
+        self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
+        Usuario.objects.filter(pk=self.cliente.pk).update(puntos_saldo=Decimal("5000"))
+        self.parqueo = Recompensa.objects.create(nombre="Parqueo", categoria="PARQUEO", costo_puntos=150,
+                                                 racha_minima_dias=15)
+        self.client.force_authenticate(self.cliente)
+
+    def _visitas(self, dias_atras):
+        for d in dias_atras:
+            v = Visita.objects.create(cliente=self.cliente, puntos=0)
+            Visita.objects.filter(pk=v.pk).update(creado_en=timezone.now() - timedelta(days=d))
+
+    def _canjear(self):
+        return self.client.post(f"/api/v1/puntos/recompensas/{self.parqueo.id}/canjear/")
+
+    def test_sin_racha_no_canjea(self):
+        self._visitas(range(0, 10))  # 10 días seguidos
+        resp = self._canjear()
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("15 días seguidos. Llevas 10", resp.data["detail"])
+        item = self.client.get("/api/v1/puntos/recompensas/").data["results"][0]
+        self.assertEqual((item["racha_minima_dias"], item["mi_racha"]), (15, 10))
+
+    def test_un_dia_sin_venir_corta_la_racha(self):
+        self._visitas([0, 1, 2] + list(range(4, 20)))  # faltó hace 3 días
+        self.assertIn("Llevas 3", self._canjear().data["detail"])
+
+    def test_con_15_dias_canjea_y_la_racha_vuelve_a_empezar(self):
+        self._visitas(range(1, 16))  # 15 días seguidos hasta ayer (hoy todavía no vino)
+        self.assertEqual(self.client.get("/api/v1/puntos/monedero/").data["racha_visitas"], 15)
+        self.assertEqual(self._canjear().status_code, 201)
+        resp = self._canjear()  # el mismo día: la racha empezó de cero
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Llevas 0", resp.data["detail"])

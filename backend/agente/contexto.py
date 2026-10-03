@@ -12,6 +12,7 @@ from django.utils import timezone
 from empresas.models import Empresa, Oferta
 from entretenimiento.models import Evento, Funcion, ReservaCine
 from fidelizacion.models import Canje, ConfiguracionPuntos, PuntoEscaneo, RangoCompra, Recompensa
+from fidelizacion.services import racha_para
 
 from .voz import EMOCIONES
 
@@ -118,6 +119,8 @@ def construir_contexto(user) -> dict:
         ],
         "recompensas": [
             f"[{r.id}] {r.nombre} ({r.get_categoria_display().lower()}): {_monedas(r.costo_puntos)} monedas"
+            + (f", requiere venir {r.racha_minima_dias} días seguidos (lleva {racha_para(user, r)})"
+               if r.racha_minima_dias else "")
             + (f" en {r.empresa.nombre}" if r.empresa else "")
             for r in recompensas
         ],

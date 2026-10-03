@@ -100,7 +100,7 @@ class RecompensaSerializer(serializers.ModelSerializer):
         model = Recompensa
         fields = [
             "id", "nombre", "descripcion", "categoria", "costo_puntos", "valor_bs", "costo_sugerido",
-            "empresa", "empresa_nombre", "imagen", "activo", "creado_en",
+            "racha_minima_dias", "empresa", "empresa_nombre", "imagen", "activo", "creado_en",
         ]
         read_only_fields = ["creado_en"]
 
@@ -184,14 +184,27 @@ class CanjeSerializer(serializers.ModelSerializer):
 
 
 class RecompensaClienteSerializer(serializers.ModelSerializer):
-    """Lo que ve el cliente en la app: solo monedas, nunca el valor en Bs."""
+    """Lo que ve el cliente en la app: solo monedas (nunca el valor en Bs) y, si el premio
+    pide venir varios días seguidos, cuántos lleva."""
 
     empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
+    mi_racha = serializers.SerializerMethodField()
 
     class Meta:
         model = Recompensa
-        fields = ["id", "nombre", "descripcion", "categoria", "costo_puntos", "empresa", "empresa_nombre", "imagen"]
+        fields = [
+            "id", "nombre", "descripcion", "categoria", "costo_puntos", "racha_minima_dias", "mi_racha",
+            "empresa", "empresa_nombre", "imagen",
+        ]
         read_only_fields = fields
+
+    def get_mi_racha(self, obj):
+        request = self.context.get("request")
+        if not obj.racha_minima_dias or not request:
+            return None
+        from .services import racha_para
+
+        return racha_para(request.user, obj)
 
 
 class RecompensaNegocioSerializer(RecompensaSerializer):

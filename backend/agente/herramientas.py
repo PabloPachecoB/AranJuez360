@@ -74,6 +74,7 @@ def _preparar_canje(user, args):
         raise ReglaNegocioError(
             f"Para {recompensa.nombre} necesitas {_m(recompensa.costo_puntos)} monedas y tienes {_m(saldo)}."
         )
+    puntos.validar_racha(user, recompensa)  # p. ej. parqueo gratis: 15 días seguidos de visita
     lugar = f" en {recompensa.empresa.nombre}" if recompensa.empresa else ""
     return (
         f"Canjear {recompensa.nombre}{lugar} por {_m(recompensa.costo_puntos)} monedas",

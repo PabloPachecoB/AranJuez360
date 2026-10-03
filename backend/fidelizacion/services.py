@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core import signing
 from django.db import transaction
 from django.db.models import F, Q
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from empresas.models import Empresa
@@ -283,6 +284,7 @@ def monedero(cliente: Usuario) -> dict:
         "saldo": saldo,
         "recompensas_disponibles": activas.filter(costo_puntos__lte=saldo).count(),
         "siguiente": None,
+        "racha_visitas": racha_visitas(cliente),
         "puntos_por_visita": config.puntos_por_visita,
     }
     if siguiente:
@@ -331,10 +333,44 @@ def recompensa_activa(recompensa_id) -> Recompensa:
     return recompensa
 
 
+def racha_visitas(cliente: Usuario, desde=None) -> int:
+    """Días seguidos que el cliente vino al Paseo, contando hasta hoy (o hasta ayer si hoy
+    todavía no vino). `desde`: solo cuentan las visitas posteriores a ese momento."""
+    visitas = Visita.objects.filter(cliente=cliente)
+    if desde:
+        visitas = visitas.filter(creado_en__gt=desde)
+    dias = set(visitas.annotate(dia=TruncDate("creado_en")).values_list("dia", flat=True))
+    hoy = timezone.localdate()
+    dia = hoy if hoy in dias else hoy - timedelta(days=1)
+    racha = 0
+    while dia in dias:
+        racha += 1
+        dia -= timedelta(days=1)
+    return racha
+
+
+def racha_para(cliente: Usuario, recompensa: Recompensa) -> int:
+    """Racha que cuenta para este premio: empieza de nuevo después del último canje del mismo premio."""
+    ultimo = Canje.objects.filter(cliente=cliente, recompensa=recompensa).order_by("-creado_en").first()
+    return racha_visitas(cliente, desde=ultimo.creado_en if ultimo else None)
+
+
+def validar_racha(cliente: Usuario, recompensa: Recompensa):
+    if not recompensa.racha_minima_dias:
+        return
+    racha = racha_para(cliente, recompensa)
+    if racha < recompensa.racha_minima_dias:
+        raise ReglaNegocioError(
+            f"Para {recompensa.nombre} tienes que venir al Paseo {recompensa.racha_minima_dias} días seguidos. "
+            f"Llevas {racha}."
+        )
+
+
 @transaction.atomic
 def canjear_recompensa(cliente: Usuario, recompensa_id) -> Canje:
     recompensa = recompensa_activa(recompensa_id)
     Usuario.objects.select_for_update().filter(pk=cliente.pk).first()
+    validar_racha(cliente, recompensa)
     cobrar_monedas(cliente.pk, recompensa.costo_puntos, f"Canje: {recompensa.nombre}", empresa=recompensa.empresa)
     return Canje.objects.create(cliente=cliente, recompensa=recompensa, monedas=recompensa.costo_puntos)
 

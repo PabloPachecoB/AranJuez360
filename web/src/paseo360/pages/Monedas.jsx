@@ -153,12 +153,13 @@ export default function Monedas() {
         subtitulo="Lo que los clientes canjean con sus monedas: parqueo, cine, descuentos y productos."
         endpoint="/admin/recompensas/"
         textoNuevo="Agregar recompensa"
-        inicial={{ nombre: "", categoria: "PRODUCTO", costo_puntos: "", descripcion: "", activo: true }}
+        inicial={{ nombre: "", categoria: "PRODUCTO", costo_puntos: "", racha_minima_dias: 0, descripcion: "", activo: true }}
         campos={[
           { k: "nombre", label: "Nombre", requerido: true },
           { k: "categoria", label: "Categoría", tipo: "select", opciones: CATEGORIAS_RECOMPENSA, requerido: true },
           { k: "costo_puntos", label: "Costo (monedas)", tipo: "decimal", requerido: true },
           { k: "valor_bs", label: "Valor real (Bs)", tipo: "decimal", ayuda: "Interno: el cliente no lo ve" },
+          { k: "racha_minima_dias", label: "Días seguidos de visita", tipo: "number", ayuda: "0 = sin requisito. Ej. parqueo gratis: 15" },
           { k: "empresa", label: "Negocio (vacío = todo el Paseo)", tipo: "select", opciones: opcionesEmpresas },
           { k: "descripcion", label: "Descripción", tipo: "textarea" },
           { k: "activo", label: "Activa", tipo: "checkbox" },
@@ -169,6 +170,7 @@ export default function Monedas() {
           { label: "Costo", render: (f) => `${m(f.costo_puntos)} monedas`, num: true },
           { label: "Valor real", render: (f) => (f.valor_bs ? `Bs ${m(f.valor_bs)}` : "—"), num: true },
           { label: "Sugerido", render: (f) => (f.costo_sugerido ? m(f.costo_sugerido) : "—"), num: true },
+          { label: "Racha", render: (f) => (f.racha_minima_dias ? `${f.racha_minima_dias} días` : "—"), num: true },
           { label: "Negocio", render: (f) => f.empresa_nombre || <span className="muted">Todo el Paseo</span> },
           { label: "Estado", render: activo },
         ]}

@@ -110,6 +110,9 @@ export default function Monedero({ datos }) {
         <View>
           <Text style={styles.saldo}>{fmt(contador)}</Text>
           <Text style={styles.saldoUnidad}>monedas</Text>
+          {datos?.racha_visitas ? (
+            <Text style={styles.saldoUnidad}>🔥 {datos.racha_visitas} {datos.racha_visitas === 1 ? "día" : "días"} seguidos viniendo al Paseo</Text>
+          ) : null}
         </View>
       </View>
 

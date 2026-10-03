@@ -214,6 +214,11 @@ class Recompensa(models.Model):
         max_digits=10, decimal_places=2, null=True, blank=True,
         help_text="Valor real del premio en Bs (lo ven el admin y el negocio; nunca el cliente).",
     )
+    racha_minima_dias = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Días seguidos de visita al Paseo para poder canjearlo (0 = sin requisito). "
+                  "La racha vuelve a empezar después de cada canje de este premio.",
+    )
     empresa = models.ForeignKey(
         "empresas.Empresa", on_delete=models.SET_NULL, null=True, blank=True,
         related_name="recompensas", help_text="Vacío si aplica en todo el Paseo.",
