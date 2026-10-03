@@ -38,6 +38,28 @@ export function iniciarLogin(email: string, password: string) {
   });
 }
 
+export type TipoEmpresa = "NEGOCIO" | "EMPRENDIMIENTO";
+
+export interface RegistroNegocioInput {
+  nombre: string;
+  tipo: TipoEmpresa;
+  categoria: number;
+  email: string;
+  telefono?: string;
+  password: string;
+  password_confirmacion: string;
+}
+
+// Autorregistro de negocio/emprendimiento: misma respuesta que /auth/login/
+// (desafío + código por correo) — reutiliza verificarCodigo tal cual.
+export function registrarNegocio(datos: RegistroNegocioInput) {
+  return api<LoginResponse>("/auth/registro-negocio/", {
+    method: "POST",
+    body: datos,
+    auth: false,
+  });
+}
+
 // Paso 2: desafío + código -> recién aquí llegan los JWT (access + refresh).
 export async function verificarCodigo(desafio: string, codigo: string) {
   const data = await api<VerificarResponse>("/auth/verificar-codigo/", {

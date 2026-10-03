@@ -17,6 +17,7 @@ router.register(r"categorias", views.CategoriaPublicaViewSet, basename="categori
 mi_empresa = views.MiEmpresaViewSet
 
 urlpatterns = [
+    path("auth/registro-negocio/", views.registro_negocio, name="registro-negocio"),
     path("mi-empresa/", mi_empresa.as_view({"get": "perfil", "patch": "perfil"}), name="mi-empresa"),
     path("mi-empresa/horarios/", mi_empresa.as_view({"get": "horarios", "put": "horarios"}), name="mi-empresa-horarios"),
     path("mi-empresa/codigo/", mi_empresa.as_view({"get": "codigo"}), name="mi-empresa-codigo"),

@@ -1,9 +1,44 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
 from usuarios.models import Usuario
 
 from .models import Categoria, Empresa, Horario, Oferta, Producto
+
+
+class RegistroEmpresaSerializer(serializers.Serializer):
+    """Autorregistro de un negocio establecido o un emprendimiento que viene
+    momentáneamente a vender — sin esperar a que el admin dé de alta la
+    cuenta (a diferencia de EmpresaAdminSerializer, acá el dueño elige su
+    propia contraseña)."""
+
+    TIPOS_PERMITIDOS = (Empresa.Tipo.NEGOCIO, Empresa.Tipo.EMPRENDIMIENTO)
+
+    nombre = serializers.CharField(max_length=120)
+    tipo = serializers.ChoiceField(choices=[(t, t) for t in TIPOS_PERMITIDOS])
+    categoria = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all())
+    email = serializers.EmailField()
+    telefono = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirmacion = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if Usuario.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirmacion"]:
+            raise serializers.ValidationError({"password_confirmacion": "Las contraseñas no coinciden."})
+        candidato = Usuario(username=attrs["email"], email=attrs["email"])
+        try:
+            validate_password(attrs["password"], candidato)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
+        return attrs
 
 
 class CategoriaSerializer(serializers.ModelSerializer):

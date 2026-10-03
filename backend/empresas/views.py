@@ -1,13 +1,16 @@
 from django.conf import settings
 from django.db import transaction
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
+from usuarios.models import CodigoVerificacion
 from usuarios.permissions import EsAdmin, EsEmpresa
+from usuarios import verificacion
 
 from . import services
 from .models import Categoria, Empresa, Horario, Oferta, Producto
@@ -20,9 +23,45 @@ from .serializers import (
     HorarioSerializer,
     OfertaSerializer,
     ProductoSerializer,
+    RegistroEmpresaSerializer,
 )
 
 PARSERS = [JSONParser, MultiPartParser, FormParser]
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+def registro_negocio(request):
+    """Autorregistro de negocio/emprendimiento: crea la cuenta y envía un
+    código de verificación al correo — mismo mecanismo que el registro de
+    clientes. La sesión se entrega recién en /auth/verificar-codigo/ (el
+    endpoint compartido ya existente; no hace falta uno nuevo)."""
+    serializer = RegistroEmpresaSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    datos = serializer.validated_data
+    with transaction.atomic():
+        usuario = services.registrar_negocio_propio(
+            nombre=datos["nombre"],
+            tipo=datos["tipo"],
+            categoria=datos["categoria"],
+            email=datos["email"],
+            telefono=datos.get("telefono", ""),
+            password=datos["password"],
+        )
+        codigo = verificacion.emitir_codigo(usuario, CodigoVerificacion.Proposito.VERIFICAR_EMAIL)
+    return Response(
+        {
+            "paso": "verificar_correo",
+            "desafio": str(codigo.desafio),
+            "email": usuario.email,
+            "vence_en_minutos": settings.CODIGO_VERIFICACION_MINUTOS,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+registro_negocio.cls.throttle_scope = "auth"
 
 
 # --- Vista administrativa -----------------------------------------------------
