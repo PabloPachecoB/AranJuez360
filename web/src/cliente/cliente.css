@@ -1,3 +1,44 @@
+/* Paleta local de PaseoYa alineada con el acceso, sin afectar Admin. */
+.cliente-theme {
+  color-scheme: light;
+  --color-primary: #091734;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1c2b4a;
+  --color-on-primary-container: #ffffff;
+  --color-primary-fixed: #e9eaf1;
+  --color-primary-fixed-dim: #d5d8e3;
+  --color-on-primary-fixed: #091734;
+  --color-on-primary-fixed-variant: #303c58;
+
+  --color-secondary: #8e650b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #f8e4a0;
+  --color-on-secondary-container: #091734;
+  --color-secondary-fixed: #fbefc7;
+  --color-secondary-fixed-dim: #f4c95d;
+  --color-on-secondary-fixed: #091734;
+  --color-on-secondary-fixed-variant: #634907;
+
+  --color-background: #f5f6f1;
+  --color-on-background: #19182d;
+  --color-surface: #f5f6f1;
+  --color-on-surface: #19182d;
+  --color-surface-variant: #e9e8ef;
+  --color-on-surface-variant: #686779;
+  --color-surface-tint: #091734;
+  --color-surface-bright: #ffffff;
+  --color-surface-dim: #d8d9df;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8f8fb;
+  --color-surface-container: #f1f0f6;
+  --color-surface-container-high: #e8e7ef;
+  --color-surface-container-highest: #dedde8;
+  --color-inverse-surface: #19182d;
+  --color-inverse-on-surface: #f5f6f1;
+  --color-outline: #858397;
+  --color-outline-variant: #dedde8;
+}
+
 @keyframes cliente-reveal {
   from {
     opacity: 0;

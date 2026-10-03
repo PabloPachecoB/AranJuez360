@@ -16,8 +16,8 @@ export function ClientePuntosPage() {
         {monedero.data && (
           <>
             <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-              <section className="bg-[#174b3b] p-6 text-white sm:p-8">
-                <p className="font-label-md text-label-md font-bold uppercase text-[#b9e5bd]">Monedas disponibles</p>
+              <section className="bg-primary p-6 text-white sm:p-8">
+                <p className="font-label-md text-label-md font-bold uppercase text-secondary-fixed-dim">Monedas disponibles</p>
                 <p className="mt-4 font-display text-[54px] leading-none font-extrabold tabular-nums">{formatoPuntos(saldo)}</p>
                 <p className="mt-3 font-body-md text-body-md text-white/80">Puntos listos para usar en el Paseo.</p>
                 <p className="mt-8 border-t border-white/20 pt-4 font-body-sm text-body-sm text-white/80">{monedero.data.recompensas_disponibles} recompensas a tu alcance ahora</p>
@@ -41,7 +41,7 @@ export function ClientePuntosPage() {
                   const activo = item.nombre === nivel.actual.nombre;
                   const pasado = saldo >= (NIVELES_CLIENTE[indice + 1]?.desde ?? Number.POSITIVE_INFINITY);
                   return (
-                    <article key={item.nombre} className={`border p-4 ${activo ? "border-secondary bg-[#edf5ee]" : "border-outline-variant/50 bg-surface-container-lowest"}`}>
+                    <article key={item.nombre} className={`border p-4 ${activo ? "border-secondary bg-secondary-fixed/60" : "border-outline-variant/50 bg-surface-container-lowest"}`}>
                       <div className="flex items-center justify-between gap-2"><h3 className="font-headline-sm text-headline-sm" style={{ color: item.color }}>{item.nombre}</h3><span className="font-label-md text-label-md font-bold">{item.multiplicador}</span></div>
                       <p className="mt-3 font-body-sm text-body-sm text-on-surface-variant">Desde {formatoPuntos(item.desde)} puntos</p>
                       <p className="mt-3 font-label-sm text-label-sm font-bold uppercase text-secondary">{activo ? "Nivel actual" : pasado ? "Completado" : "Por alcanzar"}</p>

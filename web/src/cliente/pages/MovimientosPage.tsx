@@ -27,7 +27,7 @@ export function ClienteMovimientosPage() {
             const positivo = Number(movimiento.puntos) >= 0;
             return (
               <article key={movimiento.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-outline-variant/30 px-3 py-4 last:border-b-0 sm:px-5">
-                <span className={`grid h-10 w-10 place-items-center ${positivo ? "bg-[#e8f2e9] text-secondary" : "bg-primary-fixed/50 text-primary"}`}><span className="material-symbols-outlined" aria-hidden="true">{iconos[movimiento.tipo]}</span></span>
+                <span className={`grid h-10 w-10 place-items-center ${positivo ? "bg-secondary-fixed/60 text-secondary" : "bg-primary-fixed/50 text-primary"}`}><span className="material-symbols-outlined" aria-hidden="true">{iconos[movimiento.tipo]}</span></span>
                 <div className="min-w-0"><p className="truncate font-label-md text-label-md font-bold">{movimiento.descripcion || etiquetas[movimiento.tipo]}</p><p className="mt-1 truncate font-body-sm text-body-sm text-on-surface-variant">{movimiento.empresa_nombre || etiquetas[movimiento.tipo]} · {formatoFecha(movimiento.creado_en, { dateStyle: "medium", timeStyle: "short" })}</p></div>
                 <strong className={`whitespace-nowrap font-label-md text-label-md tabular-nums ${positivo ? "text-secondary" : "text-primary"}`}>{positivo ? "+" : "−"}{formatoPuntos(Math.abs(Number(movimiento.puntos)))} pts</strong>
               </article>

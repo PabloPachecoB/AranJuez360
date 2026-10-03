@@ -58,7 +58,7 @@ export function ClientePerfilPage() {
             <fieldset className="mt-5">
               <legend className="font-body-md text-body-md font-semibold">Tus marcas favoritas</legend>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {marcas.map((marca) => <label key={marca} className={`flex min-h-11 cursor-pointer items-center gap-3 border px-3 ${preferencias.marcas.includes(marca) ? "border-secondary bg-[#edf5ee]" : "border-outline-variant/50"}`}><input type="checkbox" checked={preferencias.marcas.includes(marca)} onChange={() => alternarMarca(marca)} className="h-4 w-4 accent-[#006c4c]" /><span className="font-body-sm text-body-sm">{marca}</span></label>)}
+                {marcas.map((marca) => <label key={marca} className={`flex min-h-11 cursor-pointer items-center gap-3 border px-3 ${preferencias.marcas.includes(marca) ? "border-primary bg-primary-fixed" : "border-outline-variant/50"}`}><input type="checkbox" checked={preferencias.marcas.includes(marca)} onChange={() => alternarMarca(marca)} className="h-4 w-4 accent-[#091734]" /><span className="font-body-sm text-body-sm">{marca}</span></label>)}
               </div>
               {!marcas.length && <p className="mt-3 font-body-sm text-body-sm text-on-surface-variant">No hay establecimientos disponibles para seleccionar.</p>}
             </fieldset>

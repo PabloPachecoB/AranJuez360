@@ -19,13 +19,13 @@ export function ClienteInicioPage() {
       <CabeceraCliente eyebrow="PaseoYa · Mi espacio" titulo={`Hola, ${usuario?.first_name || "bienvenido"}`} descripcion="Tu próxima visita puede acercarte a algo bueno." />
 
       <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-        <section className="relative overflow-hidden bg-[#174b3b] px-6 py-7 text-white sm:px-9 sm:py-9">
+        <section className="relative overflow-hidden bg-primary px-6 py-7 text-white sm:px-9 sm:py-9">
           <div className="relative z-10 max-w-xl">
-            <p className="font-label-md text-label-md font-bold uppercase text-[#b9e5bd]">Saldo disponible</p>
+            <p className="font-label-md text-label-md font-bold uppercase text-secondary-fixed-dim">Saldo disponible</p>
             <p className="mt-3 font-display text-[52px] leading-none font-extrabold tabular-nums sm:text-[64px]">{formatoPuntos(saldo)} <span className="text-[20px] font-semibold">pts</span></p>
             <p className="mt-3 font-body-md text-body-md text-white/80">Equivale a {formatoBolivianos(monedero.data?.saldo_bs)} en beneficios.</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/recompensas" className="inline-flex min-h-11 items-center gap-2 bg-[#f4c95d] px-4 font-label-md text-label-md font-bold text-[#1c3026] hover:bg-[#ffdc7a]">
+              <Link to="/recompensas" className="inline-flex min-h-11 items-center gap-2 bg-secondary-fixed-dim px-4 font-label-md text-label-md font-bold text-on-primary-fixed hover:bg-secondary-fixed">
                 <span className="material-symbols-outlined" aria-hidden="true">redeem</span> Ver recompensas
               </Link>
               <Link to="/pase" className="inline-flex min-h-11 items-center gap-2 border border-white/40 px-4 font-label-md text-label-md font-bold text-white hover:bg-white/10">

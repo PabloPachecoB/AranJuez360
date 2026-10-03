@@ -36,11 +36,11 @@ export function ClienteRecompensasPage() {
 
   return (
     <div className="animate-cliente-in">
-      <CabeceraCliente eyebrow="Catálogo Paseo Points" titulo="Elige tu próxima recompensa" descripcion="Canjea tus puntos por beneficios en los establecimientos participantes." action={<div className="bg-[#174b3b] px-4 py-3 text-white"><span className="block font-label-sm text-label-sm uppercase text-white/70">Saldo</span><strong className="font-headline-sm text-headline-sm">{formatoPuntos(puntos)} pts</strong></div>} />
+      <CabeceraCliente eyebrow="Catálogo Paseo Points" titulo="Elige tu próxima recompensa" descripcion="Canjea tus puntos por beneficios en los establecimientos participantes." action={<div className="bg-primary px-4 py-3 text-white"><span className="block font-label-sm text-label-sm uppercase text-white/70">Saldo</span><strong className="font-headline-sm text-headline-sm">{formatoPuntos(puntos)} pts</strong></div>} />
       <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filtrar por umbral de puntos">
         {filtros.map((valor) => <button key={valor} type="button" aria-pressed={filtro === valor} onClick={() => setFiltro(valor)} className={`min-h-10 border px-4 font-label-md text-label-md font-semibold ${filtro === valor ? "border-primary bg-primary text-on-primary" : "border-outline-variant/60 bg-surface-container-lowest text-on-surface-variant hover:border-primary"}`}>{valor === "Todas" ? "Todas" : `${valor} pts`}</button>)}
       </div>
-      {aviso && <div role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-4 border-secondary bg-[#e9f3eb] px-4 py-3 font-body-md text-body-md"><span>{aviso}</span><Link to="/cupones" className="font-label-md text-label-md font-bold text-primary hover:underline">Ver mis cupones</Link></div>}
+      {aviso && <div role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-4 border-secondary bg-secondary-fixed/60 px-4 py-3 font-body-md text-body-md"><span>{aviso}</span><Link to="/cupones" className="font-label-md text-label-md font-bold text-primary hover:underline">Ver mis cupones</Link></div>}
       <EstadoDatos cargando={catalogo.cargando} error={catalogo.error} vacio={!recompensas.length} onRetry={catalogo.recargar}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {recompensas.map((item) => {
@@ -48,7 +48,7 @@ export function ClienteRecompensasPage() {
             const disponible = puntos >= costo;
             return (
               <article key={item.id} className="flex flex-col border border-outline-variant/50 bg-surface-container-lowest">
-                {item.imagen ? <img src={item.imagen} alt="" className="h-40 w-full object-cover" /> : <div className="grid h-32 place-items-center bg-[#edf3eb]"><span className="material-symbols-outlined text-[48px] text-secondary" aria-hidden="true">redeem</span></div>}
+                {item.imagen ? <img src={item.imagen} alt="" className="h-40 w-full object-cover" /> : <div className="grid h-32 place-items-center bg-surface-container-low"><span className="material-symbols-outlined text-[48px] text-secondary" aria-hidden="true">redeem</span></div>}
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-start justify-between gap-3"><span className="font-label-sm text-label-sm font-bold uppercase text-secondary">{item.categoria}</span><strong className="shrink-0 font-price-sm text-price-sm text-primary">{formatoPuntos(costo)} pts</strong></div>
                   <h2 className="mt-2 font-headline-sm text-headline-sm">{item.nombre}</h2>
@@ -76,7 +76,7 @@ export function ClienteCuponesPage() {
     <div className="animate-cliente-in">
       <CabeceraCliente eyebrow="Tu billetera" titulo="Cupones y beneficios" descripcion="Presenta el código en el establecimiento para usar tu recompensa." />
       <div className="mb-5 inline-flex border border-outline-variant/50 bg-surface-container-lowest p-1" role="group" aria-label="Estado de cupones">
-        {(["ACTIVO", "TODOS"] as const).map((estado) => <button key={estado} type="button" aria-pressed={filtro === estado} onClick={() => setFiltro(estado)} className={`min-h-9 px-4 font-label-md text-label-md font-semibold ${filtro === estado ? "bg-[#174b3b] text-white" : "text-on-surface-variant"}`}>{estado === "ACTIVO" ? "Por usar" : "Todos"}</button>)}
+        {(["ACTIVO", "TODOS"] as const).map((estado) => <button key={estado} type="button" aria-pressed={filtro === estado} onClick={() => setFiltro(estado)} className={`min-h-9 px-4 font-label-md text-label-md font-semibold ${filtro === estado ? "bg-primary text-on-primary" : "text-on-surface-variant"}`}>{estado === "ACTIVO" ? "Por usar" : "Todos"}</button>)}
       </div>
       <EstadoDatos cargando={cuponesApi.cargando} error={cuponesApi.error} vacio={!cupones.length} onRetry={cuponesApi.recargar}>
         <div className="grid gap-4 lg:grid-cols-2">

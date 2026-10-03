@@ -26,7 +26,7 @@ export function ClienteLayout() {
   const nombre = usuario?.first_name || usuario?.email || "Cliente";
 
   return (
-    <div className="min-h-screen bg-[#f6f8f4] text-on-surface md:grid md:grid-cols-[15.5rem_minmax(0,1fr)]">
+    <div className="cliente-theme min-h-screen bg-background font-sans text-on-surface md:grid md:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="border-b border-outline-variant/50 bg-surface-container-lowest md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r">
         <div className="flex items-center justify-between px-5 py-4 md:block md:px-6 md:pb-6 md:pt-7">
           <Link to="/" className="font-headline-md text-headline-md text-primary">

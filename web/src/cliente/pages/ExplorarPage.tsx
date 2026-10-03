@@ -22,9 +22,9 @@ export function ClienteExplorarPage() {
   return (
     <div className="animate-cliente-in">
       <CabeceraCliente eyebrow="Directorio y novedades" titulo="Explora el Paseo" descripcion="Encuentra tu próxima parada, revisa promociones y descubre nuevos locales." />
-      <section className="mb-8 bg-[#174b3b] px-5 py-6 text-white sm:px-7">
+      <section className="mb-8 bg-primary px-5 py-6 text-white sm:px-7">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><p className="font-label-sm text-label-sm font-bold uppercase text-[#b9e5bd]">Ideas para hoy</p><h2 className="mt-1 font-headline-md text-headline-md">Promociones vigentes</h2></div>
+          <div><p className="font-label-sm text-label-sm font-bold uppercase text-secondary-fixed-dim">Ideas para hoy</p><h2 className="mt-1 font-headline-md text-headline-md">Promociones vigentes</h2></div>
           <span className="font-body-sm text-body-sm text-white/75">Actualizadas desde los negocios participantes</span>
         </div>
         <EstadoDatos cargando={ofertasApi.cargando} error={ofertasApi.error} vacio={!lista(ofertasApi.data).length} onRetry={ofertasApi.recargar}>
@@ -49,7 +49,7 @@ export function ClienteExplorarPage() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtradas.map((empresa) => (
             <article key={empresa.id} className="flex items-center gap-4 border border-outline-variant/50 bg-surface-container-lowest p-4">
-              {empresa.logo ? <img src={empresa.logo} alt="" className="h-14 w-14 shrink-0 object-contain" /> : <span className="grid h-14 w-14 shrink-0 place-items-center bg-[#edf3eb] text-secondary"><span className="material-symbols-outlined text-[28px]" aria-hidden="true">storefront</span></span>}
+              {empresa.logo ? <img src={empresa.logo} alt="" className="h-14 w-14 shrink-0 object-contain" /> : <span className="grid h-14 w-14 shrink-0 place-items-center bg-surface-container-low text-secondary"><span className="material-symbols-outlined text-[28px]" aria-hidden="true">storefront</span></span>}
               <div className="min-w-0"><h3 className="truncate font-headline-sm text-headline-sm">{empresa.nombre}</h3><p className="mt-1 truncate font-body-sm text-body-sm text-on-surface-variant">{empresa.categoria_nombre || empresa.tipo}</p><p className="mt-1 font-label-sm text-label-sm font-semibold text-secondary">Piso {empresa.piso || "—"} · Local {empresa.local || "—"}</p></div>
             </article>
           ))}

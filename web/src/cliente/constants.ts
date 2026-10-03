@@ -2,7 +2,7 @@ export const NIVELES_CLIENTE = [
   { nombre: "Bronce", desde: 0, multiplicador: "1×", color: "#a45c3d" },
   { nombre: "Plata", desde: 500, multiplicador: "1.1×", color: "#61717c" },
   { nombre: "Oro", desde: 1000, multiplicador: "1.2×", color: "#b07a19" },
-  { nombre: "Platinum", desde: 2000, multiplicador: "1.5×", color: "#315d54" },
+  { nombre: "Platinum", desde: 2000, multiplicador: "1.5×", color: "#091734" },
 ] as const;
 
 export const UMBRALES_RECOMPENSA = [300, 500, 700, 1000, 1500] as const;
