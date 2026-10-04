@@ -17,10 +17,12 @@ const ICONO_ACCION: Partial<Record<EstadoPedidoApi, string>> = {
 };
 
 const CLASE_ESTADO: Record<EstadoPedidoApi, string> = {
+  PENDIENTE_PAGO: "bg-surface-container-high text-on-surface-variant",
   RECIBIDO: "bg-tertiary-fixed text-on-tertiary-fixed",
   CONFIRMADO: "bg-tertiary-fixed text-on-tertiary-fixed",
   PREPARANDO: "bg-primary-fixed text-on-primary-fixed-variant",
   LISTO_PARA_RECOGER: "bg-primary text-on-primary",
+  CLIENTE_LLEGO: "bg-[#166534] text-white",
   ENTREGADO: "bg-secondary-container text-on-secondary-container",
   CANCELADO: "bg-error-container text-on-error-container",
 };
@@ -70,8 +72,8 @@ export function PedidosPage() {
   );
 
   const kpis = useMemo(() => {
-    const porPreparar = pedidosActivos.filter((p) => p.estado !== "LISTO_PARA_RECOGER").length;
-    const listos = pedidosActivos.filter((p) => p.estado === "LISTO_PARA_RECOGER").length;
+    const porPreparar = pedidosActivos.filter((p) => ["RECIBIDO", "CONFIRMADO", "PREPARANDO"].includes(p.estado)).length;
+    const listos = pedidosActivos.filter((p) => p.estado === "LISTO_PARA_RECOGER" || p.estado === "CLIENTE_LLEGO").length;
     const entregadosHoy = pedidos.filter((p) => p.estado === "ENTREGADO" && p.entregado_en && esHoy(p.entregado_en));
     const facturadoHoy = entregadosHoy.reduce((suma, p) => suma + Number(p.total), 0);
     return { porPreparar, listos, entregadosHoy: entregadosHoy.length, facturadoHoy };
@@ -155,7 +157,7 @@ export function PedidosPage() {
               Validar retiro de cliente
             </h2>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              Escribe el código de retiro del voucher digital de PaseoYa para liberar el pedido al cliente.
+              Escribe el código de retiro del la app del Paseo para liberar el pedido al cliente.
             </p>
           </div>
           <form
@@ -269,7 +271,9 @@ export function PedidosPage() {
             </thead>
             <tbody className="text-on-surface">
               {pedidosActivos.map((pedido) => (
-                <tr key={pedido.id} className="hover:bg-surface-container-low/50 transition-colors border-b border-surface-container">
+                <tr key={pedido.id} className={`transition-colors border-b border-surface-container ${
+                  pedido.estado === "CLIENTE_LLEGO" ? "bg-[#dcfce7]" : pedido.estado === "PENDIENTE_PAGO" ? "opacity-60" : "hover:bg-surface-container-low/50"
+                }`}>
                   <td className="py-4 px-space-md">
                     <span className="font-headline-sm text-headline-sm font-bold text-primary tracking-tight">
                       {pedido.codigo_retiro}
@@ -287,9 +291,19 @@ export function PedidosPage() {
                   </td>
                   <td className="py-4 px-space-md max-w-xs">
                     <span className="font-body-sm text-body-sm text-on-surface-variant">{resumenItems(pedido)}</span>
+                    <div className={`font-label-sm text-label-sm font-bold ${pedido.retiro_programado ? "text-secondary" : "text-on-surface-variant"}`}>
+                      {pedido.retiro_programado
+                        ? `⏰ Reserva: retira ${new Date(pedido.retiro_programado).toLocaleString("es-BO", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                        : "⚡ Lo antes posible"}
+                    </div>
                   </td>
                   <td className="py-4 px-space-md">
                     <span className="font-price-display text-price-display text-on-surface">Bs {pedido.total}</span>
+                    <div className={`font-label-sm text-label-sm ${pedido.pagado_en ? "text-[#166534]" : "text-on-surface-variant"}`}>
+                      {pedido.pagado_en
+                        ? `✓ Pagado con QR · ${new Date(pedido.pagado_en).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}`
+                        : "Sin pagar"}
+                    </div>
                   </td>
                   <td className="py-4 px-space-md">
                     <span
@@ -310,9 +324,19 @@ export function PedidosPage() {
                           {ETIQUETA_ACCION[pedido.estado]}
                         </button>
                       )}
+                      {pedido.estado === "PENDIENTE_PAGO" && (
+                        <span className="font-body-sm text-body-sm text-on-surface-variant italic">
+                          Esperando el pago del cliente (no prepares todavía)
+                        </span>
+                      )}
                       {pedido.estado === "LISTO_PARA_RECOGER" && (
                         <span className="font-body-sm text-body-sm text-on-surface-variant italic">
-                          Esperando código del cliente
+                          Esperando al cliente
+                        </span>
+                      )}
+                      {pedido.estado === "CLIENTE_LLEGO" && (
+                        <span className="font-label-md text-label-md font-bold text-[#166534]">
+                          ¡El cliente está en el Paseo! Pídele su código
                         </span>
                       )}
                       {SE_PUEDE_CANCELAR.includes(pedido.estado) && (
@@ -370,7 +394,10 @@ export function PedidosPage() {
                         {pedido.cliente_nombre}
                       </span>
                     </td>
-                    <td className="py-3.5 px-space-md font-price-sm text-price-sm">Bs {pedido.total}</td>
+                    <td className="py-3.5 px-space-md font-price-sm text-price-sm">
+                      Bs {pedido.total}
+                      {pedido.reembolsado_en && <div className="font-label-sm text-label-sm text-on-surface-variant">Reembolsado (simulado)</div>}
+                    </td>
                     <td className="py-3.5 px-space-md">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-semibold ${CLASE_ESTADO[pedido.estado]}`}

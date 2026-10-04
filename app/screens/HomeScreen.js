@@ -237,15 +237,19 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Pedidos de Comer en curso (el negocio los avanza desde su panel web) */}
         {pedidosEnCurso.map((p) => {
-          const listo = p.estado === "LISTO_PARA_RECOGER";
+          const listo = p.estado === "LISTO_PARA_RECOGER" || p.estado === "CLIENTE_LLEGO";
+          const sinPagar = p.estado === "PENDIENTE_PAGO";
+          const titulo = sinPagar ? "Falta pagar tu pedido"
+            : p.estado === "CLIENTE_LLEGO" ? "Muestra tu código en el local"
+              : listo ? "¡Tu pedido está listo!" : `Pedido: ${p.estado_display}`;
           return (
             <TouchableOpacity key={p.id} style={[styles.cine, listo && styles.pedidoListo]}
               onPress={() => navigation.navigate("Comer", { pestana: "pedidos" })}>
-              <View style={[styles.cineIcono, { backgroundColor: listo ? "#166534" : STITCH.secondary }]}>
-                <Ionicons name={listo ? "checkmark-done" : "time"} size={22} color={STITCH.white} />
+              <View style={[styles.cineIcono, { backgroundColor: listo ? "#166534" : sinPagar ? "#B7791F" : STITCH.secondary }]}>
+                <Ionicons name={listo ? "checkmark-done" : sinPagar ? "qr-code" : "time"} size={22} color={STITCH.white} />
               </View>
               <View style={styles.flex1}>
-                <Text style={styles.cineTitulo}>{listo ? "¡Tu pedido está listo!" : `Pedido: ${p.estado_display}`}</Text>
+                <Text style={styles.cineTitulo}>{titulo}</Text>
                 <Text style={styles.cineTexto} numberOfLines={1}>
                   {p.empresa_nombre} · código {p.codigo_retiro}
                 </Text>
@@ -355,7 +359,11 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity key={o.id} style={styles.promo} activeOpacity={0.85}
                   onPress={() => navigation.navigate("Empresa", { id: o.empresa_id })}>
                   <View style={[styles.promoImagen, { backgroundColor: FONDOS_PROMO[i % FONDOS_PROMO.length] }]}>
-                    <Ionicons name={ICONOS_PROMO[i % ICONOS_PROMO.length]} size={54} color="rgba(255,255,255,0.85)" />
+                    {o.imagen ? (
+                      <Image source={{ uri: o.imagen }} style={styles.promoFoto} resizeMode="cover" />
+                    ) : (
+                      <Ionicons name={ICONOS_PROMO[i % ICONOS_PROMO.length]} size={54} color="rgba(255,255,255,0.85)" />
+                    )}
                     {descuento ? <Text style={styles.promoDescuento}>-{descuento}% OFF</Text> : null}
                   </View>
                   <View style={styles.promoCuerpo}>
@@ -418,12 +426,13 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.evento} activeOpacity={0.9}
-              onPress={() => navigation.navigate("Diversion", { pestana: "eventos" })}>
+              onPress={() => navigation.navigate("Diversion", { pestana: "eventos", eventoId: diversion.destacado.id })}>
               <View style={styles.eventoDecoracion} />
               <View style={styles.eventoFila}>
                 <Text style={styles.eventoCategoria}>{diversion.destacado.categoria_nombre.toUpperCase()}</Text>
                 <Text style={styles.eventoPrecio}>
-                  {diversion.destacado.gratis ? "Entrada libre" : `Bs ${diversion.destacado.precio}`}
+                  {diversion.destacado.gratis ? (diversion.destacado.acceso === "CUPOS" ? "Gratis · con cupos" : "Entrada libre")
+                    : `Bs ${Number(diversion.destacado.precio)}`}
                 </Text>
               </View>
               <Text style={styles.eventoTitulo}>{diversion.destacado.titulo}</Text>
@@ -603,7 +612,8 @@ const styles = StyleSheet.create({
 
   promos: { gap: 14, paddingVertical: 14, paddingRight: 20 },
   promo: { width: 250, backgroundColor: STITCH.surfaceLowest, borderRadius: 16, overflow: "hidden", ...SOMBRA },
-  promoImagen: { height: 120, alignItems: "center", justifyContent: "center" },
+  promoImagen: { height: 120, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  promoFoto: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   promoDescuento: { position: "absolute", top: 10, left: 10, backgroundColor: STITCH.oro, color: STITCH.oroOscuro,
     fontFamily: FUENTES.titulo, fontSize: 12, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3,
     overflow: "hidden" },

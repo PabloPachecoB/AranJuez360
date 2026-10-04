@@ -10,7 +10,7 @@ const CATEGORIAS_RECOMPENSA = [
 const m = (v) => Number(v || 0).toLocaleString("es-BO", { maximumFractionDigits: 2 });
 
 /** Reglas globales: valor de la moneda y visitas. */
-function Configuracion() {
+export function Configuracion() {
   const config = useApi("/admin/configuracion-puntos/");
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);

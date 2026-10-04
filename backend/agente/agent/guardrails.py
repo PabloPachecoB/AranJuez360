@@ -35,6 +35,32 @@ _ACTION_CLAIM_PATTERNS = tuple(
 )
 
 
+# "Te dejo el pedido...", "te lo reservo...": el modelo promete algo que solo existe si llamó a la herramienta.
+_PROMESA_DE_ACCION = tuple(
+    re.compile(p)
+    for p in (
+        r"\bte\s+(?:lo|la|los|las)\s+(?:dejo|reservo|pido|separo|aparto|encargo|programo)\b",
+        r"\bte\s+(?:dejo|reservo|pido|separo|aparto|encargo|programo)\s+(?:listo|lista|el\s+pedido|tu\s+pedido|la\s+reserva|tu\s+reserva|reservad[oa])",
+        r"\bdejo\s+(?:el|tu)\s+(?:pedido|reserva)\b",
+        r"\b(?:queda|quedo|esta)\s+(?:listo|lista|reservad[oa]|pedid[oa])\b",
+    )
+)
+
+MENSAJE_SIN_ACCION = (
+    "No logré dejar la solicitud lista. Dime otra vez qué plato o evento quieres, "
+    "cuántos y, si es comida, si la retiras ya o a qué hora."
+)
+
+
+def promete_accion_sin_herramienta(response: str) -> bool:
+    """True si el texto promete dejar listo un pedido o reserva (y no es una pregunta al usuario)."""
+    normalized = unicodedata.normalize("NFKD", response or "")
+    normalized = "".join(c for c in normalized if not unicodedata.combining(c)).lower()
+    if "?" in normalized:  # "te lo reservo, ¿cuál prefieres?" sigue pidiendo datos: no es una promesa cumplida
+        return False
+    return any(p.search(normalized) for p in _PROMESA_DE_ACCION)
+
+
 def guard_unverified_action_claim(response: str) -> Tuple[str, bool]:
     """Reemplaza afirmaciones de ejecución sin respaldo de una herramienta."""
     normalized = unicodedata.normalize("NFKD", response)

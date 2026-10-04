@@ -26,7 +26,8 @@ Endpoint: `GET /api/v1/puntos/monedero/` → `{ saldo, recompensas_disponibles, 
 - El admin las administra (`admin/recompensas/`); pueden ser de todo el Paseo o de una empresa.
 - La app lista solo las activas (`puntos/recompensas/`).
 
-## ⏳ Falta: canje
-Propuesta: el cliente elige la recompensa → se descuentan los puntos y se genera un **cupón con QR** → el negocio lo **valida** en caja (pidiendo el CI). Ver [[Pendientes]].
+## Canje
+- ✅ Backend: el cliente canjea (`puntos/canjes/`) → se descuentan las monedas → cupón con código → el negocio lo valida (`canjes/validar/<codigo>/`, `mi-empresa/canjes/`). Jarvis también canjea con confirmación.
+- ⏳ Falta la **pantalla Beneficios** en la app (hoy la pestaña solo baja al monedero). Ver [[Pendientes]].
 
 Archivos: `app/components/Monedero.js`, `app/screens/HomeScreen.js`, `backend/fidelizacion/services.py` (`monedero`)

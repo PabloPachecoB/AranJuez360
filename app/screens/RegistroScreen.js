@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import FormField from "../components/FormField";
 import PrimaryButton from "../components/PrimaryButton";
 import ProcedenciaSelector from "../components/ProcedenciaSelector";
+import SelloAnimado from "../components/SelloAnimado";
 import { COLORS } from "../constants/colors";
 import { registro } from "../services/authService";
 
@@ -24,13 +25,42 @@ const INICIAL = {
   celular: "",
   ci: "",
   nit: "",
-  fecha_nacimiento: "",
+  dia: "",
+  mes: "",
+  anio: "",
+  ocupacion: "",
   procedencia: "",
   ciudad_otra: "",
   password: "",
   password_confirmacion: "",
   acepta_terminos: false,
 };
+
+const OCUPACIONES = [
+  { valor: "ESTUDIANTE", texto: "Estudiante de colegio", icono: "school-outline" },
+  { valor: "UNIVERSITARIO", texto: "Universitario/a", icono: "library-outline" },
+  { valor: "PROFESIONAL", texto: "Profesional", icono: "briefcase-outline" },
+  { valor: "OTRO", texto: "Otro", icono: "person-outline" },
+];
+const EDAD_MINIMA = 10;
+
+/** "AAAA-MM-DD" si día/mes/año forman una fecha real; si no, null. */
+function fechaISO({ dia, mes, anio }) {
+  const d = parseInt(dia, 10);
+  const m = parseInt(mes, 10);
+  const a = parseInt(anio, 10);
+  if (!d || !m || !anio || anio.length !== 4) return null;
+  const fecha = new Date(a, m - 1, d);
+  if (fecha.getFullYear() !== a || fecha.getMonth() !== m - 1 || fecha.getDate() !== d) return null;
+  return `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function edadDe(iso) {
+  if (!iso) return null;
+  const [a, m, d] = iso.split("-").map(Number);
+  const hoy = new Date();
+  return hoy.getFullYear() - a - (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d) ? 1 : 0);
+}
 
 // Validación en el teléfono para respuesta inmediata; el backend vuelve a validar todo.
 function validar(f) {
@@ -41,7 +71,13 @@ function validar(f) {
   if (!/^(\+591)?[67]\d{7}$/.test(f.celular.trim())) e.celular = "8 dígitos, empieza con 6 o 7.";
   if (!/^\d{5,10}(-[0-9A-Za-z]{1,2})?$/.test(f.ci.trim())) e.ci = "Solo números; complemento opcional (ej. 1234567-1A).";
   if (f.nit && !/^\d{5,20}$/.test(f.nit.trim())) e.nit = "El NIT debe tener solo números.";
-  if (f.fecha_nacimiento && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_nacimiento)) e.fecha_nacimiento = "Usa el formato AAAA-MM-DD.";
+  const fecha = fechaISO(f);
+  const edad = edadDe(fecha);
+  if (!fecha) e.fecha_nacimiento = "Escribe tu fecha de nacimiento (día, mes y año).";
+  else if (edad < 0) e.fecha_nacimiento = "La fecha no puede ser futura.";
+  else if (edad < EDAD_MINIMA) e.fecha_nacimiento = `Debes tener al menos ${EDAD_MINIMA} años.`;
+  else if (edad > 110) e.fecha_nacimiento = "Revisa el año.";
+  if (!f.ocupacion) e.ocupacion = "Elige a qué te dedicas.";
   if (!f.procedencia) e.procedencia = "Elige de dónde eres.";
   else if (f.procedencia === "OTRO" && !f.ciudad_otra.trim()) e.ciudad_otra = "Escribe tu ciudad.";
   if (f.password.length < 8) e.password = "Mínimo 8 caracteres.";
@@ -81,12 +117,13 @@ export default function RegistroScreen({ navigation }) {
     }
     setLoading(true);
     try {
+      const { dia, mes, anio, ...datos } = form;
       const paso = await registro({
-        ...form,
+        ...datos,
         email: form.email.trim().toLowerCase(),
         ci: form.ci.trim().toUpperCase(),
         nit: form.nit.trim(),
-        fecha_nacimiento: form.fecha_nacimiento || null,
+        fecha_nacimiento: fechaISO(form),
         ciudad_otra: form.procedencia === "OTRO" ? form.ciudad_otra.trim() : "",
       });
       navigation.replace("VerificarCodigo", paso);
@@ -99,6 +136,11 @@ export default function RegistroScreen({ navigation }) {
   };
 
   const p = form.password;
+  const edad = edadDe(fechaISO(form));
+  const setFecha = (campo) => (valor) => {
+    set(campo)(valor.replace(/\D/g, ""));
+    if (errores.fecha_nacimiento) setErrores((e) => ({ ...e, fecha_nacimiento: undefined }));
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -107,6 +149,9 @@ export default function RegistroScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityLabel="Volver">
             <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
+          <View style={styles.sello}>
+            <SelloAnimado size={84} />
+          </View>
           <Text style={styles.title}>Crea tu cuenta</Text>
           <Text style={styles.subtitle}>Suma puntos cada vez que visitas el Paseo y compras en sus tiendas.</Text>
 
@@ -115,10 +160,48 @@ export default function RegistroScreen({ navigation }) {
             error={errores.first_name} autoComplete="given-name" />
           <FormField label="Apellido" value={form.last_name} onChangeText={set("last_name")}
             error={errores.last_name} autoComplete="family-name" />
-          <FormField label="Fecha de nacimiento (opcional)" placeholder="AAAA-MM-DD"
-            value={form.fecha_nacimiento} onChangeText={set("fecha_nacimiento")}
-            error={errores.fecha_nacimiento} hint="Te regalamos puntos en tu cumpleaños."
-            keyboardType="numbers-and-punctuation" maxLength={10} />
+
+          <Text style={styles.seccion}>Edad y ocupación</Text>
+          <Text style={styles.label}>Fecha de nacimiento</Text>
+          <View style={styles.fechaFila}>
+            <View style={styles.fechaCampo}>
+              <FormField label="Día" placeholder="DD" value={form.dia} onChangeText={setFecha("dia")}
+                keyboardType="number-pad" maxLength={2} />
+            </View>
+            <View style={styles.fechaCampo}>
+              <FormField label="Mes" placeholder="MM" value={form.mes} onChangeText={setFecha("mes")}
+                keyboardType="number-pad" maxLength={2} />
+            </View>
+            <View style={[styles.fechaCampo, styles.fechaAnio]}>
+              <FormField label="Año" placeholder="AAAA" value={form.anio} onChangeText={setFecha("anio")}
+                keyboardType="number-pad" maxLength={4} />
+            </View>
+          </View>
+          {errores.fecha_nacimiento ? (
+            <Text style={styles.error}>{errores.fecha_nacimiento}</Text>
+          ) : (
+            <Text style={styles.ayuda}>
+              {edad !== null && edad >= 0 ? `Tienes ${edad} años. ` : ""}Te regalamos monedas en tu cumpleaños.
+            </Text>
+          )}
+
+          <Text style={[styles.label, styles.labelEspacio]}>¿A qué te dedicas?</Text>
+          <View style={styles.ocupaciones}>
+            {OCUPACIONES.map((o) => {
+              const activa = form.ocupacion === o.valor;
+              return (
+                <TouchableOpacity key={o.valor} onPress={() => set("ocupacion")(o.valor)}
+                  style={[styles.ocupacion, activa && styles.ocupacionActiva, errores.ocupacion && styles.ocupacionError]}
+                  accessibilityRole="radio" accessibilityState={{ selected: activa }}>
+                  <Ionicons name={o.icono} size={22} color={activa ? "#fff" : COLORS.primary} />
+                  <Text style={[styles.ocupacionTexto, activa && styles.ocupacionTextoActivo]}>{o.texto}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {errores.ocupacion ? <Text style={styles.error}>{errores.ocupacion}</Text> : (
+            <Text style={styles.ayuda}>Así te mostramos eventos y promociones para ti.</Text>
+          )}
 
           <Text style={styles.seccion}>Contacto</Text>
           <FormField label="Correo electrónico" placeholder="tu@correo.com" value={form.email}
@@ -188,8 +271,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: 24, paddingBottom: 48 },
   back: { marginBottom: 12, alignSelf: "flex-start" },
+  sello: { alignSelf: "center", marginBottom: 12 },
   title: { fontSize: 26, fontWeight: "800", color: COLORS.text },
   subtitle: { fontSize: 14, color: COLORS.muted, marginTop: 4, marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "600", color: COLORS.text, marginBottom: 6 },
+  labelEspacio: { marginTop: 14 },
+  ayuda: { fontSize: 12, color: COLORS.muted, marginTop: 6, marginBottom: 8 },
+  fechaFila: { flexDirection: "row", gap: 10 },
+  fechaCampo: { flex: 1 },
+  fechaAnio: { flex: 1.4 },
+  ocupaciones: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  ocupacion: { width: "47%", flexGrow: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 14,
+    borderRadius: 14, borderWidth: 1.5, borderColor: "#CBD5E1", backgroundColor: "#fff" },
+  ocupacionActiva: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  ocupacionError: { borderColor: COLORS.danger },
+  ocupacionTexto: { flex: 1, fontSize: 14, fontWeight: "600", color: COLORS.text },
+  ocupacionTextoActivo: { color: "#fff" },
   seccion: { fontSize: 13, fontWeight: "800", color: COLORS.primary, textTransform: "uppercase",
     letterSpacing: 0.6, marginTop: 18, marginBottom: 10 },
   aviso: { flexDirection: "row", gap: 8, backgroundColor: "#EFF6FF", borderRadius: 12, padding: 12, marginBottom: 12 },

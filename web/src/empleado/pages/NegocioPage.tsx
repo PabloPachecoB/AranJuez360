@@ -246,7 +246,7 @@ export function NegocioPage() {
                     Negocio activo y abierto
                   </span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    Visible para navegación de catálogo y recepción de pedidos en la app de PaseoYa.
+                    Visible para navegación de catálogo y recepción de pedidos en la app del Paseo (sección Comer).
                   </span>
                 </div>
               </div>

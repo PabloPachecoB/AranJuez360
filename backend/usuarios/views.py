@@ -192,7 +192,7 @@ class UsuarioAdminViewSet(
         qs = Usuario.objects.select_related("empresa").order_by("-date_joined")
         params = self.request.query_params
         if params.get("rol"):
-            qs = qs.filter(rol=params["rol"].upper())
+            qs = qs.filter(rol__in=[r.strip().upper() for r in params["rol"].split(",") if r.strip()])
         if params.get("activo") in ("true", "false"):
             qs = qs.filter(is_active=params["activo"] == "true")
         if params.get("sin_activar") == "true":

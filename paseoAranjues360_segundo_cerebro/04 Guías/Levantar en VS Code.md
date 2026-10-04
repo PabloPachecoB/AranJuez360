@@ -32,7 +32,7 @@ npx expo start --port 8082
 |---|---|
 | Dashboard admin | http://localhost:3000 |
 | App en navegador | http://localhost:8082 |
-| App en celular | `exp://192.168.100.35:8082` (Expo Go, mismo Wi-Fi) |
+| App en celular | `exp://192.168.0.11:8082` (Expo Go, mismo Wi-Fi) |
 | Admin de Django | http://localhost:8001/admin |
 
 Cuentas → [[Cuentas de demo]] · El **código de verificación** sale en la terminal del backend.
@@ -40,7 +40,7 @@ Cuentas → [[Cuentas de demo]] · El **código de verificación** sale en la te
 ## Comandos útiles (en `backend/`)
 | Para qué | Comando |
 |---|---|
-| Pruebas | `.venv\Scripts\python.exe manage.py test usuarios empresas fidelizacion reportes` |
+| Pruebas (todas) | `.venv\Scripts\python.exe manage.py test` |
 | Datos de demo | `.venv\Scripts\python.exe manage.py cargar_demo` |
 | 60 días de actividad | `.venv\Scripts\python.exe manage.py cargar_actividad_demo --dias 60` |
 | Migraciones | `.venv\Scripts\python.exe manage.py migrate` |

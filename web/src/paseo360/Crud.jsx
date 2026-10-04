@@ -10,7 +10,7 @@ import { Estado, useApi } from "./ui";
  * columnas: [{ label, render: (fila) => nodo, num }]
  */
 export default function Crud({ titulo, subtitulo, endpoint, campos, columnas, inicial, nombreFila = (f) => f.nombre,
-  textoNuevo = "Agregar", acciones }) {
+  textoNuevo = "Agregar", acciones, sinEliminar = false }) {
   const lista = useApi(endpoint);
   const [form, setForm] = useState(null); // null = cerrado; { id?, ...valores }
   const [errores, setErrores] = useState({});
@@ -134,7 +134,7 @@ export default function Crud({ titulo, subtitulo, endpoint, campos, columnas, in
                     <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                       {acciones?.(f)}
                       <button className="btn ghost small" onClick={() => abrir(f)}>Editar</button>{" "}
-                      <button className="btn ghost small" onClick={() => eliminar(f)}>Eliminar</button>
+                      {!sinEliminar && <button className="btn ghost small" onClick={() => eliminar(f)}>Eliminar</button>}
                     </td>
                   </tr>
                 ))}

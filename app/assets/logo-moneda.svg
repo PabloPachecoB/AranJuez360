@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 200" width="400" height="400" role="img" aria-label="Sello Paseo Aranjuez 360">
+  <title>Sello Paseo Aranjuez 360</title>
+  <style>
+    /* Brillo: banda de luz que cruza la moneda cada 4 s */
+    .brillo { animation: barrido 4s cubic-bezier(.45, 0, .25, 1) infinite; }
+    @keyframes barrido {
+      0%        { transform: translateX(0); }
+      45%, 100% { transform: translateX(320px); }
+    }
+    /* Destello que aparece en la estrella superior justo después del barrido */
+    .destello {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: destello 4s ease-out infinite;
+      opacity: 0;
+    }
+    @keyframes destello {
+      0%, 30%  { opacity: 0; transform: scale(.2) rotate(0deg); }
+      38%      { opacity: 1; transform: scale(1) rotate(45deg); }
+      50%, 100%{ opacity: 0; transform: scale(.2) rotate(90deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .brillo, .destello { animation: none; }
+    }
+  </style>
+
+  <defs>
+    <!-- Hoja de laurel: almendra de 13 de largo, nace en el origen y apunta a +x -->
+    <path id="hoja" d="M0 0 Q6.5 -4.6 13 0 Q6.5 4.6 0 0 Z" fill="currentColor"/>
+
+    <!-- Par de hojas sobre el tallo (posición superior, r = 74): una hacia afuera y otra hacia adentro -->
+    <g id="par">
+      <use href="#hoja" xlink:href="#hoja" transform="translate(100 26) rotate(206.6)"/>
+      <use href="#hoja" xlink:href="#hoja" transform="translate(100 26) rotate(153.4)"/>
+    </g>
+
+    <!-- Rama derecha: tallo en arco + pares rotados alrededor del centro (ángulo desde arriba, horario) -->
+    <g id="rama">
+      <path d="M147.57 43.31 A74 74 0 0 1 141.38 161.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <use href="#hoja" xlink:href="#hoja" transform="rotate(37 100 100) translate(100 26) scale(.8) rotate(180)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(45 100 100) translate(100 26) scale(.78) translate(-100 -26)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(57 100 100) translate(100 26) scale(.9) translate(-100 -26)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(69 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(81 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(93 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(105 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(117 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(129 100 100)"/>
+      <use href="#par" xlink:href="#par" transform="rotate(141 100 100) translate(100 26) scale(.9) translate(-100 -26)"/>
+    </g>
+
+    <!-- Estrella de cinco puntas centrada en el origen (radio exterior 7, interior 2.8) -->
+    <polygon id="estrella" fill="currentColor"
+      points="0,-7 1.646,-2.265 6.657,-2.163 2.663,0.865 4.114,5.663 0,2.8 -4.114,5.663 -2.663,0.865 -6.657,-2.163 -1.646,-2.265"/>
+
+    <!-- Rayo del símbolo central: aguja que va del círculo central (r 12) hasta r 56 -->
+    <polygon id="rayo" fill="currentColor" points="98.4,88 101.6,88 100,44"/>
+
+    <!-- ===== EL SELLO COMPLETO (todo en currentColor) ===== -->
+    <g id="sello">
+      <!-- Anillos exteriores -->
+      <circle cx="100" cy="100" r="95"  fill="none" stroke="currentColor" stroke-width="9"/>
+      <circle cx="100" cy="100" r="86"  fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="100" cy="100" r="62"  fill="none" stroke="currentColor" stroke-width="1.5"/>
+
+      <!-- Laureles simétricos -->
+      <use href="#rama" xlink:href="#rama"/>
+      <use href="#rama" xlink:href="#rama" transform="matrix(-1 0 0 1 200 0)"/>
+
+      <!-- Estrellas arriba y abajo -->
+      <use href="#estrella" xlink:href="#estrella" transform="translate(100 26)"/>
+      <use href="#estrella" xlink:href="#estrella" transform="translate(100 174) rotate(180)"/>
+
+      <!-- Símbolo central -->
+      <circle cx="100" cy="100" r="48" fill="none" stroke="currentColor" stroke-width="1"/>
+      <circle cx="100" cy="100" r="38" fill="none" stroke="currentColor" stroke-width="3.5"/>
+      <circle cx="100" cy="100" r="26" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="19" fill="none" stroke="currentColor" stroke-width="1"/>
+      <circle cx="100" cy="100" r="12" fill="currentColor"/>
+      <use href="#rayo" xlink:href="#rayo"/>
+      <use href="#rayo" xlink:href="#rayo" transform="rotate(90 100 100)"/>
+      <use href="#rayo" xlink:href="#rayo" transform="rotate(180 100 100)"/>
+      <use href="#rayo" xlink:href="#rayo" transform="rotate(270 100 100)"/>
+    </g>
+
+    <!-- Banda de luz: blanco transparente → blanco → transparente -->
+    <linearGradient id="luz" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"   stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5"  stop-color="#fff" stop-opacity=".7"/>
+      <stop offset="1"   stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- La luz solo se pinta sobre la tinta negra (el fondo sigue transparente) -->
+    <mask id="soloTinta" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+      <use href="#sello" xlink:href="#sello" color="#fff"/>
+    </mask>
+  </defs>
+
+  <!-- Sello en negro -->
+  <use href="#sello" xlink:href="#sello" color="#000"/>
+
+  <!-- Brillo que pasa en diagonal -->
+  <g mask="url(#soloTinta)">
+    <g transform="rotate(20 100 100)">
+      <rect class="brillo" x="-120" y="-60" width="38" height="320" fill="url(#luz)"/>
+    </g>
+    <!-- Destello sobre la estrella superior -->
+    <path class="destello" d="M100 15 L101.2 24.8 L111 26 L101.2 27.2 L100 37 L98.8 27.2 L89 26 L98.8 24.8 Z" fill="#fff"/>
+  </g>
+</svg>

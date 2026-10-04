@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
+import { precioVigente, useFlujoPedido } from "../components/FlujoPedido";
 import { getEmpresa } from "../services/directorioService";
 
 const hhmm = (t) => (t || "").slice(0, 5);
@@ -35,6 +36,10 @@ export default function EmpresaScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
   const [foto, setFoto] = useState(null);
+  // Restaurantes: pedir y pagar desde la ficha (o reservar la hora de retiro).
+  const flujo = useFlujoPedido({
+    onPagoCerrado: (cerrado) => cerrado && navigation.navigate("Comer", { pestana: "pedidos" }),
+  });
 
   const cargar = useCallback(async () => {
     try {
@@ -64,6 +69,9 @@ export default function EmpresaScreen({ navigation, route }) {
   }
 
   const e = empresa;
+  const esComida = e.categoria_nombre === "Comida";
+  // El carrito necesita saber de qué local es cada plato.
+  const delLocal = (p) => ({ ...p, empresa: e.id, empresa_nombre: e.nombre, empresa_logo: e.logo, piso: e.piso, local: e.local });
   const contactos = [
     e.whatsapp && { icono: "logo-whatsapp", texto: "WhatsApp", url: `https://wa.me/591${e.whatsapp}` },
     e.telefono && { icono: "call", texto: "Llamar", url: `tel:${e.telefono}` },
@@ -74,7 +82,7 @@ export default function EmpresaScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.contenido}
+      <ScrollView contentContainerStyle={[styles.contenido, flujo.unidades ? { paddingBottom: 120 } : null]}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}>
         <View>
           {e.portada ? <Image source={{ uri: e.portada }} style={styles.portada} /> : <View style={[styles.portada, styles.portadaVacia]} />}
@@ -162,24 +170,52 @@ export default function EmpresaScreen({ navigation, route }) {
 
         {e.productos?.length ? (
           <>
-            <Text style={styles.seccion}>Productos</Text>
-            {e.productos.map((p) => (
-              <View key={p.id} style={styles.item}>
-                {p.foto ? <Image source={{ uri: p.foto }} style={styles.productoFoto} /> : null}
-                <View style={styles.flex}>
-                  <Text style={styles.itemTitulo}>{p.nombre}</Text>
-                  {p.descripcion ? <Text style={styles.itemTexto} numberOfLines={2}>{p.descripcion}</Text> : null}
-                </View>
-                <Text style={styles.precio}>{bs(p.en_promocion && p.precio_promocion ? p.precio_promocion : p.precio)}</Text>
+            <Text style={styles.seccion}>{esComida ? "Menú" : "Productos"}</Text>
+            {esComida ? (
+              <View style={styles.avisoPedido}>
+                <Ionicons name="bag-handle-outline" size={18} color={STITCH.secondary} />
+                <Text style={styles.avisoPedidoTexto}>
+                  Agrega platos con +, págalos con QR y retíralos aquí: ahora o a la hora que reserves.
+                </Text>
               </View>
-            ))}
+            ) : null}
+            {e.productos.map((p) => {
+              const cantidad = flujo.cantidadDe(p.id);
+              return (
+                <View key={p.id} style={styles.item}>
+                  {p.foto ? <Image source={{ uri: p.foto }} style={styles.productoFoto} /> : null}
+                  <View style={styles.flex}>
+                    <Text style={styles.itemTitulo}>{p.nombre}</Text>
+                    {p.descripcion ? <Text style={styles.itemTexto} numberOfLines={2}>{p.descripcion}</Text> : null}
+                    <Text style={styles.precio}>{bs(precioVigente(p))}</Text>
+                  </View>
+                  {esComida ? (
+                    cantidad ? (
+                      <View style={styles.stepper}>
+                        <TouchableOpacity onPress={() => flujo.cambiar(delLocal(p), -1)} accessibilityLabel={`Quitar un ${p.nombre}`}>
+                          <Ionicons name="remove-circle" size={28} color={STITCH.primary} />
+                        </TouchableOpacity>
+                        <Text style={styles.cantidad}>{cantidad}</Text>
+                        <TouchableOpacity onPress={() => flujo.cambiar(delLocal(p), 1)} accessibilityLabel={`Agregar un ${p.nombre}`}>
+                          <Ionicons name="add-circle" size={28} color={STITCH.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity onPress={() => flujo.cambiar(delLocal(p), 1)} accessibilityLabel={`Agregar ${p.nombre}`}>
+                        <Ionicons name="add-circle" size={32} color={STITCH.secondary} />
+                      </TouchableOpacity>
+                    )
+                  ) : null}
+                </View>
+              );
+            })}
           </>
         ) : null}
 
-        {e.productos?.length ? (
-          <TouchableOpacity style={[styles.jarvis, styles.pedir]} onPress={() => navigation.navigate("Comer", { empresa: e.id })}>
-            <Ionicons name="bag-handle" size={18} color={STITCH.primary} />
-            <Text style={[styles.jarvisTexto, styles.pedirTexto]}>Pedir aquí y recoger en el local</Text>
+        {esComida ? (
+          <TouchableOpacity style={[styles.jarvis, styles.pedir]} onPress={() => navigation.navigate("Comer", { pestana: "pedidos" })}>
+            <Ionicons name="receipt" size={18} color={STITCH.primary} />
+            <Text style={[styles.jarvisTexto, styles.pedirTexto]}>Ver mis pedidos</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -189,6 +225,8 @@ export default function EmpresaScreen({ navigation, route }) {
           <Text style={styles.jarvisTexto}>Preguntar a Jarvis</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {flujo.elementos}
 
       <Modal visible={!!foto} transparent animationType="fade" onRequestClose={() => setFoto(null)}>
         <TouchableOpacity style={styles.visor} activeOpacity={1} onPress={() => setFoto(null)}>
@@ -242,6 +280,11 @@ const styles = StyleSheet.create({
     borderRadius: 999, marginHorizontal: 16, marginTop: 24, paddingVertical: 14 },
   jarvisTexto: { color: STITCH.white, fontFamily: FUENTES.textoFuerte, fontSize: 15 },
   pedir: { backgroundColor: STITCH.oro },
+  avisoPedido: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: STITCH.surfaceLow, borderRadius: 12,
+    padding: 10, marginBottom: 8 },
+  avisoPedidoTexto: { flex: 1, color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 12.5 },
+  stepper: { flexDirection: "row", alignItems: "center", gap: 6 },
+  cantidad: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 16, minWidth: 16, textAlign: "center" },
   pedirTexto: { color: STITCH.primary },
   visor: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center", padding: 16 },
   visorFoto: { width: "100%", height: "80%" },

@@ -30,7 +30,10 @@ Base local: `http://localhost:8001/api/v1/` · Refresh del token: `POST /auth/to
 | `GET puntos/recompensas/` | Catálogo activo |
 
 ## Portero
-`POST porteria/visitas/` (`token` del QR del cliente) · `GET porteria/visitas/` (las de hoy)
+`POST porteria/visitas/` (`token` del QR del cliente) · `GET porteria/visitas/` (las de hoy) · `GET/POST porteria/entradas-evento/<código>/` (entrada a evento con cupos)
+
+## Escenario abierto
+Ver [[Escenario abierto]]: `entretenimiento/espacios/`, `entretenimiento/propuestas/`, `entretenimiento/entradas/`, `admin/propuestas/` (`aprobar`, `rechazar`), `admin/espacios/`.
 
 ## Caja (negocio o cajero)
 `GET caja/solicitudes/?estado=pendiente` · `POST caja/solicitudes/{id}/aprobar/` · `POST caja/solicitudes/{id}/rechazar/` (`motivo`)

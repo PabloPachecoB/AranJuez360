@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { qs } from "../../api/client";
+import MapaClientes from "../components/MapaClientes";
 import { Barras, completarDias, SerieDiaria, type ChartRow } from "../components/charts";
 import { Estado, StatTile, useApi } from "../components/ui";
 import { bs, corto, hace, isoLocal, num, ROLES, TIPOS } from "../format";
@@ -56,6 +57,20 @@ interface ProcedenciaFila {
   visitas: number;
   monedas: number;
 }
+interface PerfilFila {
+  clave: string;
+  nombre: string;
+  clientes: number;
+  clientes_con_compras: number;
+  compras: number;
+  monto: number;
+  visitas: number;
+}
+interface PerfilApi {
+  edad_promedio: number | null;
+  por_edad: PerfilFila[];
+  por_ocupacion: PerfilFila[];
+}
 interface ProcedenciasApi {
   procedencias: ProcedenciaFila[];
   ciudades: { ciudad: string; clientes: number; monedas: number }[];
@@ -100,6 +115,7 @@ export default function Dashboard() {
   const visitas = useApi<ChartRow[]>(`/admin/reportes/visitas-por-dia/${qProcedencia}`);
   const compras = useApi<ChartRow[]>(`/admin/reportes/compras-por-dia/${qProcedencia}`);
   const procedencias = useApi<ProcedenciasApi>(`/admin/reportes/clientes/procedencia/${q}`);
+  const perfil = useApi<PerfilApi>(`/admin/reportes/clientes/perfil/${q}`);
   const horas = useApi<HoraPico[]>(`/admin/reportes/horas-pico/${q}`);
   const semana = useApi<DiaSemana[]>(`/admin/reportes/dias-semana/${q}`);
   const ranking = useApi<EmpresaRanking[]>(`/admin/reportes/empresas/ranking/${q}`);
@@ -164,6 +180,8 @@ export default function Dashboard() {
         )}
       </Estado>
 
+      <MapaClientes query={q} />
+
       <section className={`${tarjeta} mb-space-md`}>
         <div className="flex flex-wrap items-start justify-between gap-space-sm">
           <div>
@@ -207,6 +225,46 @@ export default function Dashboard() {
               De fuera de Cochabamba: {procedencias.data.ciudades.map((c) => `${c.ciudad} (${c.clientes})`).join(" · ")}
             </p>
           )}
+        </Estado>
+      </section>
+
+      <section className={`${tarjeta} mb-space-md`}>
+        <h2 className={tituloSeccion}>Perfil de los clientes</h2>
+        <p className={subtitulo}>
+          Por edad y a qué se dedican (lo indican al registrarse en la app)
+          {perfil.data?.edad_promedio ? ` · edad promedio: ${perfil.data.edad_promedio} años` : ""}
+        </p>
+        <Estado cargando={perfil.cargando && !perfil.data} error={perfil.error} vacio={!perfil.data?.por_edad.length}>
+          <div className="grid grid-cols-1 gap-space-md lg:grid-cols-2">
+            {([["Edad", perfil.data?.por_edad || []], ["Ocupación", perfil.data?.por_ocupacion || []]] as [string, PerfilFila[]][]).map(([titulo, filas]) => {
+              const maxClientes = Math.max(1, ...filas.map((f) => f.clientes));
+              return (
+                <div key={titulo} className="overflow-x-auto">
+                  <table className={tabla}>
+                    <thead><tr>
+                      <th className={th}>{titulo}</th><th className={`${th} text-right`}>Clientes</th>
+                      <th className={`${th} text-right`}>Visitas</th><th className={`${th} text-right`}>Compras</th>
+                      <th className={`${th} text-right`}>Monto</th>
+                    </tr></thead>
+                    <tbody>{filas.map((fila) => (
+                      <tr key={fila.clave}>
+                        <td className={td}>{fila.nombre}</td>
+                        <td className={`${td} text-right tabular-nums`}>
+                          <div className="flex items-center justify-end gap-space-sm">
+                            <div className="h-2 rounded-r bg-secondary" style={{ width: `${(fila.clientes / maxClientes) * 70}px` }} />
+                            {num(fila.clientes)}
+                          </div>
+                        </td>
+                        <td className={`${td} text-right tabular-nums`}>{num(fila.visitas)}</td>
+                        <td className={`${td} text-right tabular-nums`}>{num(fila.compras)}</td>
+                        <td className={`${td} text-right tabular-nums`}>{bs(fila.monto)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
         </Estado>
       </section>
 

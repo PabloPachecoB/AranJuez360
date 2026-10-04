@@ -13,11 +13,13 @@ tags: [proyecto]
 - **Directorio de empresas** con ficha, horarios, productos y ofertas → [[Empresas]]
 - **Oficinas** con invitaciones QR para sus visitantes → [[Oficinas e invitaciones]]
 - **Dashboard** para que la administración tome decisiones → [[Dashboard admin]]
-- **Asistente IA** como extra integrado (pendiente).
+- **Asistente IA (Jarvis)** con datos reales → [[Jarvis (asistente IA)]]
+- **Comer (PaseoYa)**: pedido desde la app y retiro en el local → [[Comer y pedidos (PaseoYa)]]
+- **Diversión**: cartelera y eventos reales → [[Diversión (cartelera y eventos)]]
 
 ## Qué NO hacemos
-- ❌ **No vemos los pedidos ni ventas de las empresas.** Cada empresa tiene su propio sistema aislado. La única visibilidad comercial del Paseo es a través de los **tickets de fidelización**.
-- ❌ No hay delivery ni marketplace con pedidos (eso era el Reto 3, PaseoYa).
+- ❌ **El admin del Paseo no ve los pedidos ni ventas de las empresas.** Cada negocio ve solo los suyos; la visibilidad comercial del Paseo es por los **tickets de fidelización**.
+- ❌ No hay delivery: los pedidos de Comer se **retiran en el local** con código.
 - ❌ Locales, contratos, finanzas y mantenimiento del mall quedaron fuera por ahora.
 
 ## Origen

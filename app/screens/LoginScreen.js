@@ -1,8 +1,19 @@
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FormField from "../components/FormField";
 import PrimaryButton from "../components/PrimaryButton";
+import IntroLogo from "../components/IntroLogo";
 import { COLORS } from "../constants/colors";
 import { login } from "../services/authService";
 
@@ -11,6 +22,13 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { width } = useWindowDimensions();
+  const formulario = useRef(new Animated.Value(0)).current;
+
+  // El formulario aparece cuando el edificio termina de convertirse en el logo
+  const mostrarFormulario = useCallback(() => {
+    Animated.timing(formulario, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, [formulario]);
 
   const onSubmit = async () => {
     if (!email.trim() || !password) {
@@ -33,37 +51,46 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.brand}>Paseo Aranjuez 360</Text>
-          <Text style={styles.subtitle}>Visita, compra y acumula Paseo Points</Text>
+          <View style={styles.logo}>
+            <IntroLogo width={Math.min(width - 48, 340)} fondo={COLORS.bg} onFin={mostrarFormulario} />
+          </View>
+          <Animated.View
+            style={{
+              opacity: formulario,
+              transform: [{ translateY: formulario.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+            }}
+          >
+            <Text style={styles.subtitle}>Visita, compra y acumula Paseo Points</Text>
 
-          <FormField
-            label="Correo"
-            placeholder="tu@correo.com"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          <FormField
-            label="Contraseña"
-            placeholder="Tu contraseña"
-            secure
-            autoComplete="password"
-            value={password}
-            onChangeText={setPassword}
-            onSubmitEditing={onSubmit}
-          />
-          {error && <Text style={styles.error}>{error}</Text>}
+            <FormField
+              label="Correo"
+              placeholder="tu@correo.com"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+            <FormField
+              label="Contraseña"
+              placeholder="Tu contraseña"
+              secure
+              autoComplete="password"
+              value={password}
+              onChangeText={setPassword}
+              onSubmitEditing={onSubmit}
+            />
+            {error && <Text style={styles.error}>{error}</Text>}
 
-          <PrimaryButton title="Continuar" onPress={onSubmit} loading={loading} />
-          <Text style={styles.nota}>Te enviaremos un código a tu correo para confirmar que eres tú.</Text>
+            <PrimaryButton title="Continuar" onPress={onSubmit} loading={loading} />
+            <Text style={styles.nota}>Te enviaremos un código a tu correo para confirmar que eres tú.</Text>
 
-          <TouchableOpacity style={styles.link} onPress={() => navigation.navigate("Registro")}>
-            <Text style={styles.linkText}>
-              ¿No tienes cuenta? <Text style={styles.linkStrong}>Regístrate</Text>
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.link} onPress={() => navigation.navigate("Registro")}>
+              <Text style={styles.linkText}>
+                ¿No tienes cuenta? <Text style={styles.linkStrong}>Regístrate</Text>
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -74,7 +101,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   flex: { flex: 1 },
   container: { flexGrow: 1, justifyContent: "center", padding: 24 },
-  brand: { fontSize: 28, fontWeight: "800", color: COLORS.primary, textAlign: "center" },
+  logo: { alignSelf: "center", marginBottom: 10 },
   subtitle: { fontSize: 15, color: COLORS.muted, textAlign: "center", marginBottom: 32 },
   error: { color: COLORS.danger, marginBottom: 10, fontSize: 13 },
   nota: { color: COLORS.muted, fontSize: 12, textAlign: "center", marginTop: 12 },

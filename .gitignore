@@ -31,3 +31,8 @@ build/
 .vscode/
 .idea/
 .DS_Store
+
+# Datos sensibles y archivos locales
+docs/ACCESOS_DEMO_TIENDAS.csv
+tmp/
+Hackathon_By_Paseo_Aranjuez_*.pdf

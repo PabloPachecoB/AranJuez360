@@ -210,7 +210,7 @@ export function ProductosPage() {
                 <th className="py-3.5 px-4">Precio</th>
                 <th className="py-3.5 px-4">Existencias</th>
                 <th className="py-3.5 px-4">Promoción</th>
-                <th className="py-3.5 px-4 text-center">En PaseoYa</th>
+                <th className="py-3.5 px-4 text-center">En la app</th>
                 <th className="py-3.5 pr-6 pl-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -286,7 +286,7 @@ export function ProductosPage() {
                         <Switch
                           checked={producto.activo}
                           onChange={(activo) => cambiarActivo(producto, activo)}
-                          label={`Mostrar ${producto.nombre} en PaseoYa`}
+                          label={`Mostrar ${producto.nombre} en la app`}
                         />
                       </td>
                       <td className="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">

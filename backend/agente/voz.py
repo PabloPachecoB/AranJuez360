@@ -32,6 +32,19 @@ class VozError(Exception):
     """No se pudo generar el audio."""
 
 
+_PRECIO = re.compile(r"\bBs\.?\s*(\d+(?:[.,]\d+)?)", re.IGNORECASE)
+
+
+def en_bolivianos(texto: str) -> str:
+    """"Bs 52" -> "52 bolivianos": así la voz no deletrea "be ese" y el precio se entiende."""
+
+    def _convertir(m):
+        numero = m.group(1)
+        return f"{numero} {'boliviano' if numero == '1' else 'bolivianos'}"
+
+    return _PRECIO.sub(_convertir, texto)
+
+
 def quitar_emociones(texto: str) -> str:
     """Texto sin etiquetas [emoción], para mostrar en pantalla o voces sin emociones."""
     return re.sub(r"\s{2,}", " ", _ETIQUETA.sub("", texto)).strip()
@@ -62,7 +75,7 @@ def _edge(texto: str) -> bytes:
 
 def sintetizar(texto: str) -> bytes:
     """MP3 con `texto` leído por Jarvis (ElevenLabs y, si falla, edge-tts)."""
-    texto = texto[:MAX_CARACTERES]
+    texto = en_bolivianos(texto)[:MAX_CARACTERES]
     clave = "jarvis-voz:" + hashlib.sha256(texto.encode()).hexdigest()
     audio = cache.get(clave)
     if audio:

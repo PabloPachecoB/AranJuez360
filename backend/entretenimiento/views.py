@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
@@ -8,16 +10,20 @@ from rest_framework.response import Response
 
 from fidelizacion.models import PuntoEscaneo
 from fidelizacion.services import ReglaNegocioError
-from usuarios.permissions import EsAdmin, EsCliente
+from usuarios.permissions import EsAdmin, EsCliente, EsPortero
 
-from . import services
+from . import escenario, services
 
-from .models import Evento, Funcion, Pelicula, ReservaCine
+from .models import Espacio, Evento, Funcion, Pelicula, Propuesta, ReservaCine, ReservaEvento
 from .serializers import (
     ActividadSerializer,
+    EspacioSerializer,
     EventoSerializer,
     FuncionSerializer,
     PeliculaSerializer,
+    PropuestaAdminSerializer,
+    PropuestaSerializer,
+    ReservaEventoSerializer,
     ReservaSerializer,
 )
 
@@ -38,9 +44,16 @@ def _eventos_proximos():
     return (
         Evento.objects.filter(activo=True)
         .filter(Q(inicio__gte=ahora) | Q(fin__gte=ahora))
-        .select_related("empresa")
+        .select_related("empresa", "espacio", "propuesta")
         .order_by("inicio")
     )
+
+
+def _regla(funcion, *args, **kwargs):
+    try:
+        return funcion(*args, **kwargs)
+    except ReglaNegocioError as exc:
+        raise ValidationError({"detail": str(exc)})
 
 
 @api_view(["GET"])
@@ -94,7 +107,116 @@ class FuncionesAdminViewSet(viewsets.ModelViewSet):
 class EventosAdminViewSet(viewsets.ModelViewSet):
     serializer_class = EventoSerializer
     permission_classes = [EsAdmin]
-    queryset = Evento.objects.select_related("empresa").order_by("-inicio")
+    queryset = Evento.objects.select_related("empresa", "espacio", "propuesta").order_by("-inicio")
+
+    @action(detail=True, methods=["get"])
+    def asistentes(self, request, pk=None):
+        """Quiénes reservaron cupo (para el organizador y la puerta)."""
+        reservas = self.get_object().reservas.filter(estado=ReservaEvento.Estado.CONFIRMADA).select_related("cliente")
+        return Response(ReservaEventoSerializer(reservas, many=True).data)
+
+
+# ---------- Escenario abierto ----------
+
+class EspaciosViewSet(viewsets.ReadOnlyModelViewSet):
+    """Espacios que la comunidad puede pedir para presentarse."""
+
+    serializer_class = EspacioSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    queryset = Espacio.objects.filter(activo=True)
+
+
+class EspaciosAdminViewSet(viewsets.ModelViewSet):
+    serializer_class = EspacioSerializer
+    permission_classes = [EsAdmin]
+    queryset = Espacio.objects.all()
+
+
+class MisPropuestasViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+                           viewsets.GenericViewSet):
+    """Solicitudes del cliente para presentarse (le llegan al admin para aprobar)."""
+
+    serializer_class = PropuestaSerializer
+    permission_classes = [EsCliente]
+
+    def get_queryset(self):
+        return Propuesta.objects.filter(solicitante=self.request.user).select_related("espacio", "evento")
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        datos = dict(serializer.validated_data)
+        datos["espacio"] = datos["espacio"].pk
+        propuesta = _regla(escenario.crear_propuesta, request.user, datos)
+        return Response(PropuestaSerializer(propuesta).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        return Response(PropuestaSerializer(_regla(escenario.cancelar_propuesta, request.user, pk)).data)
+
+
+class PropuestasAdminViewSet(viewsets.ReadOnlyModelViewSet):
+    """Bandeja del admin: aprobar (publica el evento) o rechazar con motivo."""
+
+    serializer_class = PropuestaAdminSerializer
+    permission_classes = [EsAdmin]
+
+    def get_queryset(self):
+        qs = Propuesta.objects.select_related("espacio", "solicitante", "evento", "revisada_por")
+        estado = self.request.query_params.get("estado")
+        if estado:
+            qs = qs.filter(estado=estado)
+        # Las pendientes, por fecha de presentación (lo más urgente primero).
+        return qs.order_by("inicio") if estado == Propuesta.Estado.PENDIENTE else qs
+
+    @action(detail=True, methods=["post"])
+    def aprobar(self, request, pk=None):
+        datos = request.data
+        propuesta = _regla(
+            escenario.aprobar, pk, request.user, acceso=datos.get("acceso"), cupos=datos.get("cupos"),
+            destacado=datos.get("destacado") in (True, "true", "1"),
+        )
+        return Response(PropuestaAdminSerializer(propuesta).data)
+
+    @action(detail=True, methods=["post"])
+    def rechazar(self, request, pk=None):
+        propuesta = _regla(escenario.rechazar, pk, request.user, request.data.get("motivo", ""))
+        return Response(PropuestaAdminSerializer(propuesta).data)
+
+
+class MisEntradasViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Cupos reservados por el cliente en eventos con cupos (cada uno con su QR)."""
+
+    serializer_class = ReservaEventoSerializer
+    permission_classes = [EsCliente]
+    pagination_class = None
+
+    def get_queryset(self):
+        return ReservaEvento.objects.filter(
+            cliente=self.request.user, estado=ReservaEvento.Estado.CONFIRMADA,
+            evento__inicio__gte=timezone.now() - timedelta(hours=6),
+        ).select_related("evento", "cliente").order_by("evento__inicio")
+
+    def create(self, request):
+        reserva = _regla(escenario.reservar, request.user, request.data.get("evento"), request.data.get("cantidad", 1))
+        return Response(ReservaEventoSerializer(reserva).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        return Response(ReservaEventoSerializer(_regla(escenario.cancelar_reserva, request.user, pk)).data)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([EsPortero | EsAdmin])
+def entrada_evento(request, codigo):
+    """GET valida la entrada (QR `paseo360://evento/<codigo>`); POST registra el ingreso."""
+    if request.method == "GET":
+        return Response(ReservaEventoSerializer(_regla(escenario._entrada, codigo)).data)
+    reserva = _regla(escenario.registrar_ingreso, codigo)
+    data = ReservaEventoSerializer(reserva).data
+    data["mensaje"] = f"Ingreso registrado: {data['cliente_nombre']} · {reserva.cantidad} × {reserva.evento.titulo}."
+    return Response(data)
 
 
 class MisReservasViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):

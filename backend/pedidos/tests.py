@@ -2,16 +2,21 @@ from decimal import Decimal
 
 from rest_framework.test import APITestCase
 
-from empresas.models import Empresa, Producto
+from empresas.models import Categoria, Empresa, Producto
 from usuarios.models import Usuario
 
+from . import services
 from .models import Pedido, PedidoItem
+
+
+def _comida():
+    return Categoria.objects.get_or_create(nombre="Comida")[0]
 
 
 class CrearPedidoTests(APITestCase):
     def setUp(self):
-        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com")
-        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com")
+        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com", categoria=_comida())
+        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com", categoria=_comida())
         self.capuchino = Producto.objects.create(
             empresa=self.empresa, nombre="Capuchino", precio=Decimal("22.00"), stock=10
         )
@@ -43,7 +48,7 @@ class CrearPedidoTests(APITestCase):
         )
         self.assertEqual(resp.status_code, 201, resp.data)
         self.assertEqual(resp.data["total"], "69.00")  # 2*22 + 1*25
-        self.assertEqual(resp.data["estado"], "RECIBIDO")
+        self.assertEqual(resp.data["estado"], "PENDIENTE_PAGO")  # primero se paga con el QR
         self.assertTrue(resp.data["codigo_retiro"])
         self.assertEqual(len(resp.data["items"]), 2)
 
@@ -98,8 +103,8 @@ class CrearPedidoTests(APITestCase):
 
 class PanelNegocioPedidosTests(APITestCase):
     def setUp(self):
-        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com")
-        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com")
+        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com", categoria=_comida())
+        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com", categoria=_comida())
         self.producto = Producto.objects.create(empresa=self.empresa, nombre="Capuchino", precio=Decimal("22.00"))
         self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
         self.negocio = Usuario.objects.create_user(
@@ -114,6 +119,7 @@ class PanelNegocioPedidosTests(APITestCase):
             {"empresa": self.empresa.pk, "items": [{"producto_id": self.producto.pk, "cantidad": 1}]},
             format="json",
         ).data["id"]
+        services.confirmar_pago(Pedido.objects.get(pk=self.pedido_id).pago_referencia)
         self.pedido = Pedido.objects.get(pk=self.pedido_id)
 
     def test_negocio_ve_sus_pedidos_entrantes(self):
@@ -165,8 +171,8 @@ class PanelNegocioPedidosTests(APITestCase):
 
 class ValidarRetiroTests(APITestCase):
     def setUp(self):
-        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com")
-        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com")
+        self.empresa = Empresa.objects.create(nombre="Café Aranjuez", email_contacto="cafe@x.com", categoria=_comida())
+        self.otra_empresa = Empresa.objects.create(nombre="Tienda Y", email_contacto="y@y.com", categoria=_comida())
         self.producto = Producto.objects.create(empresa=self.empresa, nombre="Capuchino", precio=Decimal("22.00"))
         self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
         self.negocio = Usuario.objects.create_user(
@@ -181,6 +187,7 @@ class ValidarRetiroTests(APITestCase):
             {"empresa": self.empresa.pk, "items": [{"producto_id": self.producto.pk, "cantidad": 1}]},
             format="json",
         ).data["id"]
+        services.confirmar_pago(Pedido.objects.get(pk=self.pedido_id).pago_referencia)
         self.pedido = Pedido.objects.get(pk=self.pedido_id)
 
     def _avanzar_hasta_listo(self):
@@ -227,3 +234,128 @@ class ValidarRetiroTests(APITestCase):
         self.assertEqual(resp.status_code, 400)
         self.pedido.refresh_from_db()
         self.assertEqual(self.pedido.estado, Pedido.Estado.LISTO_PARA_RECOGER)
+
+
+
+class PagoQRYRetiroTests(APITestCase):
+    """Pago con QR (banco simulado), llegada del cliente y restricción a negocios de comida."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(nombre="Waffle King", email_contacto="w@x.com", categoria=_comida())
+        self.producto = Producto.objects.create(empresa=self.empresa, nombre="Waffle", precio=Decimal("32.00"))
+        self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
+        self.negocio = Usuario.objects.create_user("neg", password="x", rol=Usuario.Rol.NEGOCIO, empresa=self.empresa)
+        self.client.force_authenticate(self.cliente)
+        self.pedido = self.client.post("/api/v1/pedidos/", {
+            "empresa": self.empresa.pk, "items": [{"producto_id": self.producto.pk, "cantidad": 2}]}, format="json").data
+
+    def test_qr_de_cobro_y_banco_simulado(self):
+        self.assertTrue(self.pedido["pago_qr"].endswith(f"/pago-simulado/{self.pedido['pago_referencia']}/"))
+        url = f"/pago-simulado/{self.pedido['pago_referencia']}/"
+        self.client.logout()
+        self.assertContains(self.client.get(url), "Bs 64")
+        self.assertContains(self.client.post(url), "Pago realizado")
+        self.assertEqual(Pedido.objects.get(pk=self.pedido["id"]).estado, "RECIBIDO")
+
+    def test_negocio_no_avanza_sin_pago(self):
+        self.client.force_authenticate(self.negocio)
+        self.assertEqual(self.client.post(f"/api/v1/mi-empresa/pedidos/{self.pedido['id']}/avanzar/").status_code, 400)
+
+    def test_flujo_pago_preparacion_llegada_y_entrega(self):
+        pagado = self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/simular-pago/").data
+        self.assertEqual(pagado["estado"], "RECIBIDO")
+        self.assertIsNotNone(pagado["pagado_en"])
+        # Avisar llegada antes de que esté listo no se puede.
+        self.assertEqual(self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/llegue/").status_code, 400)
+        self.client.force_authenticate(self.negocio)
+        for _ in range(3):
+            self.client.post(f"/api/v1/mi-empresa/pedidos/{self.pedido['id']}/avanzar/")
+        self.client.force_authenticate(self.cliente)
+        self.assertEqual(self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/llegue/").data["estado"], "CLIENTE_LLEGO")
+        self.client.force_authenticate(self.negocio)
+        resp = self.client.post("/api/v1/mi-empresa/pedidos/validar-retiro/",
+                                {"codigo_retiro": pagado["codigo_retiro"]}, format="json")
+        self.assertEqual(resp.data["estado"], "ENTREGADO")
+
+    def test_qr_vencido_cancela_el_pedido(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        Pedido.objects.filter(pk=self.pedido["id"]).update(pago_vence_en=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/simular-pago/").status_code, 400)
+        self.assertEqual(self.client.get(f"/api/v1/pedidos/{self.pedido['id']}/").data["estado"], "CANCELADO")
+
+    def test_cancelar_pagado_marca_reembolso(self):
+        self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/simular-pago/")
+        self.assertEqual(self.client.post(f"/api/v1/pedidos/{self.pedido['id']}/cancelar/").status_code, 400)
+        self.client.force_authenticate(self.negocio)
+        resp = self.client.post(f"/api/v1/mi-empresa/pedidos/{self.pedido['id']}/cancelar/")
+        self.assertEqual(resp.data["estado"], "CANCELADO")
+        self.assertIsNotNone(resp.data["reembolsado_en"])
+
+    def test_solo_negocios_de_comida(self):
+        tienda = Empresa.objects.create(nombre="TecnoPlus", email_contacto="t@x.com")
+        audifonos = Producto.objects.create(empresa=tienda, nombre="Audífonos", precio=Decimal("250"))
+        resp = self.client.post("/api/v1/pedidos/", {"empresa": tienda.pk, "items": [
+            {"producto_id": audifonos.pk, "cantidad": 1}]}, format="json")
+        self.assertEqual(resp.status_code, 400)
+
+
+class ReservaDeRetiroTests(APITestCase):
+    """Comprar ahora y reservar la hora de retiro."""
+
+    def setUp(self):
+        self.empresa = Empresa.objects.create(nombre="Waffle King", email_contacto="w@x.com", categoria=_comida())
+        self.producto = Producto.objects.create(empresa=self.empresa, nombre="Waffle", precio=Decimal("32.00"))
+        self.cliente = Usuario.objects.create_user("cli", password="x", rol=Usuario.Rol.CLIENTE)
+        self.client.force_authenticate(self.cliente)
+
+    def _pedir(self, retiro):
+        return self.client.post("/api/v1/pedidos/", {
+            "empresa": self.empresa.pk, "items": [{"producto_id": self.producto.pk, "cantidad": 1}],
+            "retiro_programado": retiro}, format="json")
+
+    def test_reserva_valida(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        hora = (timezone.now() + timedelta(hours=2)).replace(microsecond=0)
+        resp = self._pedir(hora.isoformat())
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertIsNotNone(resp.data["retiro_programado"])
+
+    def test_reserva_muy_pronto_o_muy_lejos(self):
+        from datetime import timedelta
+        from django.utils import timezone
+
+        self.assertEqual(self._pedir((timezone.now() + timedelta(minutes=5)).isoformat()).status_code, 400)
+        self.assertEqual(self._pedir((timezone.now() + timedelta(days=5)).isoformat()).status_code, 400)
+
+    def test_lo_antes_posible(self):
+        resp = self._pedir(None)
+        self.assertEqual(resp.status_code, 201)
+        self.assertIsNone(resp.data["retiro_programado"])
+
+
+class AdminSupervisaPedidosTests(APITestCase):
+    def setUp(self):
+        self.empresa = Empresa.objects.create(nombre="Waffle King", email_contacto="w@x.com", categoria=_comida())
+        self.producto = Producto.objects.create(empresa=self.empresa, nombre="Waffle", precio=Decimal("32.00"))
+        self.cliente = Usuario.objects.create_user("cli", email="c@x.bo", password="x", rol=Usuario.Rol.CLIENTE)
+        self.admin = Usuario.objects.create_user("adm", password="x", rol=Usuario.Rol.ADMIN)
+        self.client.force_authenticate(self.cliente)
+        self.client.post("/api/v1/pedidos/", {"empresa": self.empresa.pk, "items": [
+            {"producto_id": self.producto.pk, "cantidad": 2}]}, format="json")
+
+    def test_solo_el_admin_ve_todos_los_pedidos(self):
+        self.assertEqual(self.client.get("/api/v1/admin/pedidos/").status_code, 403)
+        self.client.force_authenticate(self.admin)
+        data = self.client.get("/api/v1/admin/pedidos/").data["results"]
+        self.assertEqual((len(data), data[0]["empresa_nombre"], data[0]["cliente_email"]), (1, "Waffle King", "c@x.bo"))
+
+    def test_filtros_y_resumen(self):
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get("/api/v1/admin/pedidos/?estado=ENTREGADO").data["count"], 0)
+        self.assertEqual(self.client.get("/api/v1/admin/pedidos/?buscar=waffle").data["count"], 1)
+        resumen = self.client.get("/api/v1/admin/pedidos/resumen/").data
+        self.assertEqual((resumen["por_estado"]["PENDIENTE_PAGO"], resumen["pedidos"]), (1, 1))

@@ -1,13 +1,19 @@
 ---
 tags: [modulos, oficinas, diseño]
-estado: diseño (no implementado)
+estado: implementado (backend + app + portería)
 ---
 
 # Oficinas e invitaciones
 
 Las oficinas alquilan en el Paseo y brindan sus servicios aparte. No tienen caja de puntos; su módulo es **invitar visitantes**.
 
-## Flujo propuesto
+## Estado (2026-10-03)
+- Backend `backend/oficinas/` (modelo `Invitacion`, servicios, pruebas) y página pública `invitacion/<codigo>/`.
+- App: `OficinasScreen` (el visitante agenda su visita) · portería: `porteria/invitaciones/<codigo>/` valida e `ingreso/` registra.
+- Panel de la oficina: `mi-oficina/visitas/` (web `Visitas.jsx`).
+- Falta: cargar oficinas **reales** (hoy son 3 de demo) → [[Fuentes de datos reales]]
+
+## Flujo
 1. La oficina crea la invitación en la web: nombre del invitado, CI (opcional), **correo** y **celular** (separados), fecha, horario válido, motivo, tipo (**un solo uso** o **varios días**).
 2. El sistema genera un **enlace con QR** (`paseo360.bo/i/<token>`) con oficina, piso y horario. Se comparte por WhatsApp, correo o imagen.
 3. El invitado llega y muestra el QR — **no necesita la app**.

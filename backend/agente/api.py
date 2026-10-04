@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from datetime import timedelta
 
 from django.utils import timezone
-from empresas.models import Empresa
+from empresas.models import Empresa, Producto
 from empresas.rubros import normalizar
 from fidelizacion.services import ReglaNegocioError
 
@@ -56,6 +56,51 @@ def _empresas_mencionadas(request, texto: str) -> list:
     return [ficha for _, ficha in sorted(fichas, key=lambda par: par[0])][:MAX_FICHAS]
 
 
+MAX_PLATOS_FICHA = 4
+
+
+def _productos_mencionados(request, texto: str) -> list:
+    """Platos que Jarvis nombró (con su foto y local) para mostrarlos como tarjetas bajo su globo.
+
+    Cada plato se asigna al local mencionado MÁS CERCANO en la frase, así "capuchino de Café Aranjuez" no
+    se confunde con el capuchino de otro café, y un plato sin su local cerca no se muestra.
+    """
+    texto = normalizar(texto or "")
+    if not texto:
+        return []
+    productos = list(Producto.objects.filter(
+        activo=True, empresa__activo=True, empresa__categoria__nombre="Comida"
+    ).select_related("empresa"))
+    # Dónde se nombra cada local en el texto.
+    posiciones = {}
+    for empresa in {p.empresa for p in productos}:
+        nombre = normalizar(empresa.nombre.split(",")[0])
+        if len(nombre) >= 3:
+            posiciones[empresa.id] = [m.start() for m in re.finditer(rf"\b{re.escape(nombre)}\b", texto)]
+    fichas = []
+    for producto in productos:
+        nombre = normalizar(producto.nombre)
+        if len(nombre) < 4 or not posiciones.get(producto.empresa_id):
+            continue
+        for plato in re.finditer(rf"\b{re.escape(nombre)}\b", texto):
+            # (distancia, local) del local nombrado más cerca de este plato
+            cercano = min(
+                (abs(plato.start() - pos), empresa_id)
+                for empresa_id, lugares in posiciones.items() for pos in lugares
+            )
+            if cercano[1] == producto.empresa_id and cercano[0] <= 160:
+                imagen = producto.foto or producto.empresa.logo
+                precio = producto.precio_promocion if producto.en_promocion and producto.precio_promocion else producto.precio
+                fichas.append((plato.start(), {
+                    "id": producto.id, "nombre": producto.nombre, "precio": str(precio),
+                    "empresa_id": producto.empresa_id, "empresa_nombre": producto.empresa.nombre,
+                    "piso": producto.empresa.piso,
+                    "foto": request.build_absolute_uri(imagen.url) if imagen else None,
+                }))
+                break
+    return [ficha for _, ficha in sorted(fichas, key=lambda par: par[0])][:MAX_PLATOS_FICHA]
+
+
 class AgentActionViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
@@ -74,7 +119,8 @@ class AgentActionViewSet(
         result = get_conversation_service().chat(
             request.user, thread_id, data["message"]
         )
-        return Response({**result, "empresas": _empresas_mencionadas(request, result.get("text"))})
+        return Response({**result, "empresas": _empresas_mencionadas(request, result.get("text")),
+                         "productos": _productos_mencionados(request, result.get("text"))})
 
     @action(detail=False, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def voz(self, request):
@@ -99,7 +145,8 @@ class AgentActionViewSet(
         thread_id = data.get("thread_id") or f"user-{request.user.id}"
         result = get_conversation_service().chat(request.user, thread_id, transcripcion)
         return Response({**result, "transcripcion": transcripcion,
-                         "empresas": _empresas_mencionadas(request, result.get("text"))})
+                         "empresas": _empresas_mencionadas(request, result.get("text")),
+                         "productos": _productos_mencionados(request, result.get("text"))})
 
     @action(detail=False, methods=["get"])
     def hablar(self, request):

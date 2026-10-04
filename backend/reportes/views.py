@@ -13,7 +13,15 @@ from rest_framework.response import Response
 from usuarios.models import Usuario
 from usuarios.permissions import EsAdmin
 
+from . import auditoria as auditoria_modulo
 from . import services
+from .geografia import mapa_clientes as obtener_mapa_clientes
+
+
+@api_view(["GET"])
+@permission_classes([EsAdmin])
+def mapa_clientes(request):
+    return Response(obtener_mapa_clientes(*_periodo(request)))
 
 
 def _fecha(request, nombre: str, defecto: date) -> date:
@@ -114,6 +122,26 @@ def clientes_frecuentes(request):
 def clientes_por_procedencia(request):
     """De dónde son los clientes: cantidad, compras, monto, visitas y monedas por procedencia."""
     return Response(services.clientes_por_procedencia(*_periodo(request)))
+
+
+@api_view(["GET"])
+@permission_classes([EsAdmin])
+def perfil_clientes(request):
+    """Clientes por rango de edad y por ocupación (estudiante, universitario, profesional...)."""
+    return Response(services.perfil_clientes(*_periodo(request)))
+
+
+@api_view(["GET"])
+@permission_classes([EsAdmin])
+def auditoria(request):
+    """Línea de tiempo de la actividad del Paseo: ?tipo=PEDIDO|COMPRA|CANJE|VISITA|ESCENARIO|INVITACION|USUARIO."""
+    tipo = (request.query_params.get("tipo") or "").upper() or None
+    if tipo and tipo not in auditoria_modulo.TIPOS:
+        return Response({"detail": "Tipo de evento no válido."}, status=400)
+    return Response({
+        "tipos": [{"valor": k, "nombre": v} for k, v in auditoria_modulo.TIPOS.items()],
+        "eventos": auditoria_modulo.eventos(tipo=tipo),
+    })
 
 
 @api_view(["GET"])

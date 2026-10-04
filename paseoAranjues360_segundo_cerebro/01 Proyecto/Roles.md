@@ -7,7 +7,7 @@ tags: [proyecto, roles]
 | Rol | Quién es | Qué hace | Dónde |
 |---|---|---|---|
 | **ADMIN** | Administración del Paseo | Crea empresas y porteros, configura puntos y recompensas, ve todo el [[Dashboard admin]] | Web |
-| **PORTERO** | Guardia de la entrada | Escanea el QR del cliente → +puntos de visita; valida QR de invitados de oficinas | App (modo portero) |
+| **PORTERO** | Guardia de la entrada | Su app tiene solo 3 pestañas: **Escanear** (QR del cliente → visita; invitación a oficina; entrada a evento con cupos), **Eventos** disponibles (libres o con cupos) y **Cartelera** de cine. Nada más. | App (modo portero) |
 | **CLIENTE** ⭐ | Usuario principal | Gana puntos por visitas y compras, canjea recompensas | App |
 | **NEGOCIO** | Negocio **o** emprendimiento | Ficha, productos, ofertas, QR/NFC de caja, aprueba compras | Web |
 | **CAJERO** | Personal de caja de un negocio | Solo atiende solicitudes de puntos (sin acceso a la ficha) | Web (tablet/celular) |

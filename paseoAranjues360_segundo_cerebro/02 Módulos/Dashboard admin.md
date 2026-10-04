@@ -12,6 +12,7 @@ Web en **http://localhost:3000** (React + Vite + Recharts). Solo rol ADMIN.
 - Gráficos (con tooltip al pasar el mouse):
   - Visitas por día (azul) · Compras por día (naranja)
   - Horas pico · Días de la semana
+- **Perfil de los clientes** (2026-10-04): por rango de edad (menos de 18, 18–24, 25–34, 35–44, 45–59, 60+) y por ocupación (colegio, universidad, profesional, otro), con visitas, compras y monto, más la edad promedio. Endpoint `clientes/perfil/`.
 - Tablas: empresas con más actividad (compras, monto, clientes, % rechazo), clientes frecuentes, clientes que no vuelven (14 días), usuarios por rol.
 
 ## Otras páginas

@@ -7,7 +7,8 @@ tags: [modulos, auth, seguridad]
 ## Formulario de registro (app)
 | Sección | Campos | Validación |
 |---|---|---|
-| Datos personales | Nombre, apellido, fecha de nacimiento (opcional → bono de cumpleaños) | |
+| Datos personales | Nombre, apellido | |
+| **Edad y ocupación** (2026-10-04) | **Fecha de nacimiento** (día/mes/año, obligatoria; la app muestra "Tienes N años") · **¿A qué te dedicas?**: Estudiante de colegio, Universitario/a, Profesional u Otro (obligatoria) | Edad mínima 10 años. Se usan en el dashboard (Perfil de los clientes) y para el bono de cumpleaños |
 | Contacto | **Correo** y **celular** separados | celular boliviano: 8 dígitos, empieza con 6 o 7 (acepta `+591`) |
 | Identidad | **CI obligatorio** · NIT opcional | CI: 5–10 dígitos + complemento opcional (`1234567-1A`), único. Aviso: *"Tu carnet debe ser real y válido: te lo pediremos para entregarte premios y canjes."* |
 | Seguridad | Contraseña + confirmación | ≥ 8 caracteres, letras y números; indicadores en verde mientras se escribe |
@@ -51,6 +52,7 @@ sequenceDiagram
 ## Archivos clave
 - Backend: `usuarios/verificacion.py`, `usuarios/views.py`, `usuarios/serializers.py`, `usuarios/validators.py`
 - App: `screens/RegistroScreen.js`, `VerificarCodigoScreen.js`, `DesbloqueoScreen.js`, `services/biometria.js`, `context/UserContext.js`
-- Web: `src/pages/Login.jsx`
+- Web: `src/auth/LoginPage.tsx`
+- Logo animado del login → [[Logo y animación de entrada]]
 
 > [!tip] En desarrollo los correos (y códigos) se imprimen en la **terminal del backend**. Ver [[Problemas comunes]].

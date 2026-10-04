@@ -149,21 +149,33 @@ export default function DirectorioScreen({ navigation, route }) {
       </View>
 
       {vista !== "ofertas" ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {FILTROS.map((f) => (
-            <TouchableOpacity key={f.id} onPress={() => { setFiltro(f.id); setCategoria(null); }}
-              style={[styles.chip, filtro === f.id && !categoria && styles.chipActivo]}>
-              <Ionicons name={f.icono} size={14} color={filtro === f.id && !categoria ? STITCH.white : STITCH.secondary} />
-              <Text style={[styles.chipTexto, filtro === f.id && !categoria && styles.chipTextoActivo]}>{f.texto}</Text>
-            </TouchableOpacity>
-          ))}
-          {categorias.map((c) => (
-            <TouchableOpacity key={c.id} onPress={() => { setFiltro("todo"); setCategoria(categoria === c.id ? null : c.id); }}
-              style={[styles.chip, categoria === c.id && styles.chipActivo]}>
-              <Text style={[styles.chipTexto, categoria === c.id && styles.chipTextoActivo]}>{c.nombre}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <>
+          {/* Fila 1: qué quiero ver. Sin flexGrow:0 el ScrollView horizontal se aplasta a 0 de alto. */}
+          <View style={styles.filtros}>
+            {FILTROS.map((f) => {
+              const activo = filtro === f.id && !categoria;
+              return (
+                <TouchableOpacity key={f.id} onPress={() => { setFiltro(f.id); setCategoria(null); }}
+                  style={[styles.filtro, activo && styles.chipActivo]} accessibilityState={{ selected: activo }}>
+                  <Ionicons name={f.icono} size={16} color={activo ? STITCH.white : STITCH.secondary} />
+                  <Text style={[styles.filtroTexto, activo && styles.chipTextoActivo]} numberOfLines={1}>{f.texto}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {/* Fila 2: rubros, en orden alfabético. */}
+          {categorias.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsFila}
+              contentContainerStyle={styles.chips}>
+              {[...categorias].filter((c) => c.nombre !== "Comida").sort((a, b) => a.nombre.localeCompare(b.nombre, "es")).map((c) => (
+                <TouchableOpacity key={c.id} onPress={() => { setFiltro("todo"); setCategoria(categoria === c.id ? null : c.id); }}
+                  style={[styles.chip, categoria === c.id && styles.chipActivo]}>
+                  <Text style={[styles.chipTexto, categoria === c.id && styles.chipTextoActivo]}>{c.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
+        </>
       ) : null}
 
       <ScrollView contentContainerStyle={styles.contenido}
@@ -173,7 +185,11 @@ export default function DirectorioScreen({ navigation, route }) {
         {vista === "ofertas" ? (
           ofertas.length ? ofertas.map((o) => (
             <TouchableOpacity key={o.id} style={styles.ofertaTarjeta} onPress={() => abrir(o.empresa_id)}>
-              <View style={styles.ofertaIcono}><Ionicons name="pricetag" size={20} color="#5a4100" /></View>
+              {o.imagen ? (
+                <Image source={{ uri: o.imagen }} style={styles.ofertaFoto} />
+              ) : (
+                <View style={styles.ofertaIcono}><Ionicons name="pricetag" size={20} color="#5a4100" /></View>
+              )}
               <View style={styles.flex}>
                 <Text style={styles.nombre}>{o.titulo}</Text>
                 <Text style={styles.meta}>{o.empresa_nombre}{o.piso ? ` · Piso ${o.piso}` : ""}</Text>
@@ -217,8 +233,14 @@ const styles = StyleSheet.create({
   vistaActiva: { backgroundColor: STITCH.primary },
   vistaTexto: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 13 },
   vistaTextoActiva: { color: STITCH.white },
+  filtros: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, marginTop: 12 },
+  filtro: { flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 12,
+    paddingVertical: 9, borderRadius: 999, backgroundColor: STITCH.surfaceLow },
+  filtroTexto: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.textoFuerte, fontSize: 13.5 },
+  chipsFila: { flexGrow: 0, flexShrink: 0 },
   chips: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: STITCH.surfaceLow, borderRadius: 999,
+  chip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: STITCH.surfaceLowest, borderRadius: 999,
+    borderWidth: 1, borderColor: STITCH.outlineVariant,
     paddingHorizontal: 12, paddingVertical: 7 },
   chipActivo: { backgroundColor: STITCH.secondary },
   chipTexto: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.textoMedio, fontSize: 13 },
@@ -242,6 +264,7 @@ const styles = StyleSheet.create({
   oferta: { fontFamily: FUENTES.textoFuerte, fontSize: 11.5, color: "#9a3412" },
   ofertaTarjeta: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: STITCH.surfaceLowest, borderRadius: 16,
     padding: 14, ...SOMBRA },
+  ofertaFoto: { width: 72, height: 72, borderRadius: 14, backgroundColor: STITCH.surfaceHigh },
   ofertaIcono: { width: 44, height: 44, borderRadius: 22, backgroundColor: STITCH.oro, alignItems: "center", justifyContent: "center" },
   precio: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 16, marginTop: 2 },
 });

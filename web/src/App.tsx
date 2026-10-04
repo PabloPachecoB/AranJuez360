@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Sidebar } from "./empleado/components/Sidebar";
 import { Header } from "./empleado/components/Header";
@@ -17,6 +17,8 @@ import EmpresaApp from "./paseo360/empresa/EmpresaApp";
 import Activar from "./paseo360/pages/Activar";
 import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
+
+const Recepcion = lazy(() => import("./recepcion/Recepcion"));
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -72,6 +74,8 @@ function Contenido() {
   }
 
   if (!usuario) return <LoginPage />;
+  if (usuario.rol === "PORTERO") return <Suspense fallback={<p>Cargando recepción…</p>}><Recepcion /></Suspense>;
+  if (pathname === "/recepcion") return <main style={{ padding: 40 }}><h1>Recepción virtual</h1><p>Esta pantalla requiere una cuenta de portería.</p><button onClick={cerrarSesion}>Cambiar de cuenta</button></main>;
   if (usuario.rol === "ADMIN") return <AdminApp />;
   if (usuario.rol === "NEGOCIO") return <PanelAutenticado />;
   // Oficinas: ficha, horario de atención, servicios, fotos y visitas (Paseo 360).

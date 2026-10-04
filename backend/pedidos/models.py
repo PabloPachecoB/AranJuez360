@@ -8,16 +8,22 @@ def _nuevo_codigo_retiro():
     return secrets.token_hex(4).upper()
 
 
+def _nueva_referencia_pago():
+    return f"PY{secrets.token_hex(5).upper()}"
+
+
 class Pedido(models.Model):
     """Pedido de PaseoYa: compra online con retiro presencial obligatorio en el
     establecimiento (Reto 3 de la hackathon). Reutiliza Empresa/Producto de la
     app `empresas` en vez de duplicarlos."""
 
     class Estado(models.TextChoices):
-        RECIBIDO = "RECIBIDO", "Recibido"
+        PENDIENTE_PAGO = "PENDIENTE_PAGO", "Esperando pago"
+        RECIBIDO = "RECIBIDO", "Pagado · recibido"
         CONFIRMADO = "CONFIRMADO", "Confirmado"
         PREPARANDO = "PREPARANDO", "Preparando"
         LISTO_PARA_RECOGER = "LISTO_PARA_RECOGER", "Listo para recoger"
+        CLIENTE_LLEGO = "CLIENTE_LLEGO", "Cliente en el Paseo"
         ENTREGADO = "ENTREGADO", "Entregado"
         CANCELADO = "CANCELADO", "Cancelado"
 
@@ -28,7 +34,15 @@ class Pedido(models.Model):
         "empresas.Empresa", on_delete=models.PROTECT, related_name="pedidos"
     )
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.RECIBIDO)
+    estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.PENDIENTE_PAGO)
+    # Pago con QR (simulación de un banco): el QR lleva a /pago-simulado/<referencia>/.
+    pago_referencia = models.CharField(max_length=16, unique=True, default=_nueva_referencia_pago, editable=False)
+    pago_vence_en = models.DateTimeField(null=True, blank=True)
+    pagado_en = models.DateTimeField(null=True, blank=True)
+    reembolsado_en = models.DateTimeField(null=True, blank=True, help_text="Si el negocio cancela un pedido pagado.")
+    llego_en = models.DateTimeField(null=True, blank=True, help_text="Cuando el cliente avisa que está en el Paseo.")
+    # Reserva: el cliente compra ahora y elige a qué hora retira (vacío = lo antes posible).
+    retiro_programado = models.DateTimeField(null=True, blank=True)
     # Se presenta físicamente al retirar; el negocio lo valida antes de entregar.
     codigo_retiro = models.CharField(
         max_length=16, unique=True, default=_nuevo_codigo_retiro, editable=False

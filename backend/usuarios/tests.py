@@ -17,6 +17,8 @@ REGISTRO = {
     "ci": "1234567-1a",
     "nit": "",
     "procedencia": "QUILLACOLLO",
+    "fecha_nacimiento": "2002-03-15",
+    "ocupacion": "UNIVERSITARIO",
     "password": "PaseoSeguro9",
     "password_confirmacion": "PaseoSeguro9",
     "acepta_terminos": True,
@@ -231,3 +233,39 @@ class ProcedenciaTests(APITestCase):
         opciones = self.client.get("/api/v1/auth/procedencias/").data
         self.assertEqual(len(opciones), 17)  # 16 provincias + Otro
         self.assertEqual(opciones[-1]["valor"], "OTRO")
+
+
+class EdadYOcupacionTests(APITestCase):
+    def _registrar(self, **cambios):
+        return self.client.post("/api/v1/auth/registro/", {**REGISTRO, **cambios}, format="json")
+
+    def test_registro_guarda_edad_y_ocupacion(self):
+        self.assertEqual(self._registrar().status_code, 201)
+        usuario = Usuario.objects.get(email="ana@correo.com")
+        self.assertEqual(usuario.ocupacion, "UNIVERSITARIO")
+        self.assertGreaterEqual(usuario.edad, 24)
+
+    def test_son_obligatorias(self):
+        datos = {k: v for k, v in REGISTRO.items() if k not in ("ocupacion", "fecha_nacimiento")}
+        resp = self.client.post("/api/v1/auth/registro/", datos, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ocupacion", resp.data)
+        self.assertIn("fecha_nacimiento", resp.data)
+
+    def test_edad_minima_y_ocupacion_valida(self):
+        hace_5 = timezone.localdate().replace(year=timezone.localdate().year - 5)
+        self.assertIn("fecha_nacimiento", self._registrar(fecha_nacimiento=hace_5.isoformat()).data)
+        self.assertIn("ocupacion", self._registrar(ocupacion="ASTRONAUTA").data)
+
+    def test_reporte_perfil(self):
+        Usuario.objects.create_user("e", rol=Usuario.Rol.CLIENTE, ocupacion="ESTUDIANTE",
+                                    fecha_nacimiento=timezone.localdate().replace(year=timezone.localdate().year - 15))
+        Usuario.objects.create_user("s", rol=Usuario.Rol.CLIENTE)
+        admin = Usuario.objects.create_user("a", rol=Usuario.Rol.ADMIN)
+        self.client.force_authenticate(admin)
+        data = self.client.get("/api/v1/admin/reportes/clientes/perfil/").data
+        edades = {f["nombre"]: f["clientes"] for f in data["por_edad"]}
+        ocupaciones = {f["clave"]: f["clientes"] for f in data["por_ocupacion"]}
+        self.assertEqual(edades, {"Menos de 18": 1, "Sin dato": 1})
+        self.assertEqual(ocupaciones, {"ESTUDIANTE": 1, "SIN_DATO": 1})
+        self.assertEqual(data["edad_promedio"], 15)

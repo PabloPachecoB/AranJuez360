@@ -7,6 +7,7 @@ y un interrupt antes de ejecutar acciones que modifican datos.
 Rellena cada nodo con la lógica de tu dominio (locales, contratos, finanzas…).
 """
 
+import re
 import logging
 from typing import Optional
 
@@ -19,9 +20,10 @@ from usuarios.models import Usuario
 
 from .. import herramientas
 from ..llm import LLMError, get_llm_adapter
+
 from ..models import AgentAction
-from ..voz import quitar_emociones
-from .guardrails import guard_unverified_action_claim
+from ..voz import en_bolivianos, quitar_emociones
+from .guardrails import MENSAJE_SIN_ACCION, guard_unverified_action_claim, promete_accion_sin_herramienta
 from .state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -101,9 +103,23 @@ def _presentar(state: AgentState) -> dict:
             system, _historial(state), herramientas.definiciones_openai()
         )
         llm_ok = True
+        if not llamadas and promete_accion_sin_herramienta(draft):
+            # El modelo escribió "te dejo el pedido..." sin llamar a la herramienta: no existe ningún pedido ni
+            # botón Confirmar. Se le pide una vez que la llame con los datos de la conversación.
+            aviso = {
+                "role": "user",
+                "content": "(Instrucción interna: ya tienes todos los datos. Llama ahora a la herramienta que "
+                           "corresponde, sin escribir texto de confirmación.)",
+            }
+            draft, llamadas = get_llm_adapter().chat_con_herramientas(
+                system, [*_historial(state), aviso], herramientas.definiciones_openai()
+            )
+            if not llamadas and promete_accion_sin_herramienta(draft):
+                draft = MENSAJE_SIN_ACCION
         if llamadas:
             draft, accion = _proponer_accion(state, *llamadas[0])
-        draft = draft or "¿En qué puedo ayudarte?"
+        # Los [id] son internos: si el modelo los repite, se quitan (la voz los leería en voz alta).
+        draft = en_bolivianos(re.sub(r"\s*\[\d+\]", "", draft or "").strip()) or "¿En qué puedo ayudarte?"
     except (LLMError, ValueError) as exc:
         logger.warning("LLM no disponible: %s", exc)
         draft, llm_ok = RESPUESTA_SIN_LLM, False

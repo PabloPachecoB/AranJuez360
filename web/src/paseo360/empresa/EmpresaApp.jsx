@@ -36,25 +36,36 @@ export default function EmpresaApp() {
   );
 }
 
+const Icono = ({ nombre }) => <span className="material-symbols-outlined">{nombre}</span>;
+
 function Layout({ empresa, user, salir }) {
   const oficina = empresa.tipo === "OFICINA";
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">{empresa.nombre}<small>{TIPOS[empresa.tipo]} · Paseo Aranjuez</small></div>
+        <div className="side-marca">
+          <div className="side-logo"><Icono nombre={oficina ? "apartment" : "storefront"} /></div>
+          <div>
+            <div className="side-titulo">Paseo Aranjuez 360</div>
+            <div className="side-sub">{oficina ? "Portal Oficinas" : "Portal Locatarios"}</div>
+          </div>
+        </div>
+        <div className="side-local">
+          <strong>{empresa.nombre}</strong>
+          <span><Icono nombre="store" /> {TIPOS[empresa.tipo]}{empresa.piso ? ` · Piso ${empresa.piso}` : ""}{empresa.local ? ` - ${oficina ? "Of." : "Local"} ${empresa.local}` : ""}</span>
+        </div>
         <nav className="nav" aria-label="Mi empresa">
-          {oficina && <NavLink to="/visitas">Visitas</NavLink>}
-          <NavLink to="/" end>Mi ficha</NavLink>
-          <NavLink to="/horarios">{oficina ? "Horario de atención" : empresa.tipo === "EMPRENDIMIENTO" ? "Días y horarios" : "Horarios"}</NavLink>
-          <NavLink to="/catalogo">{oficina ? "Servicios" : "Productos y menú"}</NavLink>
-          {!oficina && <NavLink to="/ofertas">Ofertas</NavLink>}
-          <NavLink to="/fotos">Fotos</NavLink>
-          <a href={`/sitio/${empresa.id}`} target="_blank" rel="noreferrer">Ver mi página ↗</a>
+          {oficina && <NavLink to="/visitas"><Icono nombre="groups" />Visitas</NavLink>}
+          <NavLink to="/" end><Icono nombre="badge" />Mi ficha</NavLink>
+          <NavLink to="/horarios"><Icono nombre="schedule" />{oficina ? "Horario de atención" : empresa.tipo === "EMPRENDIMIENTO" ? "Días y horarios" : "Horarios"}</NavLink>
+          <NavLink to="/catalogo"><Icono nombre="inventory_2" />{oficina ? "Servicios" : "Productos y menú"}</NavLink>
+          {!oficina && <NavLink to="/ofertas"><Icono nombre="sell" />Ofertas</NavLink>}
+          <NavLink to="/fotos"><Icono nombre="photo_library" />Fotos</NavLink>
+          <a href={`/sitio/${empresa.id}`} target="_blank" rel="noreferrer"><Icono nombre="open_in_new" />Ver mi página</a>
         </nav>
         <div className="user">
-          {user.first_name || user.email}
-          <br />
-          <a href="#salir" onClick={(e) => { e.preventDefault(); salir(); }}>Cerrar sesión</a>
+          <div className="user-nombre">{user.first_name || user.email}</div>
+          <a href="#salir" className="salir" onClick={(e) => { e.preventDefault(); salir(); }}><Icono nombre="logout" />Cerrar sesión</a>
         </div>
       </aside>
       <main className="main"><Outlet /></main>

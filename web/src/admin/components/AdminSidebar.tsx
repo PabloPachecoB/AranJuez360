@@ -22,14 +22,15 @@ const GRUPOS: GrupoNavegacion[] = [
       { label: "Establecimientos", icono: "storefront", to: "/empresas" },
       { label: "Invitaciones", icono: "forward_to_inbox", to: "/invitaciones" },
       { label: "Mapa y espacios", icono: "map", to: "/mapa-espacios" },
-      { label: "Categorías", icono: "category" },
+      { label: "Categorías", icono: "category", to: "/categorias" },
     ],
   },
   {
     titulo: "Operación",
     opciones: [
-      { label: "Pedidos y retiros", icono: "shopping_bag" },
+      { label: "Pedidos y retiros", icono: "shopping_bag", to: "/pedidos" },
       { label: "Promociones y eventos", icono: "confirmation_number", to: "/diversion" },
+      { label: "Escenario abierto", icono: "mic_external_on", to: "/escenario" },
       { label: "Paseo Points", icono: "stars", to: "/monedas" },
     ],
   },
@@ -37,22 +38,22 @@ const GRUPOS: GrupoNavegacion[] = [
     titulo: "Personas",
     opciones: [
       { label: "Usuarios", icono: "group", to: "/usuarios" },
-      { label: "Representantes", icono: "badge" },
-      { label: "Equipo del Paseo", icono: "shield_person" },
+      { label: "Representantes", icono: "badge", to: "/representantes" },
+      { label: "Equipo del Paseo", icono: "shield_person", to: "/equipo" },
     ],
   },
   {
     titulo: "Inteligencia y análisis",
     opciones: [
-      { label: "Reportes", icono: "insights" },
-      { label: "Jarvis", icono: "smart_toy" },
+      { label: "Asistente de análisis", icono: "psychology", to: "/asistente" },
+      { label: "Reportes", icono: "insights", to: "/reportes" },
     ],
   },
   {
     titulo: "Administración",
     opciones: [
-      { label: "Auditoría", icono: "verified_user" },
-      { label: "Configuración", icono: "settings" },
+      { label: "Auditoría", icono: "verified_user", to: "/auditoria" },
+      { label: "Configuración", icono: "settings", to: "/configuracion" },
     ],
   },
 ];

@@ -5,8 +5,8 @@ tags: [proyecto, git]
 # Equipo y repositorio
 
 - **GitHub:** https://github.com/PabloPachecoB/AranJuez360
-- **Rama principal:** `main`
-- Otras ramas del equipo: `reto3-paseoya` (Alan021011, Persona 2 — PaseoYa), `master` (igual a `main` antiguo).
+- **Rama por defecto en GitHub:** `master` (el PR #7 `integracion-equipo → master` va ahí). `main` también existe: aclarar con el equipo cuál queda.
+- Otras ramas: `integracion-equipo` (trabajo actual), `reto3-paseoya` (Alan021011 — PaseoYa), `feat/admin-sidebar`, `points-cliente`, `brenda-explorar`.
 
 ## Estructura del repositorio
 ```

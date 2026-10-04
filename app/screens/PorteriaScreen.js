@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,12 +17,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { useUserContext } from "../context/UserContext";
-import {
-  getInvitacionesHoy,
-  registrarIngresoOficina,
-  registrarVisitaPaseo,
-  validarInvitacion,
-} from "../services/oficinasService";
+import { registrarIngresoOficina, registrarVisitaPaseo, validarInvitacion } from "../services/oficinasService";
+import { getDiversion, registrarIngresoEvento } from "../services/diversionService";
+
+const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+const hora = (iso) => new Date(iso).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit", hour12: false });
+const cuando = (iso) => {
+  const d = new Date(iso);
+  const hoy = new Date();
+  const manana = new Date(hoy.getTime() + 86400000);
+  const dia = d.toDateString() === hoy.toDateString() ? "Hoy" : d.toDateString() === manana.toDateString()
+    ? "Mañana" : `${DIAS[d.getDay()]} ${d.getDate()}`;
+  return `${dia} · ${hora(iso)}`;
+};
+
+// "paseo360://evento/ABCD2345" → entrada a un evento con cupos (Escenario abierto).
+function codigoEntradaEvento(texto) {
+  const enlace = (texto || "").trim().match(/\/evento\/([A-Za-z0-9]{6,12})/);
+  return enlace ? enlace[1].toUpperCase() : null;
+}
 
 // "paseo360://inv/ABCD2345" o el código suelto (8 caracteres) → invitación a oficina.
 function codigoInvitacion(texto) {
@@ -30,7 +45,12 @@ function codigoInvitacion(texto) {
   return /^[A-Za-z0-9]{8}$/.test(limpio) ? limpio.toUpperCase() : null;
 }
 
-/** Portería: invitaciones a oficinas (QR de la invitación) y visitas al Paseo (QR personal del cliente). */
+/**
+ * App del portero: solo tres cosas.
+ *  1. Escanear QR (invitación a oficina, entrada a un evento con cupos, QR personal del cliente).
+ *  2. Eventos disponibles (libres o con cupos).
+ *  3. Cartelera de cine.
+ */
 export default function PorteriaScreen() {
   const { user, cerrarSesion } = useUserContext();
   const [permiso, pedirPermiso] = useCameraPermissions();
@@ -39,21 +59,23 @@ export default function PorteriaScreen() {
   const [invitacion, setInvitacion] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const [manual, setManual] = useState("");
-  const [hoy, setHoy] = useState([]);
+  const [datos, setDatos] = useState(null); // { eventos, cartelera }
+  const [errorCarga, setErrorCarga] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
   const ocupado = useRef(false);
 
-  const cargarHoy = useCallback(async () => {
+  const cargar = useCallback(async () => {
     try {
-      setHoy(await getInvitacionesHoy());
-    } catch {
-      setHoy([]);
+      setDatos(await getDiversion());
+      setErrorCarga(null);
+    } catch (err) {
+      setErrorCarga(err.message);
     }
   }, []);
 
   useEffect(() => {
-    cargarHoy();
-  }, [cargarHoy]);
+    cargar();
+  }, [cargar]);
 
   const reiniciar = () => {
     setFase("camara");
@@ -67,8 +89,13 @@ export default function PorteriaScreen() {
     ocupado.current = true;
     setFase("cargando");
     try {
-      const codigo = codigoInvitacion(texto);
-      if (codigo) {
+      const entradaEvento = codigoEntradaEvento(texto);
+      const codigo = entradaEvento ? null : codigoInvitacion(texto);
+      if (entradaEvento) {
+        const r = await registrarIngresoEvento(entradaEvento);
+        setMensaje(r.mensaje);
+        setFase("ok");
+      } else if (codigo) {
         setInvitacion(await validarInvitacion(codigo));
         setFase("invitacion");
       } else {
@@ -91,7 +118,6 @@ export default function PorteriaScreen() {
       const r = await registrarIngresoOficina(invitacion.codigo);
       setMensaje(r.mensaje);
       setFase("ok");
-      cargarHoy();
     } catch (err) {
       setMensaje(err.message);
       setFase("error");
@@ -99,12 +125,18 @@ export default function PorteriaScreen() {
   };
 
   const salir = () =>
-    Alert.alert("Cerrar sesión", "¿Salir de la portería?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Salir", style: "destructive", onPress: cerrarSesion },
-    ]);
+    Platform.OS === "web"
+      ? cerrarSesion()
+      : Alert.alert("Cerrar sesión", "¿Salir de la portería?", [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Salir", style: "destructive", onPress: cerrarSesion },
+        ]);
 
-  const esperados = hoy.filter((v) => v.estado === "APROBADA").length;
+  const refrescar = async () => {
+    setRefrescando(true);
+    await cargar();
+    setRefrescando(false);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -120,7 +152,7 @@ export default function PorteriaScreen() {
       </View>
 
       <View style={styles.pestanas}>
-        {[["escanear", "Escanear", "scan"], ["hoy", `Hoy (${esperados})`, "people"]].map(([id, texto, icono]) => (
+        {[["escanear", "Escanear", "scan"], ["eventos", "Eventos", "calendar"], ["cartelera", "Cartelera", "film"]].map(([id, texto, icono]) => (
           <TouchableOpacity key={id} onPress={() => setPestana(id)} style={[styles.pestana, pestana === id && styles.pestanaActiva]}>
             <Ionicons name={icono} size={16} color={pestana === id ? STITCH.primary : STITCH.white} />
             <Text style={[styles.pestanaTexto, pestana === id && styles.pestanaTextoActiva]}>{texto}</Text>
@@ -132,7 +164,7 @@ export default function PorteriaScreen() {
         <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
           {fase === "camara" ? (
             <>
-              <Text style={styles.ayuda}>Escanea el QR de la invitación a una oficina o el QR personal del cliente.</Text>
+              <Text style={styles.ayuda}>Escanea el QR de la invitación a una oficina, la entrada a un evento o el QR personal del cliente.</Text>
               <View style={styles.visor}>
                 {permiso?.granted ? (
                   <CameraView style={StyleSheet.absoluteFill} facing="back"
@@ -193,19 +225,45 @@ export default function PorteriaScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.contenido}
-          refreshControl={<RefreshControl refreshing={refrescando} tintColor={STITCH.white}
-            onRefresh={async () => { setRefrescando(true); await cargarHoy(); setRefrescando(false); }} />}>
-          {hoy.length ? hoy.map((v) => (
-            <View key={v.id} style={styles.fila}>
-              <View style={styles.flex}>
-                <Text style={styles.filaNombre}>{v.visitante_nombre}</Text>
-                <Text style={styles.filaDato}>{v.oficina_nombre} · {v.hora ? v.hora.slice(0, 5) : "sin hora"}</Text>
+          refreshControl={<RefreshControl refreshing={refrescando} tintColor={STITCH.white} onRefresh={refrescar} />}>
+          {errorCarga ? <Text style={styles.ayuda}>{errorCarga}</Text> : null}
+          {!datos && !errorCarga ? <ActivityIndicator size="large" color={STITCH.oro} style={{ marginTop: 60 }} /> : null}
+
+          {pestana === "eventos" && datos ? (
+            datos.eventos.length ? datos.eventos.map((e) => {
+              const conCupos = e.acceso === "CUPOS";
+              return (
+                <View key={e.id} style={styles.fila}>
+                  {e.imagen ? <Image source={{ uri: e.imagen }} style={styles.miniatura} /> : (
+                    <View style={[styles.miniatura, styles.miniaturaVacia]}><Ionicons name="calendar" size={22} color={STITCH.oro} /></View>
+                  )}
+                  <View style={styles.flex}>
+                    <Text style={styles.filaNombre}>{e.titulo}</Text>
+                    <Text style={styles.filaDato}>{cuando(e.inicio)}{e.fin ? ` a ${hora(e.fin)}` : ""}</Text>
+                    {e.lugar ? <Text style={styles.filaDato} numberOfLines={1}>{e.lugar}</Text> : null}
+                  </View>
+                  <Text style={[styles.filaEstado, conCupos ? styles.esperado : styles.ingreso]}>
+                    {conCupos ? `${e.reservados}/${e.cupos} cupos` : "Libre"}
+                  </Text>
+                </View>
+              );
+            }) : <Text style={styles.ayuda}>No hay eventos próximos.</Text>
+          ) : null}
+
+          {pestana === "cartelera" && datos ? (
+            datos.cartelera.filter((p) => p.funciones.length).length ? datos.cartelera.filter((p) => p.funciones.length).map((p) => (
+              <View key={p.id} style={styles.fila}>
+                {p.poster ? <Image source={{ uri: p.poster }} style={styles.poster} /> : (
+                  <View style={[styles.poster, styles.miniaturaVacia]}><Ionicons name="film" size={22} color={STITCH.oro} /></View>
+                )}
+                <View style={styles.flex}>
+                  <Text style={styles.filaNombre}>{p.titulo}</Text>
+                  <Text style={styles.filaDato}>{p.genero} · {p.clasificacion} · {p.duracion_min} min</Text>
+                  <Text style={styles.funciones}>{p.funciones.map((f) => cuando(f.inicio)).join("  ·  ")}</Text>
+                </View>
               </View>
-              <Text style={[styles.filaEstado, v.estado === "USADA" ? styles.ingreso : styles.esperado]}>
-                {v.estado === "USADA" ? "Ingresó" : "Esperado"}
-              </Text>
-            </View>
-          )) : <Text style={styles.ayuda}>Hoy no hay visitas agendadas a oficinas.</Text>}
+            )) : <Text style={styles.ayuda}>No hay películas en cartelera.</Text>
+          ) : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -256,6 +314,10 @@ const styles = StyleSheet.create({
   filaNombre: { color: STITCH.white, fontFamily: FUENTES.tituloBold, fontSize: 15 },
   filaDato: { color: "#9fb3c2", fontFamily: FUENTES.texto, fontSize: 13 },
   filaEstado: { fontFamily: FUENTES.textoFuerte, fontSize: 12, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, overflow: "hidden" },
+  miniatura: { width: 54, height: 54, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.1)" },
+  miniaturaVacia: { alignItems: "center", justifyContent: "center" },
+  poster: { width: 48, height: 72, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.1)" },
+  funciones: { color: STITCH.secondaryContainer, fontFamily: FUENTES.textoFuerte, fontSize: 12.5, marginTop: 4 },
   esperado: { backgroundColor: "#FFF4CC", color: "#8A5A00" },
   ingreso: { backgroundColor: "#DCFCE7", color: "#166534" },
 });

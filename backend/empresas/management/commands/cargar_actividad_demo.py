@@ -75,6 +75,10 @@ class Command(BaseCommand):
             c.procedencia = rnd.choices([p for p, _ in PROCEDENCIAS], weights=[w for _, w in PROCEDENCIAS])[0]
             if c.procedencia == "OTRO":
                 c.ciudad_otra = rnd.choice(CIUDADES_FUERA)
+            # Edad y ocupación coherentes: colegio 13–17, universidad 18–26, profesionales 24–60.
+            c.ocupacion = rnd.choices(["ESTUDIANTE", "UNIVERSITARIO", "PROFESIONAL", "OTRO"], weights=[15, 35, 35, 15])[0]
+            edad = {"ESTUDIANTE": (13, 17), "UNIVERSITARIO": (18, 26), "PROFESIONAL": (24, 60), "OTRO": (20, 70)}[c.ocupacion]
+            c.fecha_nacimiento = hoy - timedelta(days=rnd.randint(edad[0] * 365, edad[1] * 365 + 364))
             c.set_unusable_password()
             clientes.append(c)
         Usuario.objects.bulk_create(clientes)

@@ -1,10 +1,12 @@
 import { api } from "../../api/client";
 
 export type EstadoPedidoApi =
+  | "PENDIENTE_PAGO"
   | "RECIBIDO"
   | "CONFIRMADO"
   | "PREPARANDO"
   | "LISTO_PARA_RECOGER"
+  | "CLIENTE_LLEGO"
   | "ENTREGADO"
   | "CANCELADO";
 
@@ -27,6 +29,11 @@ export interface PedidoApi {
   estado_display: string;
   codigo_retiro: string;
   items: PedidoItemApi[];
+  pago_referencia: string;
+  pagado_en: string | null;
+  reembolsado_en: string | null;
+  llego_en: string | null;
+  retiro_programado: string | null;
   entregado_en: string | null;
   creado_en: string;
 }

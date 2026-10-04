@@ -10,11 +10,21 @@ tags: [guia, demo]
 |---|---|---|
 | Admin | `admin@paseo.bo` | Web (3000) y Django admin |
 | Cliente | `cliente@paseo.bo` | App (8082) — 416 puntos, le faltan 84 para Capuchino gratis |
-| Portero | `portero@paseo.bo` | App (modo portero, pendiente) |
-| Negocio | `cafearanjuez@paseo.bo` | Web (panel empresa, pendiente) |
+| Portero (3 por defecto) | `portero@paseo.bo` · `portero.entrada@paseo.bo` · `portero.norte@paseo.bo` | App (modo portero) |
+| Negocio | `cafearanjuez@paseo.bo` | Web (panel de la empresa) |
 | Emprendimiento | `dulcehogar@paseo.bo` | Web |
 | Oficina | `estudiolegalandino@paseo.bo` | Web |
-| Cajero | `caja.cafe@paseo.bo` | Web (caja, pendiente) |
+| Cajero | `caja.cafe@paseo.bo` | Web (caja) |
+
+## Acceso rápido (2026-10-04) — contraseña de todas: `Paseo2026!`
+| Para qué | Usuario | Dónde entra |
+|---|---|---|
+| **Admin del Paseo** | `admin@paseo.bo` | Web `http://localhost:3000` (celular: `http://192.168.0.11:3000`) |
+| **HOY HAY** (cafetería, piso 3) | `demo.hoyhay@paseo.bo` | Web, "Pedidos (Comer)" |
+| PARRILLEROS (piso 3) | `demo.parrilleros@paseo.bo` | Web |
+| Helados Vacafría (piso 3) | `demo.heladosvacafria@paseo.bo` | Web |
+| Deli Stambul (piso 3) | `demo.delistambul@paseo.bo` | Web |
+La web pide el **código de 6 dígitos** que sale en la terminal del backend. Cada negocio ve **solo sus pedidos**; el admin los ve todos en **Pedidos y retiros** (`/pedidos`).
 
 ## Empresas de demo
 Café Aranjuez, Burger Paseo, TecnoPlus, Moda Urbana (negocios) · Dulce Hogar (emprendimiento) · Estudio Legal Andino (oficina). Todas con horarios y productos.

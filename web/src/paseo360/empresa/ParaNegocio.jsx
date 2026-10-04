@@ -8,7 +8,7 @@ import MiQR from "./MiQR";
 import Recompensas from "./Recompensas";
 
 /**
- * Pantallas de Paseo 360 dentro del panel del negocio (PaseoYa): lo que ese panel no
+ * Pantallas de Paseo 360 dentro del panel del negocio: lo que ese panel no
  * tenía — horarios, ofertas de la app, galería y ficha pública con su página /sitio.
  */
 function ConEmpresa({ children }) {

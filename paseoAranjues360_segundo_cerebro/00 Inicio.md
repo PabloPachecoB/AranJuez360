@@ -7,7 +7,7 @@ actualizado: 2026-10-03
 
 Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clientes, negocios, emprendimientos, oficinas, porteros y administración. Reto principal de la hackathon: **Paseo Points** (fidelización).
 
-> Repositorio: [PabloPachecoB/AranJuez360](https://github.com/PabloPachecoB/AranJuez360) · rama `main`
+> Repositorio: [PabloPachecoB/AranJuez360](https://github.com/PabloPachecoB/AranJuez360) · rama por defecto `master` (los PR van contra `master`)
 
 ## 🧭 Proyecto
 - [[Visión y alcance]] — qué es "360" y qué NO hacemos
@@ -23,11 +23,14 @@ Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clien
 - [[Directorio y rubros]] — 70 tiendas reales, tipo → rubro, fichas con fotos
 - [[Comer y pedidos (PaseoYa)]] — menús, pedido desde la app, retiro con código
 - [[Diversión (cartelera y eventos)]] — Cinema Lounge y eventos reales
+- [[Escenario abierto]] — la comunidad propone su presentación, el admin aprueba, cupos con QR
 - [[Jarvis (asistente IA)]] — recomienda con datos reales y muestra fichas
 - [[Fidelización]] — puntos por **visita** (portería) y por **compra** (caja)
 - [[Monedero y recompensas]] — monedas, progreso, catálogo
-- [[Oficinas e invitaciones]] — QR para invitados (diseño)
+- [[Oficinas e invitaciones]] — QR para invitados (implementado)
 - [[Dashboard admin]] — métricas para tomar decisiones
+- [[Asistente de análisis (admin)]] — chat de IA para el admin: datos reales, patrones y campañas
+- [[Logo y animación de entrada]] — logo 360 en SVG, sello con brillo, intro del login
 
 ## ⚙️ Técnico
 - [[Arquitectura]] — backend, web, app

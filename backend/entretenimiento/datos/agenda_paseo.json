@@ -1,6 +1,6 @@
 {
   "fuente": "Publicaciones de @mercado_gastronomico_bypaseo mostradas en paseoaranjuez.com (revisado el 2026-10-03)",
-  "nota": "La fuente no publica precios ni clasificación. Clasificación y duración son las de la película original.",
+  "nota": "La fuente no publica precios ni clasificación. Clasificación y duración son las de la película original. Los precios son referenciales (cargados desde el admin el 2026-10-03) y los pósters son los oficiales de Wikipedia.",
   "cine": "Cinema Lounge · Mercado Gastronómico, piso 3",
   "peliculas": [
     {
@@ -9,8 +9,12 @@
       "clasificacion": "+16",
       "duracion_min": 113,
       "sinopsis": "Terror y supervivencia: un mensajero despierta en un Londres desierto, arrasado por un virus que vuelve violentos a los infectados.",
-      "funciones": ["2026-10-02T18:30"],
-      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+      "funciones": [
+        "2026-10-02T18:30"
+      ],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ",
+      "precio": 40,
+      "poster": "https://upload.wikimedia.org/wikipedia/en/e/e4/28_days_later.jpg"
     },
     {
       "titulo": "Demon Slayer: Castillo Infinito",
@@ -18,8 +22,12 @@
       "clasificacion": "+16",
       "duracion_min": 155,
       "sinopsis": "La batalla final del anime: Tanjiro y los Pilares enfrentan a los demonios dentro del Castillo Infinito.",
-      "funciones": ["2026-10-03T15:30"],
-      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+      "funciones": [
+        "2026-10-03T15:30"
+      ],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ",
+      "precio": 40,
+      "poster": "https://upload.wikimedia.org/wikipedia/en/a/ae/Kimetsu_No_Yaiba_Mugen_Jyo-hen_theatrical_poster.jpg"
     },
     {
       "titulo": "Weapons (La Hora de la Desaparición)",
@@ -27,8 +35,12 @@
       "clasificacion": "+18",
       "duracion_min": 128,
       "sinopsis": "Misterio y suspenso: todos los alumnos de una clase, salvo uno, desaparecen la misma noche a la misma hora.",
-      "funciones": ["2026-10-03T19:00"],
-      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+      "funciones": [
+        "2026-10-03T19:00"
+      ],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ",
+      "precio": 40,
+      "poster": "https://upload.wikimedia.org/wikipedia/en/6/6d/Weapons_film_2025.jpeg"
     },
     {
       "titulo": "Hotel Transilvania",
@@ -36,8 +48,12 @@
       "clasificacion": "ATP",
       "duracion_min": 91,
       "sinopsis": "Drácula organiza el cumpleaños de su hija en su hotel para monstruos, hasta que llega un humano. Para toda la familia.",
-      "funciones": ["2026-10-04T14:30"],
-      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+      "funciones": [
+        "2026-10-04T14:30"
+      ],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ",
+      "precio": 35,
+      "poster": "https://upload.wikimedia.org/wikipedia/en/f/f5/HotelTransylvania.jpg"
     },
     {
       "titulo": "Monsters, Inc.",
@@ -45,8 +61,12 @@
       "clasificacion": "ATP",
       "duracion_min": 92,
       "sinopsis": "Mike y Sulley, los mejores asustadores de Monstruópolis, descubren que los niños no son tan peligrosos. Para toda la familia.",
-      "funciones": ["2026-10-04T18:00"],
-      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ"
+      "funciones": [
+        "2026-10-04T18:00"
+      ],
+      "fuente": "https://www.instagram.com/p/Dd5VZwjFWjJ",
+      "precio": 35,
+      "poster": "https://upload.wikimedia.org/wikipedia/en/6/63/Monsters_Inc.JPG"
     }
   ],
   "eventos": [
@@ -58,7 +78,8 @@
       "lugar": "El Club by Mercado Gastronómico, piso 3",
       "descripcion": "Feria de Mercado Vivo en El Club by Mercado Gastronómico.",
       "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
-      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi",
+      "precio": 0
     },
     {
       "titulo": "Emily Guzman en concierto",
@@ -68,7 +89,8 @@
       "lugar": "El Club by Mercado Gastronómico, piso 3",
       "descripcion": "Música en vivo para cerrar el viernes de Mercado Vivo.",
       "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
-      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi",
+      "precio": 30
     },
     {
       "titulo": "Gran Torneo de Rubik",
@@ -79,7 +101,8 @@
       "descripcion": "Pon a prueba tu agilidad mental en el torneo de cubo Rubik de Mercado Vivo.",
       "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
       "destacado": true,
-      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi",
+      "precio": 20
     },
     {
       "titulo": "Un Domingo de Bingo Familiar",
@@ -90,7 +113,62 @@
       "descripcion": "Bingo para compartir en familia y cerrar el fin de semana de Mercado Vivo.",
       "imagen": "/dashboard/storage/instagram-images/mercado_gastronomico_bypaseo-coIcWYXVOA.jpg",
       "destacado": true,
-      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi"
+      "fuente": "https://www.instagram.com/p/Dd4N9s0lRpi",
+      "precio": 15
+    },
+    {
+      "titulo": "En Coma: clásicos de la cumbia",
+      "categoria": "MUSICA",
+      "inicio": "2026-10-03T21:00",
+      "fin": null,
+      "lugar": "El Cuarto by Paseo, piso 4",
+      "descripcion": "En Coma revive los grandes clásicos de la cumbia para una noche de pura fiesta y recuerdos.",
+      "precio": 40,
+      "imagen": "/dashboard/storage/instagram-images/elcuartobypaseo-R5cvQAbsoY.jpg",
+      "fuente": "https://www.instagram.com/p/Dd4vc28gqbv"
+    },
+    {
+      "titulo": "Brunch Sinfónico: José José por Luis Vaca",
+      "categoria": "MUSICA",
+      "inicio": "2026-10-04T11:00",
+      "fin": "2026-10-04T14:00",
+      "lugar": "El Cuarto by Paseo, piso 4",
+      "descripcion": "Cerramos la semana con un Brunch Sinfónico: los grandes éxitos de José José en la voz de Luis Vaca.",
+      "precio": 120,
+      "imagen": "/dashboard/storage/instagram-images/elcuartobypaseo-R5cvQAbsoY.jpg",
+      "destacado": true,
+      "fuente": "https://www.instagram.com/p/Dd4vc28gqbv"
     }
-  ]
+  ],
+  "espacios": [
+    {
+      "nombre": "Escenario de El Club",
+      "lugar": "El Club by Mercado Gastronómico, piso 3",
+      "capacidad": 120,
+      "descripcion": "Escenario de Mercado Vivo: música en vivo, talento y experiencias para toda la familia.",
+      "equipamiento": "Escenario, sonido de sala, 2 micrófonos, mesas y sillas del patio de comidas."
+    },
+    {
+      "nombre": "Escenario del Cinema Lounge",
+      "lugar": "Mercado Gastronómico, piso 3",
+      "capacidad": 40,
+      "descripcion": "Ambiente lounge con puffs y escenario con pantalla gigante: ideal para podcasts en vivo, charlas y proyecciones.",
+      "equipamiento": "Pantalla gigante, proyector HD, puffs, micrófono."
+    },
+    {
+      "nombre": "Rincón acústico de El Cuarto",
+      "lugar": "El Cuarto by Paseo, piso 4",
+      "capacidad": 80,
+      "descripcion": "El espacio de shows en vivo del cuarto piso: acústicos, tributos y noches temáticas.",
+      "equipamiento": "Sonido para banda, iluminación de escenario."
+    },
+    {
+      "nombre": "Galería de Arte",
+      "lugar": "Paseo Aranjuez, piso 3",
+      "capacidad": 60,
+      "descripcion": "Sala de exposiciones: talleres de dibujo y pintura, arte en vivo y presentaciones de libros.",
+      "equipamiento": "Paneles de exposición, mesas de trabajo, iluminación de galería."
+    }
+  ],
+  "nota_espacios": "Espacios reales del Paseo mencionados en la fuente; las capacidades son estimadas."
 }

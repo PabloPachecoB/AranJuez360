@@ -105,9 +105,11 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-space-md py-space-lg">
       <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-lg p-space-lg flex flex-col gap-space-md">
         <div className="flex flex-col items-center gap-1 mb-space-sm">
-          <span className="material-symbols-outlined text-primary text-[32px]">storefront</span>
-          <h1 className="font-headline-lg text-headline-lg text-primary">PaseoYa</h1>
-          <p className="font-body-sm text-body-sm text-on-surface-variant">Portal Locatarios</p>
+          <img src="/logo-360.svg" alt="Paseo Aranjuez 360" className="w-56 max-w-full" />
+          <h1 className="sr-only">Paseo Aranjuez 360</h1>
+          <p className="font-body-sm text-body-sm text-on-surface-variant text-center">
+            Panel de administración, negocios y oficinas
+          </p>
         </div>
 
         {paso === "credenciales" && (
@@ -158,7 +160,7 @@ export function LoginPage() {
         {paso === "registro" && (
           <form onSubmit={enviarRegistro} className="flex flex-col gap-space-md">
             <p className="font-body-sm text-body-sm text-on-surface-variant">
-              Crea tu cuenta y empieza a vender en PaseoYa sin esperar aprobación.
+              Crea tu cuenta y empieza a vender en Paseo Aranjuez sin esperar aprobación.
             </p>
 
             <div className="flex flex-col gap-1.5">

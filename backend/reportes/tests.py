@@ -186,3 +186,40 @@ class UsuariosAdminTests(APITestCase):
         data = {f["rol"]: f for f in self.client.get(f"{BASE}/usuarios-por-rol/").data}
         self.assertEqual(data["PORTERO"]["sin_activar"], 1)
         self.assertEqual(data["CLIENTE"]["activos"], 1)
+
+
+class AuditoriaTests(APITestCase):
+    def setUp(self):
+        from empresas.models import Categoria, Empresa
+
+        self.admin = Usuario.objects.create_user("adm", email="adm@x.bo", password="x", rol=Usuario.Rol.ADMIN)
+        self.cliente = Usuario.objects.create_user("cli", email="cli@x.bo", password="x", rol=Usuario.Rol.CLIENTE)
+        self.empresa = Empresa.objects.create(nombre="Waffle King", email_contacto="w@x.bo", categoria=Categoria.objects.create(nombre="Comida"))
+
+    def test_solo_admin(self):
+        self.client.force_authenticate(self.cliente)
+        self.assertEqual(self.client.get("/api/v1/admin/reportes/auditoria/").status_code, 403)
+
+    def test_feed_junta_modulos_y_filtra(self):
+        from decimal import Decimal
+
+        from pedidos.models import Pedido
+
+        Pedido.objects.create(cliente=self.cliente, empresa=self.empresa, total=Decimal("30"))
+        self.client.force_authenticate(self.admin)
+        data = self.client.get("/api/v1/admin/reportes/auditoria/").data
+        tipos = {e["tipo"] for e in data["eventos"]}
+        self.assertEqual(tipos, {"PEDIDO", "USUARIO"})  # el pedido y el registro del cliente
+        pedido = next(e for e in data["eventos"] if e["tipo"] == "PEDIDO")
+        self.assertEqual((pedido["titulo"], pedido["actor"]), ("Pedido creado", "cli@x.bo"))
+        solo = self.client.get("/api/v1/admin/reportes/auditoria/?tipo=PEDIDO").data["eventos"]
+        self.assertTrue(solo and all(e["tipo"] == "PEDIDO" for e in solo))
+        self.assertEqual(self.client.get("/api/v1/admin/reportes/auditoria/?tipo=XX").status_code, 400)
+
+    def test_usuarios_acepta_varios_roles(self):
+        Usuario.objects.create_user("n", password="x", rol=Usuario.Rol.NEGOCIO, empresa=self.empresa)
+        self.client.force_authenticate(self.admin)
+        roles = {u["rol"] for u in self.client.get("/api/v1/admin/usuarios/?rol=NEGOCIO,OFICINA").data["results"]}
+        self.assertEqual(roles, {"NEGOCIO"})
+        todos = {u["rol"] for u in self.client.get("/api/v1/admin/usuarios/?rol=NEGOCIO,CLIENTE").data["results"]}
+        self.assertEqual(todos, {"NEGOCIO", "CLIENTE"})

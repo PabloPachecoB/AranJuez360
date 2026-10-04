@@ -10,6 +10,19 @@ const RESPALDO = [
   { valor: "CERCADO", nombre: "Cercado (ciudad de Cochabamba)" },
   { valor: "QUILLACOLLO", nombre: "Quillacollo (Quillacollo, Tiquipaya, Vinto, Colcapirhua, Sipe Sipe)" },
   { valor: "CHAPARE", nombre: "Chapare (Sacaba, Colomi, Villa Tunari)" },
+  { valor: "ARANI", nombre: "Arani" },
+  { valor: "ARQUE", nombre: "Arque" },
+  { valor: "AYOPAYA", nombre: "Ayopaya" },
+  { valor: "BOLIVAR", nombre: "Bolívar" },
+  { valor: "CAPINOTA", nombre: "Capinota" },
+  { valor: "CARRASCO", nombre: "Carrasco" },
+  { valor: "ESTEBAN_ARCE", nombre: "Esteban Arce" },
+  { valor: "GERMAN_JORDAN", nombre: "Germán Jordán" },
+  { valor: "MIZQUE", nombre: "Mizque" },
+  { valor: "NARCISO_CAMPERO", nombre: "Narciso Campero" },
+  { valor: "PUNATA", nombre: "Punata" },
+  { valor: "TAPACARI", nombre: "Tapacarí" },
+  { valor: "TIRAQUE", nombre: "Tiraque" },
   { valor: "OTRO", nombre: "Otro lugar (fuera de Cochabamba)" },
 ];
 
@@ -30,7 +43,8 @@ export default function ProcedenciaSelector({ value, onChange, errores = {} }) {
 
   return (
     <View>
-      <Text style={styles.label}>¿De dónde eres?</Text>
+      <Text style={styles.label}>¿De dónde nos visitas?</Text>
+      <Text style={styles.sub}>Si eres de Cochabamba, elige tu provincia. Si vienes de otro departamento o país, elige Otro lugar y escribe tu ciudad.</Text>
       <TouchableOpacity
         style={[styles.campo, errores.procedencia && styles.campoError]}
         onPress={() => setAbierto(true)}
@@ -49,7 +63,8 @@ export default function ProcedenciaSelector({ value, onChange, errores = {} }) {
         <View style={styles.ciudad}>
           <FormField label="¿De qué ciudad?" placeholder="Ej. La Paz, Santa Cruz, Oruro"
             value={value.ciudad_otra} onChangeText={(t) => onChange({ ...value, ciudad_otra: t })}
-            error={errores.ciudad_otra} autoCapitalize="words" />
+            error={errores.ciudad_otra} autoCapitalize="words" maxLength={80}
+            hint="Escribe el nombre completo de tu ciudad." />
         </View>
       ) : null}
 

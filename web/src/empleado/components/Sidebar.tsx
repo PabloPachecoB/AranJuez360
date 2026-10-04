@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 
 const ENLACES = [
   { to: "/productos", etiqueta: "Productos", icono: "inventory_2" },
-  { to: "/pedidos", etiqueta: "Pedidos", icono: "receipt_long" },
+  { to: "/pedidos", etiqueta: "Pedidos (Comer)", icono: "receipt_long" },
   { to: "/negocio", etiqueta: "Mi negocio", icono: "storefront" },
   // Paseo 360: monedas (caja y QR) y lo que ven los clientes en la app y en la página del negocio.
   { to: "/caja", etiqueta: "Caja", icono: "point_of_sale" },
@@ -54,7 +54,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
-                    PaseoYa
+                    Paseo Aranjuez 360
                   </span>
                   <span className="font-badge-code text-badge-code text-on-surface-variant uppercase">
                     Portal Locatarios

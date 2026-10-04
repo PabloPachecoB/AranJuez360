@@ -12,8 +12,10 @@ const precio = (v) => (Number(v) ? `Bs ${Number(v).toLocaleString("es-BO")}` : <
 export default function Diversion() {
   const empresas = useApi("/admin/empresas/");
   const peliculas = useApi("/admin/peliculas/");
+  const espacios = useApi("/admin/espacios/");
   const opcionesEmpresas = (empresas.data?.results || []).map((e) => [e.id, e.nombre]);
   const opcionesPeliculas = (peliculas.data?.results || []).map((p) => [p.id, p.titulo]);
+  const opcionesEspacios = (espacios.data?.results || []).map((e) => [e.id, e.nombre]);
 
   return (
     <>
@@ -79,11 +81,11 @@ export default function Diversion() {
 
       <Crud
         titulo="Eventos"
-        subtitulo="El evento marcado como destacado sale en el Inicio de la app."
+        subtitulo="El evento marcado como destacado sale en el Inicio de la app. Con cupos, el público reserva desde la app y recibe una entrada con QR."
         endpoint="/admin/eventos/"
         textoNuevo="Agregar evento"
         nombreFila={(f) => f.titulo}
-        inicial={{ titulo: "", categoria: "MUSICA", inicio: "", fin: "", lugar: "", precio: "", descripcion: "", destacado: false, activo: true }}
+        inicial={{ titulo: "", categoria: "MUSICA", inicio: "", fin: "", lugar: "", precio: "", cupos: "", espacio: "", descripcion: "", destacado: false, activo: true }}
         campos={[
           { k: "titulo", label: "Título", requerido: true },
           { k: "categoria", label: "Categoría", tipo: "select", opciones: CATEGORIAS, requerido: true },
@@ -91,6 +93,8 @@ export default function Diversion() {
           { k: "fin", label: "Fin", tipo: "datetime" },
           { k: "lugar", label: "Lugar", ayuda: "Ej. Terraza, piso 4" },
           { k: "precio", label: "Precio (Bs)", tipo: "decimal", ayuda: "Vacío = entrada libre" },
+          { k: "cupos", label: "Cupos", tipo: "number", ayuda: "Vacío = acceso libre, sin reserva" },
+          { k: "espacio", label: "Espacio (Escenario abierto)", tipo: "select", opciones: opcionesEspacios, ayuda: "Para que no se crucen horarios" },
           { k: "empresa", label: "Organiza (empresa)", tipo: "select", opciones: opcionesEmpresas },
           { k: "descripcion", label: "Descripción", tipo: "textarea" },
           { k: "destacado", label: "Destacado en el Inicio", tipo: "checkbox" },
@@ -102,6 +106,7 @@ export default function Diversion() {
           { label: "Inicio", render: (f) => fecha(f.inicio, true) },
           { label: "Lugar", render: (f) => f.lugar || "—" },
           { label: "Precio", render: (f) => precio(f.precio), num: true },
+          { label: "Acceso", render: (f) => (f.cupos ? `${f.reservados}/${f.cupos} reservados` : <span className="muted">Libre</span>) },
           { label: "Destacado", render: (f) => (f.destacado ? "★" : "") },
           { label: "Estado", render: activo },
         ]}

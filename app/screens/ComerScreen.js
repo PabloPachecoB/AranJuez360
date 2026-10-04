@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,20 +12,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { bs, pisoTexto } from "../components/CarritoSheet";
+import { precioVigente, useFlujoPedido } from "../components/FlujoPedido";
+import { FINALES, TarjetaPedido } from "../components/PedidoComer";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
-import { crearPedido, getMisPedidos, getProductos } from "../services/pedidosService";
-
-const bs = (n) => `Bs ${Number(n).toLocaleString("es-BO", { maximumFractionDigits: 2 })}`;
-const pisoTexto = (piso) => (piso === "PB" ? "Planta baja" : piso ? `Piso ${piso}` : "");
+import { getMisPedidos, getProductos } from "../services/pedidosService";
 // El negocio cambia el estado desde su panel web; mientras haya pedidos en curso se consulta seguido.
-const REFRESCO_MS = 15000;
-const FINALES = ["ENTREGADO", "CANCELADO"];
-const COLOR_ESTADO = {
-  RECIBIDO: "#1c6586", CONFIRMADO: "#1c6586", PREPARANDO: "#8A5A00",
-  LISTO_PARA_RECOGER: "#166534", ENTREGADO: "#64748b", CANCELADO: "#b91c1c",
-};
+const REFRESCO_MS = 5000;
 
-/** PaseoYa · Comer: menú de los restaurantes con fotos, carrito por local y pedido para recoger. */
+/** PaseoYa · Comer: menú, carrito por local, pago con QR y seguimiento hasta el retiro en el local. */
 export default function ComerScreen({ navigation, route }) {
   const inicial = route?.params || {};
   const [pestana, setPestana] = useState(inicial.pestana || "menu");
@@ -36,9 +29,6 @@ export default function ComerScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [local, setLocal] = useState(inicial.empresa || null);
   const [texto, setTexto] = useState("");
-  const [carrito, setCarrito] = useState({}); // { productoId: cantidad }
-  const [enviando, setEnviando] = useState(false);
-  const [confirmado, setConfirmado] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -97,54 +87,15 @@ export default function ComerScreen({ navigation, route }) {
       .sort((a, b) => !!b.foto - !!a.foto); // primero los platos con foto real del local
   }, [productos, local, texto]);
 
-  const enCarrito = useMemo(
-    () => (productos || []).filter((p) => carrito[p.id]).map((p) => ({ ...p, cantidad: carrito[p.id] })),
-    [productos, carrito],
-  );
-  const total = enCarrito.reduce((suma, p) => suma + Number(p.precio) * p.cantidad, 0);
-  const unidades = enCarrito.reduce((suma, p) => suma + p.cantidad, 0);
-
-  const cambiar = (producto, delta) => {
-    const otroLocal = enCarrito.find((p) => p.empresa !== producto.empresa);
-    if (delta > 0 && otroLocal) {
-      Alert.alert(
-        "Un pedido por local",
-        `Tu carrito tiene productos de ${otroLocal.empresa_nombre}. ¿Lo vacías para pedir en ${producto.empresa_nombre}?`,
-        [{ text: "Cancelar", style: "cancel" }, { text: "Vaciar", onPress: () => setCarrito({ [producto.id]: 1 }) }],
-      );
-      return;
-    }
-    setCarrito((prev) => {
-      const cantidad = (prev[producto.id] || 0) + delta;
-      const siguiente = { ...prev };
-      if (cantidad > 0) siguiente[producto.id] = cantidad;
-      else delete siguiente[producto.id];
-      return siguiente;
-    });
-  };
-
-  const pedir = () => {
-    const empresa = enCarrito[0];
-    Alert.alert("Confirmar pedido", `${unidades} producto(s) de ${empresa.empresa_nombre} por ${bs(total)}. Lo recoges en el local.`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Pedir",
-        onPress: async () => {
-          setEnviando(true);
-          try {
-            const pedido = await crearPedido(empresa.empresa,
-              enCarrito.map((p) => ({ producto_id: p.id, cantidad: p.cantidad })));
-            setCarrito({});
-            setConfirmado({ ...pedido, piso: empresa.piso, local: empresa.local });
-          } catch (err) {
-            Alert.alert("No se pudo hacer el pedido", err.message);
-          } finally {
-            setEnviando(false);
-          }
-        },
-      },
-    ]);
-  };
+  // Carrito → reservar u ordenar ya → pago con QR (compartido con la ficha del restaurante).
+  const flujo = useFlujoPedido({
+    mostrarBarra: pestana === "menu",
+    onPagoCerrado: (cerrado) => {
+      cargarPedidos();
+      if (cerrado) setPestana("pedidos");
+    },
+  });
+  const cambiar = flujo.cambiar;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -195,7 +146,7 @@ export default function ComerScreen({ navigation, route }) {
         </>
       ) : null}
 
-      <ScrollView contentContainerStyle={[styles.contenido, unidades ? { paddingBottom: 110 } : null]}
+      <ScrollView contentContainerStyle={[styles.contenido, flujo.unidades ? { paddingBottom: 110 } : null]}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}>
         {error ? <Text style={styles.vacio}>{error}</Text> : null}
 
@@ -220,13 +171,13 @@ export default function ComerScreen({ navigation, route }) {
                     <Text style={styles.platoNombre} numberOfLines={2}>{p.nombre}</Text>
                     <Text style={styles.platoLocal} numberOfLines={1}>{p.empresa_nombre} · {pisoTexto(p.piso)}</Text>
                     <View style={styles.platoFila}>
-                      <Text style={styles.precio}>{bs(p.precio)}</Text>
-                      {carrito[p.id] ? (
+                      <Text style={styles.precio}>{bs(precioVigente(p))}</Text>
+                      {flujo.cantidadDe(p.id) ? (
                         <View style={styles.stepper}>
                           <TouchableOpacity onPress={() => cambiar(p, -1)} accessibilityLabel="Quitar uno">
                             <Ionicons name="remove-circle" size={26} color={STITCH.primary} />
                           </TouchableOpacity>
-                          <Text style={styles.cantidad}>{carrito[p.id]}</Text>
+                          <Text style={styles.cantidad}>{flujo.cantidadDe(p.id)}</Text>
                           <TouchableOpacity onPress={() => cambiar(p, 1)} accessibilityLabel="Agregar uno">
                             <Ionicons name="add-circle" size={26} color={STITCH.primary} />
                           </TouchableOpacity>
@@ -245,52 +196,11 @@ export default function ComerScreen({ navigation, route }) {
         ) : pedidos === null ? <ActivityIndicator color={STITCH.primary} style={{ marginTop: 40 }} />
           : !pedidos.length ? <Text style={styles.vacio}>Todavía no hiciste pedidos.</Text>
           : pedidos.map((pd) => (
-            <View key={pd.id} style={styles.pedido}>
-              <View style={styles.platoFila}>
-                <Text style={styles.platoNombre}>{pd.empresa_nombre}</Text>
-                <Text style={[styles.estado, { color: COLOR_ESTADO[pd.estado] }]}>{pd.estado_display}</Text>
-              </View>
-              {pd.items.map((it) => (
-                <Text key={it.id} style={styles.platoLocal}>{it.cantidad} × {it.producto_nombre}</Text>
-              ))}
-              <View style={styles.platoFila}>
-                <Text style={styles.precio}>{bs(pd.total)}</Text>
-                {!FINALES.includes(pd.estado) ? (
-                  <Text style={styles.codigoChico} selectable>Código {pd.codigo_retiro}</Text>
-                ) : null}
-              </View>
-            </View>
+            <TarjetaPedido key={pd.id} pedido={pd} onPagar={flujo.pagar} onCambio={cargarPedidos} />
           ))}
       </ScrollView>
 
-      {pestana === "menu" && unidades ? (
-        <View style={styles.barraCarrito}>
-          <View style={styles.flex}>
-            <Text style={styles.barraTitulo}>{unidades} en tu pedido · {bs(total)}</Text>
-            <Text style={styles.barraSub} numberOfLines={1}>{enCarrito[0].empresa_nombre} · retiro en el local</Text>
-          </View>
-          <TouchableOpacity style={styles.botonPedir} onPress={pedir} disabled={enviando}>
-            {enviando ? <ActivityIndicator color={STITCH.primary} /> : <Text style={styles.botonPedirTexto}>Pedir</Text>}
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      <Modal visible={!!confirmado} transparent animationType="fade" onRequestClose={() => setConfirmado(null)}>
-        <View style={styles.modalFondo}>
-          <View style={styles.modal}>
-            <Ionicons name="checkmark-circle" size={48} color="#166534" />
-            <Text style={styles.modalTitulo}>¡Pedido enviado!</Text>
-            <Text style={styles.modalTexto}>
-              Recógelo en {confirmado?.empresa_nombre}{confirmado?.piso ? `, ${pisoTexto(confirmado.piso).toLowerCase()}` : ""}.
-              Muestra este código al retirar:
-            </Text>
-            <Text style={styles.codigo} selectable>{confirmado?.codigo_retiro}</Text>
-            <TouchableOpacity style={styles.modalBoton} onPress={() => { setConfirmado(null); setPestana("pedidos"); }}>
-              <Text style={styles.modalBotonTexto}>Ver mis pedidos</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {flujo.elementos}
     </SafeAreaView>
   );
 }
@@ -339,10 +249,15 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.primary, borderRadius: 18, padding: 14, ...SOMBRA },
   barraTitulo: { color: STITCH.white, fontFamily: FUENTES.textoFuerte, fontSize: 15 },
   barraSub: { color: "rgba(255,255,255,0.8)", fontFamily: FUENTES.texto, fontSize: 12 },
+  bolsa: { width: 44, height: 44, borderRadius: 22, backgroundColor: STITCH.oro, alignItems: "center", justifyContent: "center" },
+  bolsaNumero: { position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, borderRadius: 10, overflow: "hidden",
+    backgroundColor: STITCH.white, color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 12, textAlign: "center",
+    lineHeight: 20, paddingHorizontal: 4 },
   botonPedir: { backgroundColor: STITCH.oro, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 10, minWidth: 80, alignItems: "center" },
   botonPedirTexto: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 15 },
   modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 },
-  modal: { backgroundColor: STITCH.surfaceLowest, borderRadius: 20, padding: 24, alignItems: "center", gap: 8, width: "100%" },
+  modal: { backgroundColor: STITCH.surfaceLowest, borderRadius: 20, padding: 24, alignItems: "center", gap: 8, width: "100%",
+    maxWidth: 420 },
   modalTitulo: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 22 },
   modalTexto: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 14, textAlign: "center" },
   codigo: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 32, letterSpacing: 4, marginVertical: 8 },

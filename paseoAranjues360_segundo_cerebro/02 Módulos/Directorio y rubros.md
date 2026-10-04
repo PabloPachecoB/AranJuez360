@@ -33,7 +33,7 @@ Alias de búsqueda (`tecnologia`, `moda`, `belleza`, `bancos`…) en `backend/em
 - 69 cuentas demo `demo.<nombre>@paseo.bo` → [[Cuentas de demo]]. **HOY HAY** queda sin cuenta (pedido del usuario).
 
 ## En la app
-- **Directorio**: lista, vista por piso y ofertas; filtros Todo / Comer / Tiendas / Emprendimientos + chips por rubro.
+- **Directorio**: lista, vista por piso y ofertas. Filtros en **dos filas** (2026-10-04): fila 1 = Todo / Comer / Tiendas / Emprendimientos; fila 2 = rubros en orden alfabético con borde (sin "Comida", que ya es el botón Comer). Antes la fila de filtros se aplastaba a 0 de alto en Expo web (ScrollView horizontal sin `flexGrow: 0`).
 - **Ficha del negocio** (`EmpresaScreen`): portada, logo, rubro, piso, abierto/cerrado, WhatsApp/Instagram/Facebook, **galería** (se amplía al tocar), horarios, ofertas, productos, "Pedir aquí" → [[Comer y pedidos (PaseoYa)]] y "Preguntar a Jarvis".
 - **Inicio → "Para comer"**: carrusel con las fotos reales de los restaurantes (primero los que tienen portada).
 

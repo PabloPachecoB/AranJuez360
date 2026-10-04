@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { CuposEvento, PanelEscenario } from "../components/Escenario";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { getDiversion } from "../services/diversionService";
 import { getRecompensas } from "../services/puntosService";
@@ -21,6 +21,7 @@ const PESTANAS = [
   { id: "cartelera", texto: "Cartelera", icono: "film" },
   { id: "eventos", texto: "Eventos", icono: "calendar" },
   { id: "juegos", texto: "Juegos", icono: "game-controller" },
+  { id: "escenario", texto: "Escenario", icono: "mic" },
 ];
 
 // Pósters de respaldo mientras el cine no suba las imágenes.
@@ -35,6 +36,18 @@ const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "o
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit", hour12: false });
 const claveDia = (iso) => new Date(iso).toDateString();
 const fmt = (n) => Number(n || 0).toLocaleString("es-BO", { maximumFractionDigits: 2 });
+
+const DIAS_LARGOS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES_LARGOS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre",
+  "octubre", "noviembre", "diciembre"];
+
+function fechaLarga(iso) {
+  const d = new Date(iso);
+  const dia = nombreDia(iso);
+  const texto = `${DIAS_LARGOS[d.getDay()]} ${d.getDate()} de ${MESES_LARGOS[d.getMonth()]}`;
+  if (dia === "Hoy" || dia === "Mañana") return `${dia}, ${texto}`;
+  return texto[0].toUpperCase() + texto.slice(1);
+}
 
 function nombreDia(iso) {
   const d = new Date(iso);
@@ -140,6 +153,92 @@ function DetallePelicula({ pelicula, indice, entradaCine, onCerrar, onJarvis }) 
   );
 }
 
+/** Detalle de un evento: afiche, cuándo, dónde, precio y descripción. */
+function DetalleEvento({ evento, onCerrar, onJarvis, onCambio }) {
+  if (!evento) return null;
+  const icono = ICONO_EVENTO[evento.categoria] || "sparkles";
+  const datos = [
+    { icono: "calendar-outline", titulo: "Fecha", texto: fechaLarga(evento.inicio) },
+    { icono: "time-outline", titulo: "Horario", texto: `${hora(evento.inicio)}${evento.fin ? ` a ${hora(evento.fin)}` : ""} hrs` },
+    evento.lugar ? { icono: "location-outline", titulo: "Lugar", texto: evento.lugar } : null,
+    {
+      icono: "ticket-outline",
+      titulo: "Entrada",
+      texto: evento.gratis ? (evento.acceso === "CUPOS" ? "Gratis · con reserva de cupo" : "Libre") : `Bs ${fmt(evento.precio)}`,
+      gratis: evento.gratis,
+    },
+  ].filter(Boolean);
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onCerrar}>
+      <View style={styles.modalFondo}>
+        <View style={[styles.modal, styles.modalEvento]}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.eventoDetalle}>
+            <View>
+              {/* Banner con la parte superior del afiche (los afiches suelen ser de todo el fin de semana) */}
+              <View style={[styles.afiche, !evento.imagen && styles.aficheVacio]}>
+                {evento.imagen ? (
+                  <Image source={{ uri: evento.imagen }} style={styles.aficheImagen} resizeMode="cover" />
+                ) : (
+                  <Ionicons name={icono} size={64} color="rgba(255,255,255,0.5)" />
+                )}
+              </View>
+              <TouchableOpacity onPress={onCerrar} style={styles.aficheCerrar} accessibilityLabel="Cerrar">
+                <Ionicons name="close" size={22} color={STITCH.white} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.eventoCuerpo}>
+              <View style={styles.metaFila}>
+                <View style={styles.chipCategoria}>
+                  <Ionicons name={icono} size={13} color={STITCH.primary} />
+                  <Text style={styles.chipCategoriaTexto}>{evento.categoria_nombre}</Text>
+                </View>
+                {evento.destacado ? <Text style={styles.destacado}>DESTACADO</Text> : null}
+              </View>
+              <Text style={styles.detalleTitulo}>{evento.titulo}</Text>
+              {evento.organiza ? (
+                <View style={styles.organiza}>
+                  <Ionicons name="mic" size={14} color={STITCH.secondary} />
+                  <Text style={styles.organizaTexto}>Escenario abierto · presenta {evento.organiza}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.datosEvento}>
+                {datos.map((d) => (
+                  <View key={d.titulo} style={styles.datoEvento}>
+                    <View style={styles.datoIcono}>
+                      <Ionicons name={d.icono} size={18} color={STITCH.primary} />
+                    </View>
+                    <View style={styles.flex}>
+                      <Text style={styles.datoTitulo}>{d.titulo}</Text>
+                      <Text style={[styles.datoTexto, d.gratis && styles.gratis]}>{d.texto}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <CuposEvento evento={evento} onCambio={onCambio} />
+
+              {evento.descripcion ? (
+                <>
+                  <Text style={styles.subtitulo}>Sobre el evento</Text>
+                  <Text style={styles.sinopsis}>{evento.descripcion}</Text>
+                </>
+              ) : null}
+
+              <TouchableOpacity style={styles.botonJarvis} onPress={onJarvis}>
+                <Ionicons name="sparkles" size={18} color={STITCH.primary} />
+                <Text style={styles.botonJarvisTexto}>Preguntarle a Jarvis</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function DiversionScreen({ navigation, route }) {
   const [pestana, setPestana] = useState(route?.params?.pestana || "cartelera");
   const [datos, setDatos] = useState(null);
@@ -147,6 +246,10 @@ export default function DiversionScreen({ navigation, route }) {
   const [refrescando, setRefrescando] = useState(false);
   const [entradaCine, setEntradaCine] = useState(null);
   const [detalle, setDetalle] = useState(null); // { pelicula, indice }
+  const [evento, setEvento] = useState(null);
+  const [cambioCupos, setCambioCupos] = useState(false);
+  const [version, setVersion] = useState(0); // recarga la pestaña Escenario
+  const eventoInicial = route?.params?.eventoId;
 
   const cargar = useCallback(async () => {
     try {
@@ -168,6 +271,11 @@ export default function DiversionScreen({ navigation, route }) {
     cargar();
   }, [cargar]);
 
+  // Desde el Inicio se puede abrir directamente un evento
+  useEffect(() => {
+    if (eventoInicial && datos) setEvento(datos.eventos.find((e) => e.id === eventoInicial) || null);
+  }, [eventoInicial, datos]);
+
   const refrescar = async () => {
     setRefrescando(true);
     await cargar();
@@ -176,17 +284,9 @@ export default function DiversionScreen({ navigation, route }) {
 
   const preguntar = (pregunta) => {
     setDetalle(null);
+    setEvento(null);
     navigation.navigate("Asistente", { pregunta });
   };
-
-  const verEvento = (e) =>
-    Alert.alert(e.titulo, [
-      `${nombreDia(e.inicio)} · ${hora(e.inicio)}${e.fin ? ` a ${hora(e.fin)}` : ""}`,
-      e.lugar, e.descripcion,
-    ].filter(Boolean).join("\n\n"), [
-      { text: "Cerrar", style: "cancel" },
-      { text: "Preguntar a Jarvis", onPress: () => preguntar(`Cuéntame del evento "${e.titulo}"`) },
-    ]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -243,7 +343,7 @@ export default function DiversionScreen({ navigation, route }) {
               const d = new Date(e.inicio);
               return (
                 <TouchableOpacity key={e.id} style={styles.evento}
-                  onPress={() => verEvento(e)}>
+                  onPress={() => setEvento(e)}>
                   <View style={[styles.fecha, e.destacado && styles.fechaDestacada]}>
                     <Text style={[styles.fechaDia, e.destacado && styles.blanco]}>{d.getDate()}</Text>
                     <Text style={[styles.fechaMes, e.destacado && styles.blanco]}>{MESES[d.getMonth()]}</Text>
@@ -256,14 +356,29 @@ export default function DiversionScreen({ navigation, route }) {
                     </View>
                     <Text style={styles.eventoTitulo}>{e.titulo}</Text>
                     <Text style={styles.eventoMeta}>{nombreDia(e.inicio)} · {hora(e.inicio)}{e.lugar ? ` · ${e.lugar}` : ""}</Text>
-                    <Text style={[styles.eventoPrecio, e.gratis && styles.gratis]}>
-                      {e.gratis ? "Entrada libre" : `Bs ${fmt(e.precio)}`}
-                    </Text>
+                    <View style={styles.metaFila}>
+                      <Text style={[styles.eventoPrecio, e.gratis && styles.gratis]}>
+                        {e.gratis ? (e.acceso === "CUPOS" ? "Gratis" : "Entrada libre") : `Bs ${fmt(e.precio)}`}
+                      </Text>
+                      {e.acceso === "CUPOS" ? (
+                        <Text style={[styles.eventoCupos, !e.disponibles && styles.agotado]}>
+                          {e.mi_reserva ? "· Tienes cupo ✓" : e.disponibles ? `· ${e.disponibles} cupos libres` : "· Cupos agotados"}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                   {e.imagen ? <Image source={{ uri: e.imagen }} style={styles.eventoImagen} /> : null}
                 </TouchableOpacity>
               );
             }) : <Text style={styles.vacioTexto}>No hay eventos próximos.</Text>
+          ) : null}
+
+          {pestana === "escenario" ? (
+            <PanelEscenario version={version} onVerEvento={(id) => {
+              const encontrado = datos?.eventos.find((e) => e.id === id);
+              setPestana("eventos");
+              if (encontrado) setEvento(encontrado);
+            }} />
           ) : null}
 
           {pestana === "juegos" && datos ? (
@@ -298,6 +413,19 @@ export default function DiversionScreen({ navigation, route }) {
           onCerrar={() => setDetalle(null)}
           onJarvis={() => preguntar(`¿Qué me recomiendas sobre la película "${detalle.pelicula.titulo}"?`)} />
       ) : null}
+      {evento ? (
+        <DetalleEvento evento={evento}
+          onCambio={() => setCambioCupos(true)}
+          onCerrar={() => {
+            setEvento(null);
+            if (cambioCupos) {
+              setCambioCupos(false);
+              setVersion((v) => v + 1);
+              cargar();
+            }
+          }}
+          onJarvis={() => preguntar(`Cuéntame del evento "${evento.titulo}"`)} />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -310,10 +438,10 @@ const styles = StyleSheet.create({
   titulo: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 24 },
   sub: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 13 },
   pestanas: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
-  pestana: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10,
-    borderRadius: 999, backgroundColor: STITCH.surfaceLowest, ...SOMBRA },
+  pestana: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2, paddingVertical: 8,
+    borderRadius: 14, backgroundColor: STITCH.surfaceLowest, ...SOMBRA },
   pestanaActiva: { backgroundColor: STITCH.primary },
-  pestanaTexto: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 13.5 },
+  pestanaTexto: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 12.5 },
   pestanaTextoActiva: { color: STITCH.white },
   cargando: { marginTop: 60 },
   contenido: { padding: 16, paddingBottom: 40, gap: 12 },
@@ -349,6 +477,10 @@ const styles = StyleSheet.create({
   eventoMeta: { color: STITCH.onSurfaceVariant, fontFamily: FUENTES.texto, fontSize: 13, marginTop: 2 },
   eventoPrecio: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 13, marginTop: 4 },
   gratis: { color: "#047857" },
+  eventoCupos: { color: STITCH.secondary, fontFamily: FUENTES.textoFuerte, fontSize: 13, marginTop: 4 },
+  agotado: { color: "#B91C1C" },
+  organiza: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  organizaTexto: { color: STITCH.secondary, fontFamily: FUENTES.textoFuerte, fontSize: 13 },
 
   bannerJuegos: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFF4CC", borderRadius: 14,
     padding: 14, borderWidth: 1, borderColor: "#F5B301" },
@@ -362,7 +494,7 @@ const styles = StyleSheet.create({
     justifyContent: "center" },
 
   modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  modal: { maxHeight: "88%", backgroundColor: STITCH.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modal: { width: "100%", maxWidth: 560, alignSelf: "center", maxHeight: "88%", backgroundColor: STITCH.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalCerrar: { position: "absolute", top: 12, right: 12, zIndex: 2, padding: 6 },
   detalleCabecera: { flexDirection: "row", gap: 16, alignItems: "flex-end" },
   detalleTitulo: { color: STITCH.primary, fontFamily: FUENTES.titulo, fontSize: 22, marginTop: 6 },
@@ -388,4 +520,22 @@ const styles = StyleSheet.create({
   botonJarvis: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 20,
     backgroundColor: STITCH.secondaryContainer, borderRadius: 999, paddingVertical: 14 },
   botonJarvisTexto: { color: STITCH.primary, fontFamily: FUENTES.tituloBold, fontSize: 15 },
+
+  modalEvento: { padding: 0, overflow: "hidden" },
+  eventoDetalle: { paddingBottom: 28 },
+  afiche: { width: "100%", aspectRatio: 16 / 10, overflow: "hidden", backgroundColor: STITCH.surfaceLow },
+  aficheImagen: { width: "100%", aspectRatio: 1 },
+  aficheVacio: { backgroundColor: STITCH.primary, alignItems: "center", justifyContent: "center" },
+  aficheCerrar: { position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
+  eventoCuerpo: { paddingHorizontal: 20, paddingTop: 16 },
+  chipCategoria: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: STITCH.secondaryContainer,
+    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  chipCategoriaTexto: { color: STITCH.primary, fontFamily: FUENTES.textoFuerte, fontSize: 12 },
+  datosEvento: { marginTop: 16, gap: 10, backgroundColor: STITCH.surfaceLowest, borderRadius: 16, padding: 14, ...SOMBRA },
+  datoEvento: { flexDirection: "row", alignItems: "center", gap: 12 },
+  datoIcono: { width: 38, height: 38, borderRadius: 12, backgroundColor: STITCH.surfaceLow, alignItems: "center",
+    justifyContent: "center" },
+  datoTitulo: { color: STITCH.outline, fontFamily: FUENTES.texto, fontSize: 11.5 },
+  datoTexto: { color: STITCH.onSurface, fontFamily: FUENTES.textoFuerte, fontSize: 14.5 },
 });

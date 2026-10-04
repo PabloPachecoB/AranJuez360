@@ -6,6 +6,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import * as Linking from "expo-linking";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { CarritoProvider } from "./context/CarritoContext";
 import { UserProvider } from "./context/UserContext";
 import StackNavigator from "./navigation/StackNavigator";
 
@@ -26,10 +27,12 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <UserProvider>
-          <NavigationContainer linking={linking}>
-            <StackNavigator />
-            <StatusBar style="auto" />
-          </NavigationContainer>
+          <CarritoProvider>
+            <NavigationContainer linking={linking}>
+              <StackNavigator />
+              <StatusBar style="auto" />
+            </NavigationContainer>
+          </CarritoProvider>
         </UserProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

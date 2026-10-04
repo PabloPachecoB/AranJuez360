@@ -4,7 +4,7 @@ Uso: python manage.py cargar_demo
 Todas las cuentas de demo usan la contraseña "Paseo2026!".
 """
 
-from datetime import time, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 
 from django.core.management import call_command
@@ -110,13 +110,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self._usuario("admin@paseo.bo", email="admin@paseo.bo", rol=Usuario.Rol.ADMIN,
                       is_staff=True, is_superuser=True)
-        self._usuario("portero@paseo.bo", email="portero@paseo.bo", rol=Usuario.Rol.PORTERO,
-                      first_name="Portero", last_name="Demo")
+        # Porteros por defecto: su app solo tiene escáner QR, eventos disponibles y cartelera.
+        for correo, nombre, apellido in [
+            ("portero@paseo.bo", "Portero", "Demo"),
+            ("portero.entrada@paseo.bo", "Portero", "Entrada principal"),
+            ("portero.norte@paseo.bo", "Portero", "Acceso norte"),
+        ]:
+            self._usuario(correo, email=correo, rol=Usuario.Rol.PORTERO, first_name=nombre, last_name=apellido)
         self._usuario("cliente@paseo.bo", email="cliente@paseo.bo", rol=Usuario.Rol.CLIENTE,
                       first_name="Cliente", last_name="Demo", ci="1234567", celular="71234567",
-                      procedencia="CERCADO")
-        # Si la cuenta ya existía (de una carga anterior), se completa su procedencia.
+                      procedencia="CERCADO", ocupacion="UNIVERSITARIO", fecha_nacimiento=date(2003, 5, 14))
+        # Si la cuenta ya existía (de una carga anterior), se completan sus datos.
         Usuario.objects.filter(username="cliente@paseo.bo", procedencia="").update(procedencia="CERCADO")
+        Usuario.objects.filter(username="cliente@paseo.bo", ocupacion="").update(
+            ocupacion="UNIVERSITARIO", fecha_nacimiento=date(2003, 5, 14))
 
         for nombre, tipo, categoria, piso, local, productos in EMPRESAS:
             if tipo != Empresa.Tipo.OFICINA:

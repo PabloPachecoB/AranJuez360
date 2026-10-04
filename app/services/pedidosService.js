@@ -21,6 +21,17 @@ export async function getProductos(filtros = {}) {
   return lista(await llamar("get", `/productos/?${params}`));
 }
 
-/** Un pedido = un solo negocio. items: [{ producto_id, cantidad }]. Devuelve el pedido con su código de retiro. */
-export const crearPedido = (empresa, items) => llamar("post", "/pedidos/", { empresa, items });
+/**
+ * Un pedido = un solo negocio. items: [{ producto_id, cantidad }].
+ * retiroProgramado: ISO de la hora reservada para retirar (null = lo antes posible).
+ */
+export const crearPedido = (empresa, items, retiroProgramado = null) =>
+  llamar("post", "/pedidos/", { empresa, items, retiro_programado: retiroProgramado });
 export const getMisPedidos = async () => lista(await llamar("get", "/pedidos/"));
+export const getPedido = (id) => llamar("get", `/pedidos/${id}/`);
+/** Demo: paga el QR desde la app, como si el banco confirmara el cobro. */
+export const simularPago = (id) => llamar("post", `/pedidos/${id}/simular-pago/`);
+/** Solo mientras no está pagado. */
+export const cancelarPedido = (id) => llamar("post", `/pedidos/${id}/cancelar/`);
+/** "Ya estoy en el Paseo" cuando el pedido está listo para recoger. */
+export const avisarLlegada = (id) => llamar("post", `/pedidos/${id}/llegue/`);

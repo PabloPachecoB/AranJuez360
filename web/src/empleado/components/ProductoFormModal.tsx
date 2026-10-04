@@ -72,11 +72,11 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
             <div className="flex items-center gap-space-xs text-primary mb-1">
               <span className="material-symbols-outlined text-[18px]">verified</span>
               <span className="font-badge-code text-badge-code uppercase font-bold tracking-wider">
-                Catálogo PaseoYa
+                Catálogo de la app
               </span>
             </div>
             <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold tracking-tight">
-              {productoExistente ? "Editar producto" : "Nuevo producto para PaseoYa"}
+              {productoExistente ? "Editar producto" : "Nuevo producto"}
             </h2>
           </div>
           <button
@@ -210,7 +210,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
               </div>
               <div className="flex flex-col">
                 <span className="font-label-md text-label-md font-bold text-on-surface">
-                  Visible en PaseoYa
+                  Visible en la app (Comer)
                 </span>
                 <span className="font-body-sm text-body-sm text-on-surface-variant">
                   Al guardar, será visible para los clientes del centro comercial.

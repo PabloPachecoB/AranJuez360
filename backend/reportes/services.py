@@ -365,3 +365,57 @@ def historial_cliente(cliente: Usuario) -> dict:
             .values("tipo", "puntos", "descripcion", "empresa__nombre", "creado_en")[:20]
         ),
     }
+
+
+RANGOS_EDAD = [(0, 17, "Menos de 18"), (18, 24, "18 a 24"), (25, 34, "25 a 34"), (35, 44, "35 a 44"),
+               (45, 59, "45 a 59"), (60, 200, "60 o más")]
+
+
+def _rango_edad(edad) -> str:
+    if edad is None:
+        return "Sin dato"
+    return next(nombre for desde, hasta, nombre in RANGOS_EDAD if desde <= edad <= hasta)
+
+
+def perfil_clientes(desde: date, hasta: date) -> dict:
+    """Clientes por rango de edad y por ocupación: cuántos son, cuánto vienen y cuánto compran."""
+    clientes = list(Usuario.objects.filter(rol=Usuario.Rol.CLIENTE).only("id", "fecha_nacimiento", "ocupacion"))
+    compras = {
+        f["cliente"]: f for f in SolicitudPuntos.objects.filter(estado=APROBADA, **_rango(desde, hasta))
+        .values("cliente").annotate(compras=Count("id"), monto=Sum("monto"))
+    }
+    visitas = {
+        f["cliente"]: f["n"] for f in Visita.objects.filter(**_rango(desde, hasta)).values("cliente").annotate(n=Count("id"))
+    }
+    nombres_ocupacion = dict(Usuario.Ocupacion.choices)
+
+    def acumular(grupos, clave, nombre, c):
+        fila = grupos.setdefault(clave, {"clave": clave, "nombre": nombre, "clientes": 0, "visitas": 0,
+                                         "compras": 0, "monto": 0, "clientes_con_compras": 0})
+        fila["clientes"] += 1
+        fila["visitas"] += visitas.get(c.id, 0)
+        compra = compras.get(c.id)
+        if compra:
+            fila["compras"] += compra["compras"]
+            fila["monto"] += compra["monto"] or 0
+            fila["clientes_con_compras"] += 1
+
+    por_edad, por_ocupacion = {}, {}
+    edades = []
+    for c in clientes:
+        edad = c.edad
+        if edad is not None:
+            edades.append(edad)
+        rango = _rango_edad(edad)
+        acumular(por_edad, rango, rango, c)
+        ocupacion = c.ocupacion or SIN_DATO
+        acumular(por_ocupacion, ocupacion, nombres_ocupacion.get(c.ocupacion, "Sin dato").split(" (")[0], c)
+
+    orden_edad = [n for _, _, n in RANGOS_EDAD] + ["Sin dato"]
+    orden_ocupacion = list(Usuario.Ocupacion.values) + [SIN_DATO]
+    return {
+        **_rango_texto(desde, hasta),
+        "edad_promedio": round(sum(edades) / len(edades), 1) if edades else None,
+        "por_edad": sorted(por_edad.values(), key=lambda f: orden_edad.index(f["clave"])),
+        "por_ocupacion": sorted(por_ocupacion.values(), key=lambda f: orden_ocupacion.index(f["clave"])),
+    }

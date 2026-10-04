@@ -30,6 +30,11 @@ export function PedidosProvider({ children }: { children: ReactNode }) {
       return;
     }
     recargar();
+    // Los pagos y las llegadas ocurren en la app del cliente: se consulta cada 6 s sin parpadear.
+    const id = setInterval(() => {
+      listarPedidosEmpresa().then(setPedidos).catch(() => {});
+    }, 6000);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario]);
 

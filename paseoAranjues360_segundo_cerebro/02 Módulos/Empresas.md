@@ -31,6 +31,6 @@ Uso del QR → [[Fidelización]]
 La app y la web muestran solo empresas **activas**, con horarios, productos activos y ofertas vigentes.
 
 ## Archivos clave
-`backend/empresas/` (models, services, views) · `web/src/pages/Empresas.jsx`
+`backend/empresas/` (models, services, views) · `web/src/admin/pages/Empresas.tsx` · panel de la empresa `web/src/paseo360/empresa/`
 
 Directorio organizado por tipo y rubro, con las 70 tiendas reales → [[Directorio y rubros]] · Menús y pedidos → [[Comer y pedidos (PaseoYa)]]

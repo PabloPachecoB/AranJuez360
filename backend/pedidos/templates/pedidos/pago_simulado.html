@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Banco Simulado · Pago QR</title>
+  <style>
+    :root { --azul: #0b3d5c; --verde: #15803d; --rojo: #b91c1c; --gris: #64748b; --fondo: #eef2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: var(--fondo); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #0f172a; }
+    .app { width: 100%; max-width: 380px; background: #fff; border-radius: 24px; overflow: hidden;
+      box-shadow: 0 12px 40px rgba(11, 61, 92, .18); }
+    .barra { background: var(--azul); color: #fff; padding: 18px 20px; display: flex; align-items: center; gap: 10px; }
+    .logo { width: 36px; height: 36px; border-radius: 10px; background: #fff; color: var(--azul); display: grid;
+      place-items: center; font-weight: 900; }
+    .barra small { display: block; opacity: .75; font-size: 12px; }
+    .aviso { background: #fff7d6; color: #7a5a00; font-size: 12px; padding: 8px 20px; }
+    .cuerpo { padding: 22px 20px 24px; }
+    .etiqueta { color: var(--gris); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .monto { font-size: 40px; font-weight: 800; color: var(--azul); margin: 4px 0 16px; }
+    dl { margin: 0 0 18px; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 14px; }
+    dt { color: var(--gris); } dd { margin: 0; text-align: right; font-weight: 600; }
+    button { width: 100%; border: 0; border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 700;
+      background: var(--azul); color: #fff; cursor: pointer; }
+    .estado { text-align: center; padding: 8px 0 4px; }
+    .estado .icono { font-size: 54px; line-height: 1; }
+    .ok { color: var(--verde); } .error { color: var(--rojo); }
+    .nota { color: var(--gris); font-size: 12.5px; text-align: center; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="barra">
+      <div class="logo">B</div>
+      <div><strong>Banco Simulado</strong><small>Pago con QR</small></div>
+    </div>
+    <div class="aviso">Simulación para la demo de Paseo Aranjuez 360: no se mueve dinero real.</div>
+    <div class="cuerpo">
+      {% if not pedido %}
+        <div class="estado error"><div class="icono">✕</div><p>{{ error }}</p></div>
+      {% else %}
+        <div class="etiqueta">Pagar a</div>
+        <h2 style="margin:4px 0 0">{{ pedido.empresa.nombre }}</h2>
+        <div class="monto">Bs {{ pedido.total }}</div>
+        <dl>
+          <dt>Referencia</dt><dd>{{ pedido.pago_referencia }}</dd>
+          <dt>Concepto</dt><dd>Pedido PaseoYa · retiro en el local</dd>
+          {% if pedido.pago_vence_en and not pedido.pagado_en %}<dt>Vence</dt><dd>{{ pedido.pago_vence_en|time:"H:i" }}</dd>{% endif %}
+        </dl>
+        {% if pedido.pagado_en %}
+          <div class="estado ok">
+            <div class="icono">✓</div>
+            <h3>Pago realizado</h3>
+            <p>{{ pedido.pagado_en|date:"d/m/Y H:i" }} · el comercio ya recibió tu pedido.<br>Vuelve a la app del Paseo para seguirlo.</p>
+          </div>
+        {% elif pedido.estado == "CANCELADO" %}
+          <div class="estado error"><div class="icono">✕</div><h3>Cobro anulado</h3><p>{{ error|default:"El pedido fue cancelado o el QR venció." }}</p></div>
+        {% else %}
+          {% if error %}<p class="error">{{ error }}</p>{% endif %}
+          <form method="post">{% csrf_token %}<button type="submit">Pagar Bs {{ pedido.total }}</button></form>
+          <p class="nota">Al confirmar, el banco avisa el pago y tu pedido pasa a la cocina del local.</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

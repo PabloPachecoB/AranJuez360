@@ -30,11 +30,12 @@ Ver rangos reservados: `netsh interface ipv4 show excludedportrange protocol=tcp
 3. **No** arrancar Expo con `CI=1`: en ese modo no vigila archivos y sirve código viejo.
 
 ## La web muestra datos de otro proyecto / 404 raros
-El proxy de Vite debe apuntar a `http://127.0.0.1:8001` (`web/vite.config.js`). Si apunta al 8000, responde el otro proyecto.
+El proxy de Vite debe apuntar a `http://127.0.0.1:8001` (`web/vite.config.ts`). Si apunta al 8000, responde el otro proyecto.
 
-## El celular no conecta
+## El celular no conecta (o cambió la IP de la PC)
+Si cambias de red: actualizar la IP en `app/.env` y `backend/.env` (`ALLOWED_HOSTS`, `WEB_PANEL_URL`, `PUBLIC_BASE_URL`), reiniciar el backend y abrir Expo con `npx expo start -c` (las `EXPO_PUBLIC_*` quedan dentro del paquete).
 - Mismo Wi-Fi que la PC.
-- `app/.env` con la IP de la PC: `EXPO_PUBLIC_API_BASE=http://192.168.100.35:8001`
+- `app/.env` con la IP de la PC: `EXPO_PUBLIC_API_BASE=http://192.168.0.11:8001`
 - `ALLOWED_HOSTS` en `backend/.env` debe incluir esa IP.
 - Aceptar el aviso del firewall de Windows para Python y Node.
 

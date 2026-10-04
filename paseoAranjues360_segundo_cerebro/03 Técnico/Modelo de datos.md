@@ -35,6 +35,15 @@ erDiagram
 | **Visita** | cliente, portero, puntos |
 | **MovimientoPuntos** | cliente, empresa?, solicitud?, visita?, puntos (+/−), tipo (COMPRA/VISITA/CANJE) |
 | **Recompensa** | nombre, costo_puntos, empresa?, imagen, activo |
+| **Canje** | cliente, recompensa, código del cupón, estado (validado en caja) |
+| **RangoCompra** · **PuntoEscaneo** | tramos de puntos por monto · puntos NFC/QR de puerta y actividades |
+| **Pedido** · **PedidoItem** | cliente, empresa, estado, código de retiro · productos y cantidades |
+| **Pelicula** · **Funcion** · **ReservaCine** | póster, clasificación · inicio, sala, precio · entradas con monedas o boletería |
+| **Evento** | categoría, inicio/fin, lugar, imagen, precio (0 = libre), destacado, **cupos** (vacío = acceso libre), **espacio** |
+| **Espacio** | nombre, lugar, capacidad, equipamiento → [[Escenario abierto]] |
+| **Propuesta** | solicitante, espacio, artista, título, tipo, descripción, necesidades, inicio/fin, personas, acceso, estado, motivo, evento publicado |
+| **ReservaEvento** | evento, cliente, cantidad, código (QR), estado, ingreso_en |
+| **Invitacion** (oficinas) | oficina, visitante, fecha, código, ingreso |
 
 ## Pendientes de modelar
-Canje/Cupón · Invitación de oficina · Evento · Puerta de entrada en Visita. Ver [[Pendientes]].
+Cajeros gestionados por la empresa · niveles (Bronce/Plata/Oro) · notificaciones push. Ver [[Pendientes]].

@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class Usuario(AbstractUser):
@@ -22,6 +23,14 @@ class Usuario(AbstractUser):
         NEGOCIO = "NEGOCIO", "Negocio"
         CAJERO = "CAJERO", "Cajero"
         OFICINA = "OFICINA", "Oficina"
+
+    class Ocupacion(models.TextChoices):
+        """A qué se dedica el cliente (para saber a quién llegan las promociones y eventos)."""
+
+        ESTUDIANTE = "ESTUDIANTE", "Estudiante de colegio"
+        UNIVERSITARIO = "UNIVERSITARIO", "Universitario/a"
+        PROFESIONAL = "PROFESIONAL", "Profesional"
+        OTRO = "OTRO", "Otro (trabaja, emprende, jubilado...)"
 
     class Procedencia(models.TextChoices):
         """De dónde viene el cliente: provincias del departamento de Cochabamba u otro lugar."""
@@ -63,12 +72,22 @@ class Usuario(AbstractUser):
     ciudad_otra = models.CharField(
         "ciudad", max_length=80, blank=True, help_text="Solo si la procedencia es OTRO (ej. La Paz, Santa Cruz).",
     )
+    ocupacion = models.CharField(max_length=15, choices=Ocupacion.choices, blank=True, db_index=True)
     acepto_terminos_en = models.DateTimeField(null=True, blank=True)
     email_verificado = models.BooleanField(default=False)
     # Saldo en monedas de Paseo (con decimales: 0,75 por visita).
     puntos_saldo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     # Las cuentas creadas por el admin reciben una contraseña temporal por correo.
     debe_cambiar_password = models.BooleanField(default=False)
+
+    @property
+    def edad(self):
+        """Años cumplidos (None si no indicó su fecha de nacimiento)."""
+        if not self.fecha_nacimiento:
+            return None
+        hoy = timezone.localdate()
+        n = self.fecha_nacimiento
+        return hoy.year - n.year - ((hoy.month, hoy.day) < (n.month, n.day))
 
     @property
     def procedencia_texto(self) -> str:

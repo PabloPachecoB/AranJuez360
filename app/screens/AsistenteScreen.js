@@ -22,11 +22,14 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
+import QRCode from "react-native-qrcode-svg";
 import ModoVoz from "../components/ModoVoz";
+import { PagoQRModal } from "../components/PedidoComer";
 import TarjetaAccion from "../components/TarjetaAccion";
 import { COLORS } from "../constants/colors";
 import { useUserContext } from "../context/UserContext";
 import { chatAgente, confirmarAccion, enviarNotaDeVoz, rechazarAccion } from "../services/agenteService";
+import { getPedido } from "../services/pedidosService";
 import { detenerVoz, hablarComoJarvis } from "../services/vozJarvis";
 
 // Notas más cortas que esto se descartan (toque accidental del micrófono).
@@ -62,6 +65,7 @@ export default function AsistenteScreen({ navigation, route }) {
   const [modoVoz, setModoVoz] = useState(() => Boolean(route?.params?.modoVoz));
   const [hablando, setHablando] = useState(false);
   const [emocion, setEmocion] = useState(null);
+  const [pagoPedido, setPagoPedido] = useState(null); // pedido de comida que Jarvis creó y falta pagar
   const lista = useRef(null);
 
   const recorder = useAudioRecorder(OPCIONES_GRABACION);
@@ -99,6 +103,7 @@ export default function AsistenteScreen({ navigation, route }) {
           voz: conEmocion,
           accion: data.accion ? { ...data.accion, estado: "pendiente" } : null,
           empresas: data.empresas || [],
+          productos: data.productos || [], // platos que Jarvis nombró, con foto
         }));
         // Solo responde en voz alta si le hablaste (nota de voz o modo voz), no al escribir.
         if (data.transcripcion) hablar(conEmocion);
@@ -121,8 +126,16 @@ export default function AsistenteScreen({ navigation, route }) {
     try {
       const data = await confirmarAccion(accion.id);
       marcarAccion(accion.id, "confirmada");
-      agregar(mensaje("jarvis", data.text, { voz: data.voz, codigo: data.resultado?.codigo }));
+      const resultado = data.resultado || {};
+      agregar(mensaje("jarvis", data.text, {
+        voz: data.voz,
+        codigo: resultado.codigo,
+        qr: resultado.qr, // entrada a un evento con cupos
+        pedidoId: resultado.tipo === "pedido" ? resultado.id : null,
+      }));
       hablar(data.voz || data.text);
+      // Pedido de comida: se abre el cobro con QR en el mismo chat.
+      if (resultado.tipo === "pedido") abrirPago(resultado.id);
     } catch (err) {
       marcarAccion(accion.id, "fallida");
       agregar(mensaje("error", err.message));
@@ -130,6 +143,14 @@ export default function AsistenteScreen({ navigation, route }) {
       setPensando(false);
     }
   }, [agregar, hablar, marcarAccion]);
+
+  const abrirPago = useCallback(async (id) => {
+    try {
+      setPagoPedido(await getPedido(id));
+    } catch (err) {
+      agregar(mensaje("error", err.message));
+    }
+  }, [agregar]);
 
   const cancelar = useCallback(async (accion) => {
     marcarAccion(accion.id, "cancelada");
@@ -250,7 +271,13 @@ export default function AsistenteScreen({ navigation, route }) {
           onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)}
-              onConfirmar={confirmar} onCancelar={cancelar}
+              onConfirmar={confirmar} onCancelar={cancelar} onPagar={abrirPago}
+              onPedirPlato={(p) => {
+                if (pensando) return;
+                const frase = `Quiero pedir ${p.nombre} de ${p.empresa_nombre}`;
+                agregar(mensaje("usuario", frase));
+                procesar(() => chatAgente(frase, threadId));
+              }}
               onAbrirEmpresa={(id) => navigation.navigate("Empresa", { id })} />
           )}
           ListFooterComponent={pensando ? (
@@ -314,11 +341,14 @@ export default function AsistenteScreen({ navigation, route }) {
         onConfirmar={confirmar}
         onCancelar={cancelar}
       />
+      {pagoPedido ? (
+        <PagoQRModal pedido={pagoPedido} onCerrar={() => setPagoPedido(null)} />
+      ) : null}
     </SafeAreaView>
   );
 }
 
-function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa }) {
+function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, onPagar, onPedirPlato }) {
   if (item.rol === "error") {
     return (
       <View style={styles.error}>
@@ -341,9 +371,41 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa }) 
         <View style={styles.codigo}>
           <Text style={styles.codigoEtiqueta}>Tu código</Text>
           <Text style={styles.codigoValor} selectable>{item.codigo}</Text>
+          {item.qr ? <View style={styles.qr}><QRCode value={item.qr} size={140} /></View> : null}
         </View>
       ) : null}
+      {item.pedidoId ? (
+        <TouchableOpacity style={styles.pagar} onPress={() => onPagar(item.pedidoId)}>
+          <Ionicons name="qr-code" size={16} color={COLORS.white} />
+          <Text style={styles.pagarTexto}>Pagar / ver mi pedido</Text>
+        </TouchableOpacity>
+      ) : null}
       {item.accion ? <TarjetaAccion accion={item.accion} onConfirmar={onConfirmar} onCancelar={onCancelar} /> : null}
+      {item.productos?.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
+          {item.productos.map((p) => (
+            <View key={p.id} style={styles.plato}>
+              {p.foto ? <Image source={{ uri: p.foto }} style={styles.platoFoto} /> : (
+                <View style={[styles.platoFoto, styles.fichaLogoVacio]}>
+                  <Ionicons name="restaurant" size={26} color={COLORS.white} />
+                </View>
+              )}
+              <View style={styles.platoCuerpo}>
+                <Text style={styles.fichaNombre} numberOfLines={2}>{p.nombre}</Text>
+                <Text style={styles.textoMuted} numberOfLines={1}>
+                  {p.empresa_nombre}{p.piso ? ` · ${p.piso === "PB" ? "PB" : `piso ${p.piso}`}` : ""}
+                </Text>
+                <Text style={styles.platoPrecio}>Bs {Number(p.precio)}</Text>
+                <TouchableOpacity style={styles.platoBoton} onPress={() => onPedirPlato(p)}
+                  accessibilityLabel={`Pedir ${p.nombre}`}>
+                  <Ionicons name="bag-add" size={14} color={COLORS.white} />
+                  <Text style={styles.platoBotonTexto}>Pedir</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
       {item.empresas?.length ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
           {item.empresas.map((e) => (
@@ -377,6 +439,14 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa }) 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   fichas: { gap: 8, paddingTop: 10 },
+  plato: { width: 170, backgroundColor: COLORS.white, borderRadius: 14, overflow: "hidden", borderWidth: 1,
+    borderColor: "#E2E8F0" },
+  platoFoto: { width: "100%", height: 92, backgroundColor: "#E2E8F0" },
+  platoCuerpo: { padding: 8, gap: 2 },
+  platoPrecio: { fontSize: 15, fontWeight: "800", color: COLORS.primary, marginTop: 2 },
+  platoBoton: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+    backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 7 },
+  platoBotonTexto: { color: COLORS.white, fontWeight: "700", fontSize: 13 },
   ficha: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.white, borderRadius: 12,
     padding: 8, borderWidth: 1, borderColor: "#E2E8F0", maxWidth: 210 },
   fichaLogo: { width: 40, height: 40, borderRadius: 10 },
@@ -425,4 +495,8 @@ const styles = StyleSheet.create({
   codigo: { marginTop: 10, backgroundColor: COLORS.bg, borderRadius: 12, padding: 10, alignItems: "center" },
   codigoEtiqueta: { fontSize: 11, color: COLORS.muted, fontWeight: "700" },
   codigoValor: { fontSize: 24, fontWeight: "800", letterSpacing: 4, color: COLORS.primary },
+  qr: { marginTop: 8, padding: 8, backgroundColor: "#fff", borderRadius: 10 },
+  pagar: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 10 },
+  pagarTexto: { color: COLORS.white, fontWeight: "700", fontSize: 14 },
 });

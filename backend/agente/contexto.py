@@ -10,7 +10,17 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from empresas.models import Empresa, Oferta, Producto
+from entretenimiento.escenario import disponibles as _cupos_libres
 from entretenimiento.models import Evento, Funcion, ReservaCine
+
+
+def _acceso(evento):
+    """Acceso libre o con cupos (y cuántos quedan), y quién lo presenta si vino de Escenario abierto."""
+    texto = "; acceso libre, sin reserva" if evento.cupos is None else (
+        f"; con cupos: quedan {_cupos_libres(evento)} de {evento.cupos} (se reserva en Diversión, entrada con QR)"
+    )
+    propuesta = getattr(evento, "propuesta", None)
+    return texto + (f"; presenta {propuesta.artista} (Escenario abierto)" if propuesta else "")
 from fidelizacion.models import Canje, ConfiguracionPuntos, PuntoEscaneo, RangoCompra, Recompensa
 from fidelizacion.services import racha_para
 
@@ -22,6 +32,7 @@ MAX_RECOMPENSAS = 15
 MAX_FUNCIONES = 40
 MAX_EVENTOS = 10
 MAX_PLATOS = 5  # por establecimiento, para que el prompt no crezca de más
+MAX_PLATOS_RESTAURANTE = 12  # en los restaurantes van todos (con [id] para pedir)
 
 
 def _monedas(valor) -> str:
@@ -66,7 +77,7 @@ def construir_contexto(user) -> dict:
     )
     eventos = (
         Evento.objects.filter(activo=True).filter(Q(inicio__gte=ahora) | Q(fin__gte=ahora))
-        .order_by("inicio")[:MAX_EVENTOS]
+        .select_related("propuesta").order_by("inicio")[:MAX_EVENTOS]
     )
 
     directorio = {}
@@ -74,8 +85,13 @@ def construir_contexto(user) -> dict:
         tipo = tienda.get_tipo_display()
         rubro = tienda.categoria.nombre if tienda.categoria else "Otros"
         grupo = directorio.setdefault(tipo, {}).setdefault(rubro, [])
-        platos = "; ".join(f"{p.nombre} Bs {_monedas(p.precio_promocion if p.en_promocion and p.precio_promocion else p.precio)}"
-                           for p in tienda.menu[:MAX_PLATOS])
+        es_comida = rubro == "Comida"
+        # En los restaurantes cada plato lleva su [id]: Jarvis puede pedirlo con la herramienta.
+        platos = "; ".join(
+            f"{f'[{p.id}] ' if es_comida else ''}{p.nombre} Bs "
+            f"{_monedas(p.precio_promocion if p.en_promocion and p.precio_promocion else p.precio)}"
+            for p in tienda.menu[:MAX_PLATOS_RESTAURANTE if es_comida else MAX_PLATOS]
+        )
         grupo.append(f"{tienda.nombre} ({_ubicacion(tienda)})"
                      + (f": {tienda.descripcion[:160]}" if tienda.descripcion else "")
                      + (f" Menú: {platos}." if platos else ""))
@@ -98,8 +114,9 @@ def construir_contexto(user) -> dict:
             for f in funciones
         ],
         "eventos": [
-            f"{e.titulo} ({e.get_categoria_display()}): {_cuando(e.inicio)}"
-            + (f" en {e.lugar}" if e.lugar else "") + (f", Bs {_monedas(e.precio)}" if e.precio else ", entrada libre")
+            f"[{e.id}] {e.titulo} ({e.get_categoria_display()}): {_cuando(e.inicio)}"
+            + (f" en {e.lugar}" if e.lugar else "") + (f", Bs {_monedas(e.precio)}" if e.precio else ", sin costo")
+            + _acceso(e)
             for e in eventos
         ],
         "mis_reservas": [
@@ -176,8 +193,11 @@ belleza y cuidado personal. Otros conserva las especialidades en la descripción
 No confundas oficinas con negocios de servicios ni inventes establecimientos en rubros vacíos.
 Si el usuario cuenta cómo se siente o tiene un antojo (por ejemplo "estoy triste, ¿qué puedo comer?"),
 acompáñalo con empatía y recomienda uno o dos platos concretos del Menú con su precio, el nombre exacto
-del local y su piso. Los platos también se pueden pedir desde la sección Comer de la app y se recogen
-en el local con un código.
+del local y su piso, y ofrece pedírselo.
+Los restaurantes (rubro Comida) tienen sus platos con [id]: esos SÍ los puedes pedir con tu herramienta.
+NUNCA inventes platos: ofrece solo los que aparecen escritos en el Menú de ESE local, con su nombre y precio
+exactos. Si el usuario pide algo que ese local no tiene (por ejemplo un capuchino en un local que solo vende
+café americano), dilo con claridad y ofrece lo que sí tiene o el local que sí lo vende.
 
 Ofertas vigentes hoy:
 {_lista(ctx.get("ofertas"))}
@@ -191,7 +211,7 @@ Cupones canjeados sin usar:
 Cartelera de cine (próximas funciones, [id] para reservar; precio en Bs):
 {_lista(ctx.get("cartelera"))}
 
-Eventos en el Paseo:
+Eventos en el Paseo ([id] para reservar cupos):
 {_lista(ctx.get("eventos"))}
 
 Recompensas canjeables con monedas (parqueo, cine, descuentos, productos):
@@ -206,12 +226,28 @@ bolivianos ni conviertas monedas a Bs: las monedas se cuentan solo en monedas):
   revisando el ticket. Monedas según el monto:
 {_lista(ctx.get("rangos_compra"))}
 
-Acciones: puedes RESERVAR entradas de cine, CANJEAR recompensas y CANCELAR reservas con tus
-herramientas, usando los [id] de arriba. Si falta un dato (función, cuántas entradas, si paga con
-monedas o en boletería), pregúntalo antes. Cuando ya tengas todos los datos, LLAMA A LA HERRAMIENTA
-en ese mismo turno: solo así aparece el botón Confirmar. Nunca digas "toca Confirmar" ni "te lo dejo
-listo" sin haber llamado a la herramienta, y nunca digas que ya está hecho. No puedes sumar monedas ni hacer compras en los negocios: explica cómo hacerlo
-desde la app (escáner y caja). Nunca leas los [id] en voz alta.
+Acciones que SÍ puedes hacer con tus herramientas, usando los [id] de arriba:
+- RESERVAR entradas de cine, CANJEAR recompensas y CANCELAR reservas de cine.
+- PEDIR COMIDA de los restaurantes: se paga con QR en la app justo después de confirmar y se retira en el
+  local (nunca hay delivery). Puede ser para ya o reservado a una hora (hoy o mañana).
+- RESERVAR CUPOS en eventos que dicen "con cupos": el usuario recibe una entrada con QR.
+Si falta un dato (qué plato y cuántos, si lo retira ya o a qué hora; qué función o evento y cuántas
+entradas; si paga el cine con monedas o en boletería), pregúntalo antes. Cuando ya tengas los datos,
+LLAMA A LA HERRAMIENTA en ese mismo turno: solo así aparece el botón Confirmar. Si el usuario ya eligió
+el plato y dijo cuándo lo retira (aunque sea "ahora" o una hora), NO respondas con texto como "te dejo
+el pedido" o "te lo reservo": llama a la herramienta. Un texto sin herramienta no crea ningún pedido. Nunca digas "toca
+Confirmar" ni "te lo dejo listo" sin haber llamado a la herramienta, y nunca digas que ya está hecho,
+comprado o pagado.
+Lo que NO puedes hacer, y debes decirlo con claridad en vez de dar rodeos: comprar productos que no son
+comida (ropa, tecnología, regalos: ahí indica el local y su piso para comprar en persona), hacer delivery,
+cobrar o pagar por el usuario, sumar monedas, ni reservar eventos de acceso libre (di que no hace falta
+reservar; si tienen precio, se paga en el lugar). Si piden un plato que no está en el Menú, dilo y ofrece
+los parecidos que sí hay. Nunca leas los [id] en voz alta.
+
+No inventes recompensas, canjes ni descuentos: menciona solo los de las listas de arriba.
+
+Precios: dilos siempre con la palabra "bolivianos" (por ejemplo "cincuenta y dos bolivianos" o "52 bolivianos"),
+nunca con "Bs" ni con el símbolo, porque tu voz los lee en voz alta.
 
 Reglas: usa solo los datos de arriba; si no sabes algo, dilo y sugiere preguntar
 en informaciones del Paseo."""

@@ -84,3 +84,105 @@ class ReservasTests(APITestCase):
         Funcion.objects.filter(pk=self.funcion.pk).update(inicio=timezone.now() + timedelta(minutes=30))
         resp = self.client.post(f"/api/v1/entretenimiento/reservas/{reserva['id']}/cancelar/")
         self.assertEqual(resp.status_code, 400)
+
+
+class EscenarioAbiertoTests(APITestCase):
+    """Propuesta del cliente → aprobación del admin → evento con cupos → reserva con QR → puerta."""
+
+    def setUp(self):
+        from .models import Espacio
+
+        self.cliente = Usuario.objects.create_user("c", email="c@x.bo", password="x", rol=Usuario.Rol.CLIENTE)
+        self.otro = Usuario.objects.create_user("o", email="o@x.bo", password="x", rol=Usuario.Rol.CLIENTE)
+        self.admin = Usuario.objects.create_user("a", email="admin@x.bo", password="x", rol=Usuario.Rol.ADMIN)
+        self.portero = Usuario.objects.create_user("p", password="x", rol=Usuario.Rol.PORTERO)
+        self.espacio = Espacio.objects.create(nombre="Escenario", lugar="Piso 3", capacidad=50)
+        self.inicio = (timezone.now() + timedelta(days=3)).replace(microsecond=0)
+
+    def _proponer(self, usuario=None, **extra):
+        self.client.force_authenticate(usuario or self.cliente)
+        datos = {
+            "espacio": self.espacio.id, "artista": "Juan y su guitarra", "titulo": "Acústico de sábado",
+            "tipo": "MUSICA", "descripcion": "Covers en guitarra.", "necesidades": "Un micrófono",
+            "inicio": self.inicio.isoformat(), "fin": (self.inicio + timedelta(hours=2)).isoformat(),
+            "personas": 30, "acceso": "CUPOS",
+        }
+        datos.update(extra)
+        return self.client.post("/api/v1/entretenimiento/propuestas/", datos, format="json")
+
+    def _aprobar(self, propuesta_id, **datos):
+        self.client.force_authenticate(self.admin)
+        return self.client.post(f"/api/v1/admin/propuestas/{propuesta_id}/aprobar/", datos, format="json")
+
+    def test_propuesta_llega_al_admin(self):
+        from django.core import mail
+
+        resp = self._proponer()
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data["estado"], "PENDIENTE")
+        self.assertEqual(mail.outbox[-1].to, ["admin@x.bo"])
+        self.client.force_authenticate(self.admin)
+        pendientes = self.client.get("/api/v1/admin/propuestas/?estado=PENDIENTE").data["results"]
+        self.assertEqual(pendientes[0]["solicitante_email"], "c@x.bo")
+
+    def test_validaciones_de_la_propuesta(self):
+        manana = timezone.now() + timedelta(hours=5)
+        self.assertEqual(self._proponer(inicio=manana.isoformat(),
+                                        fin=(manana + timedelta(hours=1)).isoformat()).status_code, 400)
+        self.assertEqual(self._proponer(personas=80).status_code, 400)  # supera la capacidad
+        self.client.force_authenticate(self.cliente)
+        self.assertEqual(self.client.get("/api/v1/admin/propuestas/").status_code, 403)
+
+    def test_aprobar_publica_con_cupos_y_bloquea_el_horario(self):
+        propuesta = self._proponer().data
+        aprobada = self._aprobar(propuesta["id"], acceso="CUPOS", cupos=2).data
+        self.assertEqual(aprobada["estado"], "APROBADA")
+        evento = self.client.get("/api/v1/entretenimiento/").data["eventos"][0]
+        self.assertEqual((evento["acceso"], evento["cupos"], evento["disponibles"]), ("CUPOS", 2, 2))
+        self.assertEqual(evento["organiza"], "Juan y su guitarra")
+        # Otra solicitud en el mismo horario ya no se puede pedir.
+        self.assertEqual(self._proponer(usuario=self.otro).status_code, 400)
+
+    def test_rechazo_requiere_motivo(self):
+        propuesta = self._proponer().data
+        self.client.force_authenticate(self.admin)
+        url = f"/api/v1/admin/propuestas/{propuesta['id']}/rechazar/"
+        self.assertEqual(self.client.post(url, {}, format="json").status_code, 400)
+        resp = self.client.post(url, {"motivo": "Ese día hay mantenimiento"}, format="json")
+        self.assertEqual(resp.data["estado"], "RECHAZADA")
+
+    def test_reservar_cupos_qr_y_puerta(self):
+        propuesta = self._proponer().data
+        evento_id = self._aprobar(propuesta["id"], acceso="CUPOS", cupos=2).data["evento"]
+
+        self.client.force_authenticate(self.cliente)
+        entrada = self.client.post("/api/v1/entretenimiento/entradas/", {"evento": evento_id, "cantidad": 2}, format="json")
+        self.assertEqual(entrada.status_code, 201, entrada.data)
+        self.assertTrue(entrada.data["qr"].startswith("paseo360://evento/"))
+        # Ya tiene su cupo y no quedan más.
+        self.assertEqual(self.client.post("/api/v1/entretenimiento/entradas/", {"evento": evento_id}).status_code, 400)
+        self.client.force_authenticate(self.otro)
+        self.assertEqual(self.client.post("/api/v1/entretenimiento/entradas/", {"evento": evento_id}).status_code, 400)
+
+        # La puerta no la acepta con 3 días de anticipación; el día del evento sí, una sola vez.
+        from .models import Evento
+
+        self.client.force_authenticate(self.portero)
+        url = f"/api/v1/porteria/entradas-evento/{entrada.data['codigo']}/"
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.post(url).status_code, 400)
+        Evento.objects.filter(pk=evento_id).update(inicio=timezone.now() + timedelta(minutes=30))
+        self.assertEqual(self.client.post(url).status_code, 200)
+        self.assertEqual(self.client.post(url).status_code, 400)
+
+    def test_cancelar_libera_el_cupo_y_acceso_libre_no_se_reserva(self):
+        propuesta = self._proponer().data
+        evento_id = self._aprobar(propuesta["id"], acceso="CUPOS", cupos=1).data["evento"]
+        self.client.force_authenticate(self.cliente)
+        entrada = self.client.post("/api/v1/entretenimiento/entradas/", {"evento": evento_id}, format="json").data
+        self.client.post(f"/api/v1/entretenimiento/entradas/{entrada['id']}/cancelar/")
+        self.client.force_authenticate(self.otro)
+        self.assertEqual(self.client.post("/api/v1/entretenimiento/entradas/", {"evento": evento_id}).status_code, 201)
+
+        libre = Evento.objects.create(titulo="Feria", inicio=timezone.now() + timedelta(days=1))
+        self.assertEqual(self.client.post("/api/v1/entretenimiento/entradas/", {"evento": libre.id}).status_code, 400)

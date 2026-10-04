@@ -6,6 +6,9 @@ from rest_framework import serializers
 from .models import Usuario
 
 
+EDAD_MINIMA = 10
+
+
 def _validar_procedencia(attrs):
     """Si es de fuera de Cochabamba (OTRO) debe escribir la ciudad; si no, la ciudad se limpia."""
     procedencia = attrs.get("procedencia")
@@ -18,6 +21,7 @@ def _validar_procedencia(attrs):
 
 class UsuarioSerializer(serializers.ModelSerializer):
     procedencia_texto = serializers.CharField(read_only=True)
+    edad = serializers.IntegerField(read_only=True)
     empresa_nombre = serializers.CharField(source="empresa.nombre", read_only=True, default=None)
 
     class Meta:
@@ -26,6 +30,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "id", "username", "first_name", "last_name", "email", "celular", "ci", "nit",
             "fecha_nacimiento", "email_verificado", "rol", "empresa", "empresa_nombre",
             "puntos_saldo", "debe_cambiar_password", "procedencia", "ciudad_otra", "procedencia_texto",
+            "ocupacion", "edad",
         ]
         read_only_fields = fields
 
@@ -50,7 +55,14 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
         r"^\d{5,20}$", required=False, allow_blank=True,
         error_messages={"invalid": "El NIT debe tener solo números."},
     )
-    fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
+    fecha_nacimiento = serializers.DateField(
+        error_messages={"required": "Indica tu fecha de nacimiento.", "null": "Indica tu fecha de nacimiento.",
+                        "invalid": "Usa el formato AAAA-MM-DD."},
+    )
+    ocupacion = serializers.ChoiceField(
+        choices=Usuario.Ocupacion.choices,
+        error_messages={"required": "Cuéntanos a qué te dedicas.", "invalid_choice": "Elige una opción de la lista."},
+    )
     procedencia = serializers.ChoiceField(
         choices=Usuario.Procedencia.choices,
         error_messages={"required": "Indica de dónde eres.", "invalid_choice": "Elige una opción de la lista."},
@@ -63,7 +75,7 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = [
-            "first_name", "last_name", "email", "celular", "ci", "nit", "fecha_nacimiento",
+            "first_name", "last_name", "email", "celular", "ci", "nit", "fecha_nacimiento", "ocupacion",
             "procedencia", "ciudad_otra", "password", "password_confirmacion", "acepta_terminos",
         ]
         extra_kwargs = {"email": {"required": True}}
@@ -84,8 +96,13 @@ class RegistroClienteSerializer(serializers.ModelSerializer):
         return value
 
     def validate_fecha_nacimiento(self, value):
-        if value and value > timezone.localdate():
+        if value > timezone.localdate():
             raise serializers.ValidationError("La fecha de nacimiento no puede ser futura.")
+        edad = Usuario(fecha_nacimiento=value).edad
+        if edad < EDAD_MINIMA:
+            raise serializers.ValidationError(f"Debes tener al menos {EDAD_MINIMA} años para registrarte.")
+        if edad > 110:
+            raise serializers.ValidationError("Revisa el año de tu fecha de nacimiento.")
         return value
 
     def validate_acepta_terminos(self, value):
@@ -189,10 +206,11 @@ class ProcedenciaSerializer(serializers.ModelSerializer):
 
     procedencia = serializers.ChoiceField(choices=Usuario.Procedencia.choices)
     ciudad_otra = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    ocupacion = serializers.ChoiceField(choices=Usuario.Ocupacion.choices, required=False)
 
     class Meta:
         model = Usuario
-        fields = ["procedencia", "ciudad_otra"]
+        fields = ["procedencia", "ciudad_otra", "ocupacion"]
 
     def validate(self, attrs):
         return _validar_procedencia(attrs)

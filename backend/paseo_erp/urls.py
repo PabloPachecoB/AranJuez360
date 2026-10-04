@@ -5,6 +5,7 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from oficinas.views import invitacion_publica
+from pedidos.views import pago_simulado
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -13,6 +14,8 @@ urlpatterns = [
     path("api/v1/", include("paseo_erp.api_v1_urls")),
     # Página con el QR de una invitación a oficina (se comparte por WhatsApp a quien no tiene la app).
     path("invitacion/<str:codigo>/", invitacion_publica, name="invitacion-publica"),
+    # Banco simulado: el QR de cobro de un pedido de Comer abre esta página para "pagar".
+    path("pago-simulado/<str:referencia>/", pago_simulado, name="pago-simulado"),
 ]
 
 if settings.DEBUG:
