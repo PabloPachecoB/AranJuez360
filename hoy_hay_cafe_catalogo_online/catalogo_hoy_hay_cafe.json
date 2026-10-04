@@ -1,0 +1,510 @@
+{
+  "negocio": "Hoy Hay Café",
+  "moneda": "Bs",
+  "categorias": [
+    {
+      "categoria": "Cafetería de especialidad",
+      "subcategorias": [
+        {
+          "nombre": "Calientes",
+          "productos": [
+            {
+              "nombre": "Capuccino",
+              "precio": 19
+            },
+            {
+              "nombre": "Americano",
+              "precio": 16
+            },
+            {
+              "nombre": "Espresso",
+              "precio": 14
+            },
+            {
+              "nombre": "Lungo",
+              "precio": 14
+            },
+            {
+              "nombre": "Cortado",
+              "precio": 15
+            },
+            {
+              "nombre": "Flat White",
+              "precio": 25
+            },
+            {
+              "nombre": "Latte",
+              "precio": 22
+            },
+            {
+              "nombre": "Mocaccino",
+              "precio": 28
+            },
+            {
+              "nombre": "Capugalleta",
+              "precio": 30
+            },
+            {
+              "nombre": "Macciato",
+              "precio": 15
+            }
+          ]
+        },
+        {
+          "nombre": "Fríos",
+          "productos": [
+            {
+              "nombre": "Iced Latte",
+              "precio": 22
+            },
+            {
+              "nombre": "Dirty Coffee",
+              "precio": 16
+            },
+            {
+              "nombre": "Iced Tamarindo Coffee",
+              "precio": 25
+            },
+            {
+              "nombre": "Iced Orange Coffee",
+              "precio": 25
+            },
+            {
+              "nombre": "Cold Brew",
+              "precio": 25
+            },
+            {
+              "nombre": "Affogato",
+              "precio": 25,
+              "descripcion": "Helado de queso o vainilla"
+            },
+            {
+              "nombre": "Frappe Capuccino",
+              "precio": 30
+            },
+            {
+              "nombre": "Vienesa",
+              "precio": 30
+            }
+          ]
+        },
+        {
+          "nombre": "Métodos y filtrados",
+          "productos": [
+            {
+              "nombre": "Aeropress",
+              "precio": 30
+            },
+            {
+              "nombre": "Prensa Francesa",
+              "precio": 30
+            },
+            {
+              "nombre": "Chemex",
+              "precio": 30
+            },
+            {
+              "nombre": "Origami",
+              "precio": 30
+            },
+            {
+              "nombre": "V60",
+              "precio": 30
+            },
+            {
+              "nombre": "Sifón Japonés",
+              "precio": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Infusiones y bebidas",
+      "subcategorias": [
+        {
+          "nombre": "Tecitos",
+          "productos": [
+            {
+              "nombre": "Coca Latte",
+              "precio": 28,
+              "descripcion": "Harina de coca con leche texturizada"
+            },
+            {
+              "nombre": "Matcha Latte",
+              "precio": 28,
+              "descripcion": "Té matcha con leche texturizada"
+            },
+            {
+              "nombre": "Chai Latte",
+              "precio": 28,
+              "descripcion": "Té chai con leche texturizada"
+            },
+            {
+              "nombre": "Leche Dorada",
+              "precio": 28,
+              "descripcion": "Cúrcuma, canela, jengibre, pimienta negra, miel y aceite de coco con leche texturizada"
+            },
+            {
+              "nombre": "Té Negro con Especias",
+              "precio": 12
+            },
+            {
+              "nombre": "Mates",
+              "precio": 10,
+              "descripcion": "Coca, manzanilla o anís"
+            }
+          ]
+        },
+        {
+          "nombre": "Fríos",
+          "productos": [
+            {
+              "nombre": "Frappé Chai",
+              "precio": 28,
+              "descripcion": "Té chai con leche frappeado"
+            },
+            {
+              "nombre": "Frappé Matcha",
+              "precio": 28,
+              "descripcion": "Té matcha con leche frappeado"
+            },
+            {
+              "nombre": "Frappé Frutos Rojos",
+              "precio": 28,
+              "descripcion": "Infusión de frutos rojos con agua"
+            },
+            {
+              "nombre": "Frappé Pie de Limón",
+              "precio": 30,
+              "descripcion": "Pie de limón con leche y crema"
+            },
+            {
+              "nombre": "Frappé Chocolate",
+              "precio": 30,
+              "descripcion": "Chocolate con leche y crema"
+            },
+            {
+              "nombre": "Frappé Iced Tea",
+              "precio": 20,
+              "descripcion": "Té negro con especias y limón"
+            },
+            {
+              "nombre": "Iced Matcha Latte",
+              "precio": 28,
+              "descripcion": "Té matcha con leche y cubos de hielo"
+            }
+          ]
+        },
+        {
+          "nombre": "Calderitas",
+          "productos": [
+            {
+              "nombre": "Frutos rojos",
+              "precio": 25,
+              "descripcion": "Infusión de flor de Jamaica, manzana, canela, pétalos de rosa y frutos rojos"
+            },
+            {
+              "nombre": "Flores amarillas",
+              "precio": 25,
+              "descripcion": "Infusión de anís, jengibre, naranja, miel y manzanilla"
+            },
+            {
+              "nombre": "Bosque púrpura",
+              "precio": 25,
+              "descripcion": "Infusión de mora, limón y lavanda"
+            },
+            {
+              "nombre": "Campo verde",
+              "precio": 25,
+              "descripcion": "Infusión de limón, cedrón, coca y manzana verde"
+            }
+          ]
+        },
+        {
+          "nombre": "Jugos de fruta",
+          "productos": [
+            {
+              "nombre": "Jugo de fruta con agua",
+              "precio": 15,
+              "sabores": [
+                "Frutilla",
+                "Mango",
+                "Papaya",
+                "Maracuyá",
+                "Tumbo",
+                "Piña",
+                "Melón",
+                "Limón"
+              ]
+            },
+            {
+              "nombre": "Jugo de fruta con leche",
+              "precio": 18,
+              "sabores": [
+                "Frutilla",
+                "Mango",
+                "Papaya",
+                "Maracuyá",
+                "Tumbo",
+                "Piña",
+                "Melón",
+                "Limón"
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "Chocolates",
+          "productos": [
+            {
+              "nombre": "Chocolate Marshmallow",
+              "precio": 28,
+              "descripcion": "Cocoa con leche texturizada y marshmallows"
+            },
+            {
+              "nombre": "Chocolate Cremoso",
+              "precio": 28,
+              "descripcion": "Cocoa con leche texturizada y crema, decorado con chocolate líquido"
+            },
+            {
+              "nombre": "Chocolate con leche",
+              "precio": 20,
+              "descripcion": "Cocoa con leche texturizada"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Repostería",
+      "subcategorias": [
+        {
+          "nombre": "Dulce",
+          "productos": [
+            {
+              "nombre": "Brownie",
+              "precio_desde": 14,
+              "precio_hasta": 24,
+              "descripcion": "Brownie caliente de chocolate decorado con chocolate líquido"
+            },
+            {
+              "nombre": "Queque",
+              "precio_desde": 8,
+              "precio_hasta": 38,
+              "descripcion": "Queque de limón"
+            },
+            {
+              "nombre": "Alfajores",
+              "precio": 9,
+              "descripcion": "Maizena con coco y dulce de leche"
+            },
+            {
+              "nombre": "Cinnamon Rolls",
+              "precio": 14,
+              "descripcion": "Rollos de canela decorados con queso crema"
+            },
+            {
+              "nombre": "Galletas",
+              "precio": 10,
+              "descripcion": "Chocolate, Red Velvet y chispas de chocolate"
+            },
+            {
+              "nombre": "Tiramisú",
+              "precio": 25,
+              "descripcion": "Postre con galletas, crema y café"
+            },
+            {
+              "nombre": "Torta",
+              "precio_desde": 30,
+              "precio_hasta": 290,
+              "sabores": [
+                "Zanahoria",
+                "Chocolate",
+                "Coco",
+                "Piña"
+              ]
+            },
+            {
+              "nombre": "Torta de pencos",
+              "precio_desde": 25,
+              "precio_hasta": 240,
+              "descripcion": "Varias capas de masa intercaladas con dulce de leche"
+            },
+            {
+              "nombre": "Pavlova",
+              "precio_desde": 25,
+              "precio_hasta": 210,
+              "descripcion": "Sin gluten y sin aceite vegetal. Merengue relleno con helado, crema y frutas"
+            },
+            {
+              "nombre": "Tarta Vasca de queso",
+              "precio_desde": 30,
+              "precio_hasta": 190
+            },
+            {
+              "nombre": "Tarta Cheese Cake",
+              "precio": 25,
+              "descripcion": "Tarta de masa quebrada horneada con queso crema, jalea y crema",
+              "sabores": [
+                "Pie de limón",
+                "Frutos rojos",
+                "Maracuyá"
+              ]
+            }
+          ]
+        },
+        {
+          "nombre": "Salada",
+          "productos": [
+            {
+              "nombre": "Cuñapé",
+              "precio": 9,
+              "descripcion": "Sin gluten y sin aceite vegetal. Fécula de yuca con queso horneado"
+            },
+            {
+              "nombre": "Sonso",
+              "precio": 20,
+              "descripcion": "Sin gluten y sin aceite vegetal. Yuca cocida con queso criollo y queso crema"
+            },
+            {
+              "nombre": "Empanadas al horno",
+              "precio": 14,
+              "descripcion": "Empanadas rellenas de pollo"
+            },
+            {
+              "nombre": "Tarta de pizza",
+              "precio": 25,
+              "descripcion": "Masa quebrada con jamón, queso y tomate deshidratado"
+            },
+            {
+              "nombre": "Tarta vegetariana",
+              "precio": 25,
+              "descripcion": "Masa quebrada con champiñones y queso mozzarella"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Sándwich de marraqueta",
+      "productos": [
+        {
+          "nombre": "Carne ahumada con queso",
+          "precio": 42
+        },
+        {
+          "nombre": "Carne ahumada con ensalada asada",
+          "precio": 42
+        },
+        {
+          "nombre": "Palta",
+          "precio": 30
+        },
+        {
+          "nombre": "Champiñones",
+          "precio": 38
+        },
+        {
+          "nombre": "Pollo barbacoa",
+          "precio": 38
+        },
+        {
+          "nombre": "Jamón y queso",
+          "precio": 25
+        },
+        {
+          "nombre": "Huevo",
+          "precio": 25
+        },
+        {
+          "nombre": "Bronco",
+          "precio": 48
+        }
+      ]
+    },
+    {
+      "categoria": "Sándwich cuñapé",
+      "productos": [
+        {
+          "nombre": "Carne ahumada",
+          "precio": 22
+        },
+        {
+          "nombre": "Champiñones",
+          "precio": 22
+        },
+        {
+          "nombre": "Pollo barbacoa",
+          "precio": 18
+        },
+        {
+          "nombre": "Italiano",
+          "precio": 18
+        },
+        {
+          "nombre": "Napolitano",
+          "precio": 18
+        },
+        {
+          "nombre": "Huevo",
+          "precio": 15
+        }
+      ]
+    },
+    {
+      "categoria": "Desayunos",
+      "nota": "+10 Bs jugo de fruta",
+      "productos": [
+        {
+          "nombre": "Brunch",
+          "precio": 75
+        },
+        {
+          "nombre": "Waffles clásicos",
+          "precio": 45,
+          "descripcion": "2 waffles con dulce de leche, fruta y crema"
+        },
+        {
+          "nombre": "Waffles con tocino",
+          "precio": 55,
+          "descripcion": "2 waffles con huevo revuelto, tocino y miel de maple"
+        },
+        {
+          "nombre": "Panqueques",
+          "precio": 45,
+          "descripcion": "4 panqueques con miel de caña y mantequilla"
+        },
+        {
+          "nombre": "Francesa de frutos rojos",
+          "precio": 45,
+          "descripcion": "Tostadas francesas rellenas con queso crema y jalea de moras"
+        },
+        {
+          "nombre": "Francesa de jamón y queso",
+          "precio": 45
+        },
+        {
+          "nombre": "Tocino huevo palta",
+          "precio": 55
+        },
+        {
+          "nombre": "Palita tostada",
+          "precio": 45
+        },
+        {
+          "nombre": "Costra de queso keto",
+          "precio": 55
+        },
+        {
+          "nombre": "Criollo",
+          "precio": 45
+        },
+        {
+          "nombre": "Parrillero",
+          "precio": 85
+        }
+      ]
+    }
+  ]
+}

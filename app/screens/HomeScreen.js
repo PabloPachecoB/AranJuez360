@@ -73,9 +73,9 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 24,
   },
-  cardLabel: { color: COLORS.secondary, fontSize: 14, fontWeight: "600" },
+  cardLabel: { color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: "600" },
   points: { color: COLORS.white, fontSize: 48, fontWeight: "800", marginVertical: 8 },
-  cardHint: { color: "#CBD5E1", fontSize: 13 },
+  cardHint: { color: "rgba(255,255,255,0.7)", fontSize: 13 },
   paseoYaCard: {
     flexDirection: "row",
     alignItems: "center",
