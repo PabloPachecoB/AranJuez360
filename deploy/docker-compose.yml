@@ -1,0 +1,55 @@
+# Despliegue de Paseo Aranjuez 360 en un VPS: PostgreSQL + backend Django + Caddy (web y HTTPS).
+# Uso (en el VPS, dentro de deploy/):  docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AGENT_CHECKPOINT_SQLITE_PATH: /app/datos/agent_checkpoints.sqlite3
+    volumes:
+      - media:/app/mediafiles
+      - static:/app/staticfiles
+      - datos:/app/datos
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ../web
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - media:/srv/media:ro
+      - static:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  postgres:
+  media:
+  static:
+  datos:
+  caddy_data:
+  caddy_config:

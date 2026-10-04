@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invitación · {{ inv.oficina.nombre }}</title>
+  <style>
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f7f9ff; color: #181c20; }
+    .tarjeta { max-width: 380px; margin: 24px auto; background: #fff; border-radius: 18px; overflow: hidden;
+               border: 1px solid #e5e8ee; box-shadow: 0 6px 24px rgba(0, 50, 75, .08); }
+    .cabecera { background: #00324b; color: #fff; padding: 18px 22px; }
+    .marca { color: #f6be3b; font-weight: 800; letter-spacing: .5px; font-size: 13px; }
+    .cabecera h1 { margin: 6px 0 0; font-size: 20px; }
+    .cuerpo { padding: 22px; text-align: center; }
+    .qr { width: 240px; height: 240px; image-rendering: pixelated; }
+    .codigo { font-size: 26px; font-weight: 800; letter-spacing: 6px; color: #00324b; margin: 6px 0 14px; }
+    .dato { text-align: left; border-top: 1px solid #ebeef3; padding: 10px 0; font-size: 15px; }
+    .dato span { display: block; color: #72787e; font-size: 12px; }
+    .estado { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; font-weight: 700;
+              font-size: 13px; background: #e6f4ea; color: #1e7b34; }
+    .estado.usada { background: #ebeef3; color: #41474d; }
+    .pie { color: #72787e; font-size: 12px; padding: 0 22px 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="tarjeta">
+    <div class="cabecera">
+      <div class="marca">PASEO ARANJUEZ · OFICINAS</div>
+      <h1>Invitación a {{ inv.oficina.nombre }}</h1>
+    </div>
+    <div class="cuerpo">
+      <img class="qr" alt="Código QR de la invitación" src="data:image/png;base64,{{ qr }}">
+      <div class="codigo">{{ inv.codigo }}</div>
+      {% if inv.estado == "USADA" %}
+        <span class="estado usada">Ya ingresó</span>
+      {% else %}
+        <span class="estado">Válida para el {{ inv.fecha|date:"d/m/Y" }}</span>
+      {% endif %}
+      <div class="dato"><span>Visitante</span>{{ inv.visitante_nombre }}</div>
+      <div class="dato"><span>Oficina</span>{{ inv.oficina.nombre }}{% if inv.oficina.piso %} · Piso {{ inv.oficina.piso }}{% endif %}{% if inv.oficina.local %}, oficina {{ inv.oficina.local }}{% endif %}</div>
+      <div class="dato"><span>Fecha y hora</span>{{ inv.fecha|date:"d/m/Y" }}{% if inv.hora %} · {{ inv.hora|time:"H:i" }}{% endif %}</div>
+      {% if inv.motivo %}<div class="dato"><span>Motivo</span>{{ inv.motivo }}</div>{% endif %}
+    </div>
+    <div class="pie">Muestra este código QR al guardia en la entrada del Paseo Aranjuez.</div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Paseo Aranjuez 360",
+    "slug": "paseo-aranjuez-360",
+    "scheme": "paseo360",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pablopacheco.paseoaranjuez360",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La app usa la cámara para escanear el QR de los negocios y acumular Paseo Points.",
+        "NSFaceIDUsageDescription": "Usamos Face ID para que entres a tu cuenta sin escribir tu contraseña.",
+        "NSMicrophoneUsageDescription": "Permite usar el micrófono para enviarle notas de voz a Jarvis, el asistente del Paseo."
+      }
+    },
+    "android": {
+      "package": "com.pablopacheco.paseoaranjuez360",
+      "permissions": [
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite escanear el QR de los negocios para sumar puntos."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usamos Face ID para que entres a tu cuenta sin escribir tu contraseña."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Permite usar el micrófono para enviarle notas de voz a Jarvis, el asistente del Paseo."
+        }
+      ]
+    ]
+  }
+}
