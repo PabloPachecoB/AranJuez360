@@ -196,3 +196,34 @@
 .jarvis-bar-5 { animation: voiceBar5 0.7s ease-in-out infinite 0.3s; }
 .jarvis-bar-6 { animation: voiceBar6 0.65s ease-in-out infinite 0.18s; }
 .jarvis-bar-7 { animation: voiceBar7 0.8s ease-in-out infinite 0.4s; }
+
+/* ---- Landing con intro cinemática (/inicio-cinematico) ---- */
+@keyframes introPulseGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); filter: blur(30px); }
+  50% { opacity: 0.85; transform: scale(1.15); filter: blur(40px); }
+}
+@keyframes shimmerPass { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+@keyframes laserScan { 0% { top: 0%; opacity: 0.2; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0.2; } }
+@keyframes qrLaser { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(130px); opacity: 0.9; } }
+@keyframes flowLine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes heroSlideUp { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }
+
+.animate-intro-glow { animation: introPulseGlow 3s ease-in-out infinite; }
+.animate-laser { animation: laserScan 2.2s ease-in-out infinite; }
+.animate-qr-laser { animation: qrLaser 2.5s ease-in-out infinite; }
+
+.landing-360 .btn-shimmer { position: relative; overflow: hidden; }
+.landing-360 .btn-shimmer::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(60deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+.landing-360 .btn-shimmer:hover::after { transform: translateX(100%); }
+
+.landing-360.page-loaded .hero-reveal-title { animation: heroSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }

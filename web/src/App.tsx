@@ -20,6 +20,7 @@ import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegoci
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
 const LandingInmersiva = lazy(() => import("./landing/LandingInmersiva"));
+const LandingCinematica = lazy(() => import("./landing/LandingCinematica"));
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -65,6 +66,9 @@ function Contenido() {
   // Portada pública "Experiencia Web Inmersiva" (Stitch).
   if (pathname === "/inicio") {
     return <Suspense fallback={null}><LandingInmersiva /></Suspense>;
+  }
+  if (pathname === "/inicio-cinematico") {
+    return <Suspense fallback={null}><LandingCinematica /></Suspense>;
   }
   if (pathname.startsWith("/activar/")) {
     return <Paseo360><Routes><Route path="/activar/:token" element={<Activar />} /></Routes></Paseo360>;
