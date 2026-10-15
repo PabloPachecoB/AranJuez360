@@ -1,0 +1,198 @@
+/*
+ * Portada pública "Experiencia Web Inmersiva" (Stitch) — /inicio.
+ * Su paleta y tipografías son distintas a las del panel, así que se aplican solo dentro de
+ * .landing-360. El bloque @theme declara únicamente los nombres que el panel no tiene para
+ * que Tailwind genere sus utilidades; los valores reales se fijan en el ámbito .landing-360.
+ */
+@theme {
+  --spacing-space-2xl: 4rem;
+  --spacing-margin-xl: 6rem;
+  --spacing-gutter-sm: 1rem;
+  --spacing-margin-sm: 1rem;
+  --spacing-margin-lg: 4rem;
+  --spacing-gutter-lg: 2rem;
+  --font-title-lg: "Plus Jakarta Sans", sans-serif;
+  --font-headline-xl-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-headline-xl: "Plus Jakarta Sans", sans-serif;
+  --font-display-hero: "Plus Jakarta Sans", sans-serif;
+  --font-display-hero-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-label-caps: "Plus Jakarta Sans", sans-serif;
+  --font-label-lg: "Plus Jakarta Sans", sans-serif;
+  --text-title-lg: 18px;
+  --text-title-lg--line-height: 24px;
+  --text-title-lg--letter-spacing: -0.01em;
+  --text-title-lg--font-weight: 600;
+  --text-headline-xl-mobile: 28px;
+  --text-headline-xl-mobile--line-height: 36px;
+  --text-headline-xl-mobile--letter-spacing: -0.02em;
+  --text-headline-xl-mobile--font-weight: 700;
+  --text-headline-xl: 40px;
+  --text-headline-xl--line-height: 48px;
+  --text-headline-xl--letter-spacing: -0.025em;
+  --text-headline-xl--font-weight: 700;
+  --text-display-hero: 56px;
+  --text-display-hero--line-height: 64px;
+  --text-display-hero--letter-spacing: -0.03em;
+  --text-display-hero--font-weight: 800;
+  --text-display-hero-mobile: 36px;
+  --text-display-hero-mobile--line-height: 44px;
+  --text-display-hero-mobile--letter-spacing: -0.02em;
+  --text-display-hero-mobile--font-weight: 800;
+  --text-label-caps: 11px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.08em;
+  --text-label-caps--font-weight: 700;
+}
+
+.landing-360 {
+  --color-inverse-surface: #2d3133;
+  --color-on-tertiary-fixed-variant: #004b74;
+  --color-surface-container: #ebeef1;
+  --color-on-surface: #181c1e;
+  --color-primary-fixed: #cfe5ff;
+  --color-inverse-on-surface: #eef1f4;
+  --color-primary-fixed-dim: #a8caef;
+  --color-surface-container-high: #e5e8eb;
+  --color-on-primary-container: #7293b6;
+  --color-tertiary-fixed: #cde5ff;
+  --color-surface-variant: #e0e3e6;
+  --color-on-secondary-fixed-variant: #004c6e;
+  --color-secondary: #006591;
+  --color-on-primary: #ffffff;
+  --color-tertiary-fixed-dim: #94ccff;
+  --color-surface-container-low: #f1f4f7;
+  --color-on-secondary-fixed: #001e2f;
+  --color-on-tertiary-fixed: #001d32;
+  --color-background: #f7fafd;
+  --color-surface-tint: #406182;
+  --color-surface-bright: #f7fafd;
+  --color-secondary-fixed-dim: #89ceff;
+  --color-inverse-primary: #a8caef;
+  --color-on-error: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-primary-fixed: #001d34;
+  --color-outline: #73777e;
+  --color-outline-variant: #c3c7ce;
+  --color-on-surface-variant: #42474d;
+  --color-error: #ba1a1a;
+  --color-secondary-container: #39b8fd;
+  --color-error-container: #ffdad6;
+  --color-on-background: #181c1e;
+  --color-surface-dim: #d7dadd;
+  --color-primary: #001629;
+  --color-surface-container-highest: #e0e3e6;
+  --color-tertiary-container: #002b46;
+  --color-tertiary: #001627;
+  --color-on-tertiary: #ffffff;
+  --color-on-error-container: #93000a;
+  --color-on-secondary-container: #004666;
+  --color-surface: #f7fafd;
+  --color-on-secondary: #ffffff;
+  --color-on-primary-fixed-variant: #274969;
+  --color-primary-container: #002b49;
+  --color-secondary-fixed: #c9e6ff;
+  --color-on-tertiary-container: #3e96d7;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-2xl: 4rem;
+  --spacing-margin-xl: 6rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-sm: 1rem;
+  --spacing-margin-sm: 1rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-margin-lg: 4rem;
+  --spacing-gutter-lg: 2rem;
+  --spacing-space-md: 1rem;
+  --spacing-margin: 1.5rem;
+  --spacing-space-xl: 2.5rem;
+  --spacing-space-lg: 1.5rem;
+  --font-headline-lg: "Plus Jakarta Sans", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-title-lg: "Plus Jakarta Sans", sans-serif;
+  --font-headline-sm: "Plus Jakarta Sans", sans-serif;
+  --font-headline-xl-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-headline-xl: "Plus Jakarta Sans", sans-serif;
+  --font-headline-md: "Plus Jakarta Sans", sans-serif;
+  --font-display-hero: "Plus Jakarta Sans", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-body-sm: "Inter", sans-serif;
+  --font-display-hero-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-label-caps: "Plus Jakarta Sans", sans-serif;
+  --font-label-lg: "Plus Jakarta Sans", sans-serif;
+  --font-label-md: "Plus Jakarta Sans", sans-serif;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 700;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+  --text-title-lg: 18px;
+  --text-title-lg--line-height: 24px;
+  --text-title-lg--letter-spacing: -0.01em;
+  --text-title-lg--font-weight: 600;
+  --text-headline-sm: 20px;
+  --text-headline-sm--line-height: 28px;
+  --text-headline-sm--font-weight: 600;
+  --text-headline-xl-mobile: 28px;
+  --text-headline-xl-mobile--line-height: 36px;
+  --text-headline-xl-mobile--letter-spacing: -0.02em;
+  --text-headline-xl-mobile--font-weight: 700;
+  --text-headline-xl: 40px;
+  --text-headline-xl--line-height: 48px;
+  --text-headline-xl--letter-spacing: -0.025em;
+  --text-headline-xl--font-weight: 700;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--letter-spacing: -0.015em;
+  --text-headline-md--font-weight: 600;
+  --text-display-hero: 56px;
+  --text-display-hero--line-height: 64px;
+  --text-display-hero--letter-spacing: -0.03em;
+  --text-display-hero--font-weight: 800;
+  --text-body-md: 15px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+  --text-display-hero-mobile: 36px;
+  --text-display-hero-mobile--line-height: 44px;
+  --text-display-hero-mobile--letter-spacing: -0.02em;
+  --text-display-hero-mobile--font-weight: 800;
+  --text-label-caps: 11px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.08em;
+  --text-label-caps--font-weight: 700;
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 20px;
+  --text-label-lg--letter-spacing: 0.01em;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-md--letter-spacing: 0.02em;
+  --text-label-md--font-weight: 600;
+}
+
+.landing-360 ::-webkit-scrollbar { display: none; }
+
+@keyframes floatGentle1 { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+@keyframes floatGentle2 { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-14px) rotate(-1.5deg); } }
+@keyframes floatGentle3 { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-7px); } }
+.animate-float-1 { animation: floatGentle1 4.5s ease-in-out infinite; }
+.animate-float-2 { animation: floatGentle2 5.5s ease-in-out infinite 0.8s; }
+.animate-float-3 { animation: floatGentle3 4s ease-in-out infinite 1.4s; }
+
+@keyframes voiceBar1 { 0%, 100% { height: 8px; } 50% { height: 26px; } }
+@keyframes voiceBar2 { 0%, 100% { height: 18px; } 50% { height: 38px; } }
+@keyframes voiceBar3 { 0%, 100% { height: 12px; } 50% { height: 30px; } }
+@keyframes voiceBar4 { 0%, 100% { height: 24px; } 50% { height: 42px; } }
+@keyframes voiceBar5 { 0%, 100% { height: 10px; } 50% { height: 34px; } }
+@keyframes voiceBar6 { 0%, 100% { height: 16px; } 50% { height: 28px; } }
+@keyframes voiceBar7 { 0%, 100% { height: 6px; } 50% { height: 20px; } }
+.jarvis-bar-1 { animation: voiceBar1 0.75s ease-in-out infinite; }
+.jarvis-bar-2 { animation: voiceBar2 0.6s ease-in-out infinite 0.15s; }
+.jarvis-bar-3 { animation: voiceBar3 0.85s ease-in-out infinite 0.25s; }
+.jarvis-bar-4 { animation: voiceBar4 0.55s ease-in-out infinite 0.05s; }
+.jarvis-bar-5 { animation: voiceBar5 0.7s ease-in-out infinite 0.3s; }
+.jarvis-bar-6 { animation: voiceBar6 0.65s ease-in-out infinite 0.18s; }
+.jarvis-bar-7 { animation: voiceBar7 0.8s ease-in-out infinite 0.4s; }

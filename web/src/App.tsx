@@ -19,6 +19,7 @@ import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
+const LandingInmersiva = lazy(() => import("./landing/LandingInmersiva"));
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -60,6 +61,10 @@ function Contenido() {
   // Páginas públicas (sin sesión): mini-sitio de cada empresa y alta por invitación.
   if (pathname.startsWith("/sitio/")) {
     return <Paseo360><Routes><Route path="/sitio/:id" element={<Sitio />} /></Routes></Paseo360>;
+  }
+  // Portada pública "Experiencia Web Inmersiva" (Stitch).
+  if (pathname === "/inicio") {
+    return <Suspense fallback={null}><LandingInmersiva /></Suspense>;
   }
   if (pathname.startsWith("/activar/")) {
     return <Paseo360><Routes><Route path="/activar/:token" element={<Activar />} /></Routes></Paseo360>;

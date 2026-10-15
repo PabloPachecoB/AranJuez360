@@ -1,6 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap");
 @import "tailwindcss";
 @import "./admin/admin-theme.css";
+@import "./landing/landing-theme.css";
 
 /* Design system de Paseo Aranjuez 360 (Stitch) — tokens copiados 1:1 del
    tailwind.config de las pantallas generadas, para que las utilidades de
