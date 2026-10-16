@@ -262,12 +262,14 @@ export default function AsistenteScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <FlatList
           ref={lista}
           data={mensajes}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.lista}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)}
