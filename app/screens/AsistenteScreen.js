@@ -44,7 +44,9 @@ const emocionDe = (texto) => texto?.match(/\[([a-zA-Z ]{2,30})\]/)?.[1]?.trim().
 const nivelDeVoz = (db) => (typeof db === "number" ? Math.min(1, Math.max(0, (db + 50) / 50)) : 0);
 
 let siguienteId = 0;
-const mensaje = (rol, texto, extra = {}) => ({ id: String(siguienteId++), rol, texto, ...extra });
+// Fast Refresh conserva el estado del chat, pero reinicia las variables del módulo.
+// El timestamp evita repetir claves al volver a cargar el contador desde cero.
+const mensaje = (rol, texto, extra = {}) => ({ id: `msg-${Date.now()}-${siguienteId++}`, rol, texto, ...extra });
 
 function formatoDuracion(ms) {
   const s = Math.floor(ms / 1000);
@@ -262,15 +264,16 @@ export default function AsistenteScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <FlatList
           ref={lista}
+          style={styles.flex}
           data={mensajes}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.lista}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() => requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }))}
           renderItem={({ item }) => (
             <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)}
               onConfirmar={confirmar} onCancelar={cancelar} onPagar={abrirPago}
@@ -384,9 +387,9 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
       ) : null}
       {item.accion ? <TarjetaAccion accion={item.accion} onConfirmar={onConfirmar} onCancelar={onCancelar} /> : null}
       {item.productos?.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
-          {item.productos.map((p) => (
-            <View key={p.id} style={styles.plato}>
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={styles.carrusel} contentContainerStyle={styles.fichas}>
+          {item.productos.map((p, indice) => (
+            <View key={`producto-${p.id ?? p.nombre}-${indice}`} style={styles.plato}>
               {p.foto ? <Image source={{ uri: p.foto }} style={styles.platoFoto} /> : (
                 <View style={[styles.platoFoto, styles.fichaLogoVacio]}>
                   <Ionicons name="restaurant" size={26} color={COLORS.white} />
@@ -409,9 +412,9 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
         </ScrollView>
       ) : null}
       {item.empresas?.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
-          {item.empresas.map((e) => (
-            <TouchableOpacity key={e.id} style={styles.ficha} onPress={() => onAbrirEmpresa(e.id)}
+        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} style={styles.carrusel} contentContainerStyle={[styles.fichas, styles.tiendas]}>
+          {item.empresas.map((e, indice) => (
+            <TouchableOpacity key={`empresa-${e.id ?? e.nombre}-${indice}`} style={styles.ficha} onPress={() => onAbrirEmpresa(e.id)}
               accessibilityLabel={`Ver ${e.nombre}`}>
               {e.logo ? <Image source={{ uri: e.logo }} style={styles.fichaLogo} /> : (
                 <View style={[styles.fichaLogo, styles.fichaLogoVacio]}>
@@ -440,15 +443,17 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  fichas: { gap: 8, paddingTop: 10 },
-  plato: { width: 170, backgroundColor: COLORS.white, borderRadius: 14, overflow: "hidden", borderWidth: 1,
+  fichas: { flexDirection: "row", flexWrap: "nowrap", alignItems: "flex-start", gap: 4, paddingTop: 6 },
+  carrusel: { flexGrow: 0, flexShrink: 0, alignSelf: "stretch" },
+  tiendas: { paddingTop: 4 },
+  plato: { width: 148, backgroundColor: COLORS.white, borderRadius: 14, overflow: "hidden", borderWidth: 1,
     borderColor: "#E2E8F0" },
-  platoFoto: { width: "100%", height: 92, backgroundColor: "#E2E8F0" },
+  platoFoto: { width: "100%", height: 72, backgroundColor: "#E2E8F0" },
   platoCuerpo: { padding: 8, gap: 2 },
   platoPrecio: { fontSize: 15, fontWeight: "800", color: COLORS.primary, marginTop: 2 },
-  platoBoton: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-    backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 7 },
-  platoBotonTexto: { color: COLORS.white, fontWeight: "700", fontSize: 13 },
+  platoBoton: { marginTop: 5, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+    backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 6 },
+  platoBotonTexto: { color: COLORS.white, fontWeight: "700", fontSize: 12 },
   ficha: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.white, borderRadius: 12,
     padding: 8, borderWidth: 1, borderColor: "#E2E8F0", maxWidth: 210 },
   fichaLogo: { width: 40, height: 40, borderRadius: 10 },
