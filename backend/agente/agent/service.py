@@ -11,6 +11,7 @@ from typing import Any, Dict
 from django.utils import timezone
 
 from ..contexto import construir_contexto
+from ..llm import get_llm_adapter
 from ..models import ConversacionJarvis, MensajeJarvis
 from .checkpoints import get_checkpoint_runtime
 from .graph import MAX_HISTORIAL, build_agent_graph
@@ -48,6 +49,49 @@ class AgentConversationService:
             pk=conversacion.pk,
             archivada_en__isnull=True,
         ).update(actualizada_en=timezone.now())
+
+    @staticmethod
+    def _titulo_fallback(mensaje_usuario: str) -> str:
+        """Título determinista y seguro si el modelo de títulos no responde."""
+        palabras = (mensaje_usuario or "").split()
+        titulo = " ".join(palabras[:6]).strip()
+        if not any(caracter.isalnum() for caracter in titulo):
+            return ""
+        return titulo[:ConversacionJarvis._meta.get_field("titulo").max_length].rstrip()
+
+    def _asignar_titulo_si_falta(
+        self,
+        conversacion: ConversacionJarvis,
+        mensaje_usuario: str,
+        respuesta_asistente: str,
+    ) -> None:
+        if (conversacion.titulo or "").strip():
+            return
+        try:
+            titulo = get_llm_adapter().generar_titulo(mensaje_usuario, respuesta_asistente)
+        except Exception:
+            # El título es una mejora no crítica: nunca debe afectar el turno.
+            titulo = ""
+        limite = ConversacionJarvis._meta.get_field("titulo").max_length
+        titulo = (titulo or "").strip()[:limite]
+        titulo = titulo or self._titulo_fallback(mensaje_usuario)
+        if titulo:
+            # Solo escribe sobre el valor realmente vacío; así no pisa un
+            # título creado o editado concurrentemente por otro proceso.
+            ConversacionJarvis.objects.filter(pk=conversacion.pk, titulo="").update(titulo=titulo)
+
+    @staticmethod
+    def _primer_mensaje_usuario(conversacion: ConversacionJarvis, respaldo: str) -> str:
+        return (
+            MensajeJarvis.objects.filter(
+                conversacion=conversacion,
+                rol=MensajeJarvis.Rol.USUARIO,
+            )
+            .order_by("creado_en", "id")
+            .values_list("contenido", flat=True)
+            .first()
+            or respaldo
+        )
 
     def chat(
         self,
@@ -111,6 +155,11 @@ class AgentConversationService:
                 metadatos=metadatos,
             )
             self._actualizar_conversacion(conversacion)
+            self._asignar_titulo_si_falta(
+                conversacion,
+                self._primer_mensaje_usuario(conversacion, contenido),
+                respuesta,
+            )
             # Dato efímero para que la capa API pueda asociar tarjetas públicas
             # con este turno exacto. Los endpoints lo eliminan antes de responder.
             presentation["_mensaje_asistente_id"] = mensaje_asistente.pk

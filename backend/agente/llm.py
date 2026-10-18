@@ -15,6 +15,10 @@ from openai import OpenAI, OpenAIError
 from .config import LLMSettings
 
 
+MAX_TITULO_CARACTERES = 120
+MAX_TITULO_ENTRADA = 800
+
+
 class LLMError(Exception):
     """El proveedor LLM falló o no está disponible."""
 
@@ -77,6 +81,43 @@ class LLMAdapter:
                 argumentos = {}
             llamadas.append((llamada.function.name, argumentos))
         return (mensaje.content or "").strip(), llamadas
+
+    @staticmethod
+    def _limpiar_titulo(titulo: str) -> str:
+        """Normaliza la salida breve del modelo y respeta el campo Django."""
+        limpio = " ".join((titulo or "").split())
+        limpio = limpio.strip(" \t\r\n\"'“”‘’«»")
+        if limpio.lower().startswith(("título:", "titulo:")):
+            limpio = limpio.split(":", 1)[1].strip()
+        limpio = limpio[:MAX_TITULO_CARACTERES].rstrip()
+        return limpio if any(caracter.isalnum() for caracter in limpio) else ""
+
+    def generar_titulo(self, mensaje_usuario: str, respuesta_asistente: str) -> str:
+        """Genera un título breve sin cambiar el modelo del chat principal."""
+        limite_por_turno = MAX_TITULO_ENTRADA // 2
+        contexto = (
+            f"Mensaje inicial del usuario:\n{(mensaje_usuario or '').strip()[:limite_por_turno]}\n\n"
+            f"Respuesta de Jarvis:\n{(respuesta_asistente or '').strip()[:limite_por_turno]}"
+        )[:MAX_TITULO_ENTRADA]
+        system = (
+            "Genera un título breve y descriptivo para una conversación. "
+            "Usa el idioma de la conversación, idealmente de 3 a 6 palabras. "
+            "Describe solo el tema central, no inventes datos y devuelve únicamente el título, sin comillas ni explicación."
+        )
+        try:
+            response = self._client.chat.completions.create(
+                model=self.settings.title_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": contexto},
+                ],
+                temperature=0,
+                max_tokens=32,
+                extra_body={"enable_thinking": False},
+            )
+        except OpenAIError as exc:
+            raise LLMError(str(exc)) from exc
+        return self._limpiar_titulo(response.choices[0].message.content or "")
 
     def transcribe(self, audio: bytes, formato: str) -> str:
         """Transcribe una nota de voz con el modelo multimodal (Qwen Omni).

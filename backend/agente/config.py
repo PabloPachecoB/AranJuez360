@@ -24,6 +24,8 @@ class LLMSettings:
     max_tokens: int
     # Modelo multimodal que entiende audio (notas de voz). Vacío = sin voz.
     audio_model: str = ""
+    # Modelo específico para resumir el tema de una conversación.
+    title_model: str = ""
 
     @classmethod
     def from_env(cls, environ: Optional[Mapping[str, str]] = None):
@@ -42,6 +44,9 @@ class LLMSettings:
         model = values.get("QWEN_MODEL", "qwen3:8b").strip()
         if not model:
             raise ValueError("QWEN_MODEL no puede estar vacío.")
+
+        # Mantiene compatibilidad: sin variable (o vacía) usa el modelo de chat.
+        title_model = values.get("QWEN_TITLE_MODEL", "").strip() or model
 
         try:
             timeout_seconds = float(values.get("QWEN_TIMEOUT_SECONDS", "30"))
@@ -70,4 +75,5 @@ class LLMSettings:
             temperature=temperature,
             max_tokens=max_tokens,
             audio_model=values.get("QWEN_AUDIO_MODEL", "").strip(),
+            title_model=title_model,
         )
