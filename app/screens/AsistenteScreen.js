@@ -64,7 +64,10 @@ export default function AsistenteScreen({ navigation, route }) {
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [errorChat, setErrorChat] = useState(null);
   const [errorAcciones, setErrorAcciones] = useState(null);
+  const [errorConversaciones, setErrorConversaciones] = useState(null);
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [opcionesConversacion, setOpcionesConversacion] = useState(null);
+  const [eliminandoConversationId, setEliminandoConversationId] = useState(null);
   const [modoVoz, setModoVoz] = useState(() => Boolean(route?.params?.modoVoz));
   const [hablando, setHablando] = useState(false);
   const [emocion, setEmocion] = useState(null);
@@ -76,7 +79,8 @@ export default function AsistenteScreen({ navigation, route }) {
   const esBorradorNuevoRef = useRef(false);
   const generacionCargaRef = useRef(0);
   const generacionListaRef = useRef(0);
-  const preguntaInicial = useRef(route?.params?.pregunta?.trim() || null);
+  const preguntaInicial = useRef(null);
+  const solicitudInicioProcesadaRef = useRef(null);
 
   const recorder = useAudioRecorder(OPCIONES_GRABACION);
   const grabacion = useAudioRecorderState(recorder, 100);
@@ -216,11 +220,9 @@ export default function AsistenteScreen({ navigation, route }) {
   const crearNuevoChat = useCallback((permitirOcupado = false) => {
     if (ocupado && !permitirOcupado) return;
     setErrorChat(null);
-    generacionListaRef.current += 1;
     generacionCargaRef.current += 1;
     conversacionActivaRef.current = null;
     esBorradorNuevoRef.current = true;
-    setCargandoConversaciones(false);
     setCargandoHistorial(false);
     setConversationId(null);
     setEsBorradorNuevo(true);
@@ -230,6 +232,42 @@ export default function AsistenteScreen({ navigation, route }) {
     setErrorAcciones(null);
     setPanelAbierto(false);
   }, [ocupado]);
+
+  const eliminarConversacionDesdeLista = useCallback((id) => {
+    if (eliminandoConversationId) return;
+    setOpcionesConversacion(null);
+    Alert.alert("Eliminar conversación", "¿Eliminar esta conversación? Ya no aparecerá en tu lista.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Eliminar conversación", style: "destructive", onPress: async () => {
+        setEliminandoConversationId(id);
+        setErrorConversaciones(null);
+        try {
+          await archivarConversacion(id);
+          const eraActiva = conversacionActivaRef.current === id;
+          quitarConversacion(id);
+          if (eraActiva) crearNuevoChat(true);
+          refrescarConversaciones();
+        } catch (err) {
+          const mensajeError = err.message || "No pudimos eliminar la conversación. Intenta de nuevo.";
+          setErrorConversaciones(mensajeError);
+          agregarError(mensajeError);
+        } finally {
+          setEliminandoConversationId(null);
+        }
+      } },
+    ]);
+  }, [agregarError, crearNuevoChat, eliminandoConversationId, quitarConversacion, refrescarConversaciones]);
+  useEffect(() => {
+    const solicitudId = route?.params?.solicitudId;
+    if (!route?.params?.iniciarBorrador || !solicitudId || solicitudInicioProcesadaRef.current === solicitudId) return;
+    solicitudInicioProcesadaRef.current = solicitudId;
+    preguntaInicial.current = route?.params?.pregunta?.trim() || null;
+    crearNuevoChat(true);
+    setModoVoz(Boolean(route?.params?.modoVoz));
+    refrescarConversaciones();
+    navigation.setParams({ iniciarBorrador: undefined, solicitudId: undefined, pregunta: undefined, modoVoz: undefined });
+  }, [crearNuevoChat, navigation, refrescarConversaciones, route?.params?.iniciarBorrador, route?.params?.modoVoz, route?.params?.pregunta, route?.params?.solicitudId]);
+
   const seleccionarConversacion = useCallback(async (id) => {
     if (ocupado || id === conversationId) { setPanelAbierto(false); return; }
     generacionCargaRef.current += 1;
@@ -277,7 +315,7 @@ export default function AsistenteScreen({ navigation, route }) {
   }, [agregarError, cargarHistorial, conversationId, ocupado, quitarConversacion, refrescarConversaciones, texto]);
 
   useEffect(() => {
-    if (cargandoConversaciones || !preguntaInicial.current) return;
+    if (!preguntaInicial.current || !esBorradorNuevoRef.current) return;
     const pregunta = preguntaInicial.current;
     preguntaInicial.current = null;
     enviarTexto(pregunta);
@@ -381,24 +419,6 @@ export default function AsistenteScreen({ navigation, route }) {
     } finally { setProcesandoAccion(false); }
   }, [agregarError, cargarHistorial, conversationId, ocupado, quitarConversacion]);
 
-  const confirmarArchivo = useCallback(() => {
-    if (!conversationId || ocupado) return;
-    Alert.alert("Archivar conversación", "Podrás iniciar una nueva conversación; esta dejará de aparecer en tu historial activo.", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Archivar", style: "destructive", onPress: async () => {
-        setProcesandoAccion(true);
-        try {
-          await archivarConversacion(conversationId);
-          quitarConversacion(conversationId);
-          await crearNuevoChat(true);
-        } catch (err) {
-          if (err.status === 404) { quitarConversacion(conversationId); agregarError("Esta conversación ya no está disponible."); }
-          else agregarError(err.message);
-        } finally { setProcesandoAccion(false); }
-      } },
-    ]);
-  }, [agregarError, conversationId, crearNuevoChat, ocupado, quitarConversacion]);
-
   const grabando = grabacion.isRecording;
   const pensando = ocupado || cargandoHistorial;
   const estadoAvatar = grabando ? "escuchando" : pensando ? "pensando" : hablando ? "hablando" : "inactivo";
@@ -415,18 +435,17 @@ export default function AsistenteScreen({ navigation, route }) {
         <TouchableOpacity onPress={crearNuevoChat} disabled={ocupado} style={styles.iconBtn} accessibilityLabel="Nuevo chat"><Ionicons name="add-circle-outline" size={24} color={COLORS.primary} /></TouchableOpacity>
         <TouchableOpacity onPress={() => setModoVoz(true)} style={styles.botonModoVoz} accessibilityLabel="Abrir modo voz con Jarvis"><Ionicons name="pulse" size={18} color={COLORS.white} /><Text style={styles.botonModoVozTexto}>Voz</Text></TouchableOpacity>
       </View>
-      {conversationId ? <TouchableOpacity onPress={confirmarArchivo} disabled={ocupado} style={styles.archivar} accessibilityLabel="Archivar conversación"><Ionicons name="archive-outline" size={15} color={COLORS.muted} /><Text style={styles.archivarTexto}>Archivar conversación</Text></TouchableOpacity> : null}
 
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         {cargandoConversaciones || cargandoHistorial ? <View style={styles.carga}><ActivityIndicator color={COLORS.primary} /><Text style={styles.textoMuted}>Cargando conversación…</Text></View> : null}
-        {!cargandoConversaciones && !cargandoHistorial && mensajes.length === 0 && (esBorradorNuevo || (conversationId && historialCargado) || (!conversationId && !errorChat)) ? <SaludoInicial nombre={nombre} /> : null}
+        {!cargandoHistorial && mensajes.length === 0 && (esBorradorNuevo || (!cargandoConversaciones && ((conversationId && historialCargado) || (!conversationId && !errorChat)))) ? <SaludoInicial nombre={nombre} /> : null}
         <FlatList ref={lista} style={styles.flex} data={mensajes} keyExtractor={(item) => item.id} contentContainerStyle={styles.lista} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" onContentSizeChange={() => requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }))} renderItem={({ item }) => <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)} onConfirmar={confirmar} onCancelar={cancelar} onPagar={abrirPago} onAbrirEmpresa={(id) => navigation.navigate("Empresa", { id })} onPedirPlato={(producto) => enviarTexto(`Quiero pedir 1 ${producto.nombre} de ${producto.empresa_nombre} para retirar apenas esté listo.`)} />} ListFooterComponent={<><AccionesPendientes acciones={accionesPendientes} error={errorAcciones} onConfirmar={confirmar} onCancelar={cancelar} />{pensando ? <View style={[styles.burbuja, styles.jarvis, styles.pensando]}><ActivityIndicator size="small" color={COLORS.primary} /><Text style={styles.textoMuted}>Jarvis está pensando…</Text></View> : null}</>} />
         {errorChat ? <View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} /><Text style={styles.errorTexto}>{errorChat}</Text></View> : null}
         {resultadoConfirmacion ? <ResultadoConfirmacion resultado={resultadoConfirmacion} onCerrar={() => setResultadoConfirmacion(null)} /> : null}
         {grabando ? <View style={styles.grabando}><View style={styles.puntoRojo} /><Text style={styles.grabandoTexto}>Escuchando… {formatoDuracion(grabacion.durationMillis)} · suelta para enviar</Text></View> : null}
         <View style={styles.barra}><TextInput style={styles.input} value={texto} onChangeText={setTexto} placeholder="Pregúntale a Jarvis…" placeholderTextColor={COLORS.muted} onSubmitEditing={() => enviarTexto()} returnKeyType="send" editable={!grabando && !ocupado} multiline />{texto.trim() ? <TouchableOpacity style={[styles.botonRedondo, ocupado && styles.deshabilitado]} onPress={() => enviarTexto()} disabled={ocupado} accessibilityLabel="Enviar mensaje"><Ionicons name="send" size={20} color={COLORS.white} /></TouchableOpacity> : <Pressable onPressIn={empezarGrabacion} onPressOut={terminarGrabacion} disabled={ocupado} style={[styles.botonRedondo, grabando && styles.botonGrabando, ocupado && styles.deshabilitado]} accessibilityLabel="Mantén presionado para hablar"><Ionicons name="mic" size={22} color={COLORS.white} /></Pressable>}</View>
       </KeyboardAvoidingView>
-      <ConversacionesModal visible={panelAbierto} conversaciones={conversaciones} seleccionada={conversationId} cargando={cargandoConversaciones} onCerrar={() => setPanelAbierto(false)} onSeleccionar={seleccionarConversacion} onNuevo={crearNuevoChat} />
+      <ConversacionesModal visible={panelAbierto} conversaciones={conversaciones} seleccionada={conversationId} cargando={cargandoConversaciones} error={errorConversaciones} opcionesAbiertas={opcionesConversacion} eliminandoId={eliminandoConversationId} onCerrar={() => setPanelAbierto(false)} onSeleccionar={seleccionarConversacion} onNuevo={crearNuevoChat} onOpciones={(id) => setOpcionesConversacion((actual) => (actual === id ? null : id))} onEliminar={eliminarConversacionDesdeLista} />
       <ModoVoz visible={modoVoz} estado={estadoAvatar} nivel={nivelDeVoz(grabacion.metering)} emocion={emocion} tuMensaje={ultimo("usuario")?.texto} respuesta={ultimo("jarvis")?.texto} error={errorChat || (ultimoMensaje?.rol === "error" ? ultimoMensaje.texto : null)} onMicrofono={() => (grabando ? terminarGrabacion() : empezarGrabacion())} onCerrar={() => { if (grabando) { quiereGrabar.current = false; recorder.stop().catch(() => {}); } detenerVoz(); setModoVoz(false); }} accion={accionesPendientes[0]} onConfirmar={confirmar} onCancelar={cancelar} />
       {pagoPedido ? <PagoQRModal pedido={pagoPedido} onCerrar={() => setPagoPedido(null)} /> : null}
     </SafeAreaView>
@@ -439,8 +458,8 @@ function SaludoInicial({ nombre }) {
   </View>;
 }
 
-function ConversacionesModal({ visible, conversaciones, seleccionada, cargando, onCerrar, onSeleccionar, onNuevo }) {
-  return <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}><SafeAreaView style={styles.safe}><View style={styles.modalHeader}><Text style={styles.modalTitulo}>Conversaciones</Text><TouchableOpacity onPress={onCerrar} accessibilityLabel="Cerrar conversaciones"><Ionicons name="close" size={26} color={COLORS.text} /></TouchableOpacity></View><TouchableOpacity style={styles.nuevoChat} onPress={onNuevo} accessibilityLabel="Crear nuevo chat"><Ionicons name="add" size={20} color={COLORS.white} /><Text style={styles.nuevoChatTexto}>Nuevo chat</Text></TouchableOpacity>{cargando ? <ActivityIndicator style={styles.modalCarga} color={COLORS.primary} /> : <FlatList data={conversaciones} keyExtractor={(item) => item.id} contentContainerStyle={styles.conversaciones} ListEmptyComponent={<Text style={styles.textoMuted}>Aún no tienes conversaciones activas.</Text>} renderItem={({ item }) => <TouchableOpacity onPress={() => onSeleccionar(item.id)} style={[styles.conversacion, item.id === seleccionada && styles.conversacionActiva]} accessibilityLabel={`Abrir ${item.titulo || "Nueva conversación"}`}><Ionicons name="chatbubble-outline" size={18} color={COLORS.primary} /><View style={styles.flex}><Text style={styles.conversacionTitulo} numberOfLines={1}>{item.titulo || "Nueva conversación"}</Text><Text style={styles.textoMuted} numberOfLines={1}>{item.actualizada_en ? new Date(item.actualizada_en).toLocaleDateString() : ""}</Text></View></TouchableOpacity>} />}</SafeAreaView></Modal>;
+function ConversacionesModal({ visible, conversaciones, seleccionada, cargando, error, opcionesAbiertas, eliminandoId, onCerrar, onSeleccionar, onNuevo, onOpciones, onEliminar }) {
+  return <Modal visible={visible} animationType="slide" onRequestClose={onCerrar}><SafeAreaView style={styles.safe}><View style={styles.modalHeader}><Text style={styles.modalTitulo}>Conversaciones</Text><TouchableOpacity onPress={onCerrar} accessibilityLabel="Cerrar conversaciones"><Ionicons name="close" size={26} color={COLORS.text} /></TouchableOpacity></View><TouchableOpacity style={styles.nuevoChat} onPress={onNuevo} accessibilityLabel="Crear nuevo chat"><Ionicons name="add" size={20} color={COLORS.white} /><Text style={styles.nuevoChatTexto}>Nuevo chat</Text></TouchableOpacity>{error ? <View style={styles.errorConversaciones}><Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} /><Text style={styles.errorTexto}>{error}</Text></View> : null}{cargando ? <ActivityIndicator style={styles.modalCarga} color={COLORS.primary} /> : <FlatList data={conversaciones} keyExtractor={(item) => item.id} contentContainerStyle={styles.conversaciones} ListEmptyComponent={<Text style={styles.textoMuted}>Aún no tienes conversaciones activas.</Text>} renderItem={({ item }) => <View><View style={[styles.conversacion, item.id === seleccionada && styles.conversacionActiva]}><TouchableOpacity onPress={() => onSeleccionar(item.id)} style={styles.conversacionContenido} accessibilityLabel={`Abrir ${item.titulo || "Nueva conversación"}`}><Ionicons name="chatbubble-outline" size={18} color={COLORS.primary} /><View style={styles.flex}><Text style={styles.conversacionTitulo} numberOfLines={1}>{item.titulo || "Nueva conversación"}</Text><Text style={styles.textoMuted} numberOfLines={1}>{item.actualizada_en ? new Date(item.actualizada_en).toLocaleDateString() : ""}</Text></View></TouchableOpacity><TouchableOpacity onPress={() => onOpciones(item.id)} disabled={Boolean(eliminandoId)} style={styles.opcionesConversacion} accessibilityLabel={`Opciones de ${item.titulo || "Nueva conversación"}`}><Ionicons name={eliminandoId === item.id ? "hourglass-outline" : "ellipsis-horizontal"} size={20} color={COLORS.muted} /></TouchableOpacity></View>{opcionesAbiertas === item.id ? <View style={styles.menuConversacion}><TouchableOpacity onPress={() => onEliminar(item.id)} disabled={Boolean(eliminandoId)} style={styles.menuEliminar} accessibilityLabel="Eliminar conversación"><Ionicons name="trash-outline" size={17} color={COLORS.danger} /><Text style={styles.menuEliminarTexto}>Eliminar conversación</Text></TouchableOpacity></View> : null}</View>} />}</SafeAreaView></Modal>;
 }
 
 function AccionesPendientes({ acciones, error, onConfirmar, onCancelar }) {
@@ -469,6 +488,12 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
 }
 
 const styles = StyleSheet.create({
+  errorConversaciones: { flexDirection: "row", alignItems: "center", gap: 6, marginHorizontal: 16, marginBottom: 8, backgroundColor: "#FEF2F2", borderRadius: 10, padding: 10 },
+  conversacionContenido: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  opcionesConversacion: { padding: 6, marginLeft: 4 },
+  menuConversacion: { marginTop: -4, marginBottom: 6, alignItems: "flex-end" },
+  menuEliminar: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: "#FEF2F2" },
+  menuEliminarTexto: { color: COLORS.danger, fontSize: 13, fontWeight: "700" },
   saludoInicial: { marginHorizontal: 16, marginTop: 24 },
   resultadoConfirmacion: { marginHorizontal: 16, marginBottom: 8, backgroundColor: COLORS.white, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#86EFAC", alignItems: "center" },
   resultadoCabecera: { width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },

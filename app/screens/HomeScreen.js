@@ -97,6 +97,7 @@ export default function HomeScreen({ navigation }) {
   };
   const scroll = useRef(null);
   const yPuntos = useRef(0);
+  const solicitudJarvis = useRef(0);
   const nombre = user?.first_name || user?.username || "cliente";
   // La API manda las monedas con decimales como texto ("416.75").
   const saldo = Number(monedero?.saldo ?? user?.puntos_saldo ?? 0);
@@ -163,9 +164,17 @@ export default function HomeScreen({ navigation }) {
     setRefrescando(false);
   }, [recargarPerfil, cargarMonedero, cargarOfertas, cargarDiversion, cargarPedidos, cargarRestaurantes]);
 
-  const preguntarAJarvis = (pregunta) => navigation.navigate("Asistente", { pregunta });
+  const abrirBorradorJarvis = (params = {}) => {
+    solicitudJarvis.current += 1;
+    navigation.navigate("Asistente", {
+      iniciarBorrador: true,
+      solicitudId: `inicio-${Date.now()}-${solicitudJarvis.current}`,
+      ...params,
+    });
+  };
+  const preguntarAJarvis = (pregunta) => abrirBorradorJarvis({ pregunta });
   const ir = (atajo) => (atajo.ruta ? navigation.navigate(atajo.ruta, atajo.params) : preguntarAJarvis(atajo.pregunta));
-  const abrirModoVoz = () => navigation.navigate("Asistente", { modoVoz: true });
+  const abrirModoVoz = () => abrirBorradorJarvis({ modoVoz: true });
 
   const buscar = () => {
     const texto = busqueda.trim();
@@ -271,7 +280,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <JarvisMini
             mensajes={mensajesJarvis}
-            onPress={() => navigation.navigate("Asistente")}
+            onPress={() => abrirBorradorJarvis()}
             onLongPress={abrirModoVoz}
           />
         </View>
@@ -332,7 +341,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.conciergeBotonTexto}>Hablar con Jarvis</Text>
               <Ionicons name="arrow-forward" size={18} color={STITCH.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.conciergeChat} onPress={() => navigation.navigate("Asistente")}
+            <TouchableOpacity style={styles.conciergeChat} onPress={() => abrirBorradorJarvis()}
               accessibilityLabel="Escribirle a Jarvis">
               <Ionicons name="chatbubble-ellipses" size={20} color={STITCH.white} />
             </TouchableOpacity>
