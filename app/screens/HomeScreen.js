@@ -27,6 +27,7 @@ import { getEmpresas } from "../services/directorioService";
 import { getOfertas } from "../services/empresasService";
 import { getMisPedidos } from "../services/pedidosService";
 import { getMonedero } from "../services/puntosService";
+import { abrirBorradorJarvis } from "../services/jarvisNavigation";
 
 // Atajos a las secciones de la app (los que no tienen pantalla propia le preguntan a Jarvis).
 const CHIPS = [
@@ -97,7 +98,6 @@ export default function HomeScreen({ navigation }) {
   };
   const scroll = useRef(null);
   const yPuntos = useRef(0);
-  const solicitudJarvis = useRef(0);
   const nombre = user?.first_name || user?.username || "cliente";
   // La API manda las monedas con decimales como texto ("416.75").
   const saldo = Number(monedero?.saldo ?? user?.puntos_saldo ?? 0);
@@ -164,17 +164,9 @@ export default function HomeScreen({ navigation }) {
     setRefrescando(false);
   }, [recargarPerfil, cargarMonedero, cargarOfertas, cargarDiversion, cargarPedidos, cargarRestaurantes]);
 
-  const abrirBorradorJarvis = (params = {}) => {
-    solicitudJarvis.current += 1;
-    navigation.navigate("Asistente", {
-      iniciarBorrador: true,
-      solicitudId: `inicio-${Date.now()}-${solicitudJarvis.current}`,
-      ...params,
-    });
-  };
-  const preguntarAJarvis = (pregunta) => abrirBorradorJarvis({ pregunta });
+  const preguntarAJarvis = (pregunta) => abrirBorradorJarvis(navigation, { pregunta });
   const ir = (atajo) => (atajo.ruta ? navigation.navigate(atajo.ruta, atajo.params) : preguntarAJarvis(atajo.pregunta));
-  const abrirModoVoz = () => abrirBorradorJarvis({ modoVoz: true });
+  const abrirModoVoz = () => abrirBorradorJarvis(navigation, { modoVoz: true });
 
   const buscar = () => {
     const texto = busqueda.trim();
@@ -280,7 +272,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <JarvisMini
             mensajes={mensajesJarvis}
-            onPress={() => abrirBorradorJarvis()}
+            onPress={() => abrirBorradorJarvis(navigation)}
             onLongPress={abrirModoVoz}
           />
         </View>
@@ -341,7 +333,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.conciergeBotonTexto}>Hablar con Jarvis</Text>
               <Ionicons name="arrow-forward" size={18} color={STITCH.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.conciergeChat} onPress={() => abrirBorradorJarvis()}
+            <TouchableOpacity style={styles.conciergeChat} onPress={() => abrirBorradorJarvis(navigation)}
               accessibilityLabel="Escribirle a Jarvis">
               <Ionicons name="chatbubble-ellipses" size={20} color={STITCH.white} />
             </TouchableOpacity>

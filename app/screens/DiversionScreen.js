@@ -16,6 +16,7 @@ import { CuposEvento, PanelEscenario } from "../components/Escenario";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { getDiversion } from "../services/diversionService";
 import { getRecompensas } from "../services/puntosService";
+import { abrirBorradorJarvis } from "../services/jarvisNavigation";
 
 const PESTANAS = [
   { id: "cartelera", texto: "Cartelera", icono: "film" },
@@ -285,7 +286,7 @@ export default function DiversionScreen({ navigation, route }) {
   const preguntar = (pregunta) => {
     setDetalle(null);
     setEvento(null);
-    navigation.navigate("Asistente", { pregunta });
+    abrirBorradorJarvis(navigation, { pregunta });
   };
 
   return (
