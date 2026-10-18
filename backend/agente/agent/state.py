@@ -13,7 +13,11 @@ from typing_extensions import TypedDict
 
 class AgentState(TypedDict, total=False):
     messages: Annotated[List[AnyMessage], add_messages]
+    # Historial canónico que llega desde MensajeJarvis. No usa el reducer para
+    # que no se acumule ni duplique dentro del checkpoint de LangGraph.
+    history_messages: List[Dict[str, str]]
     thread_id: str
+    conversation_id: str
     user_id: int
     authenticated_context: Dict[str, Any]
     intent: str

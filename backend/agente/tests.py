@@ -11,6 +11,7 @@ from usuarios.models import Usuario
 from .agent.checkpoints import CheckpointSettings, build_checkpoint_runtime
 from .agent.service import AgentConversationService
 from .llm import LLMError
+from .models import AgentAction, ConversacionJarvis, MensajeJarvis
 from .voz import VozError
 
 
@@ -47,6 +48,7 @@ class AsistenteTests(APITestCase):
         memoria = build_checkpoint_runtime(CheckpointSettings(backend="memory", sqlite_path=""))
         with mock.patch("agente.agent.service.get_checkpoint_runtime", return_value=memoria):
             servicio = AgentConversationService()
+        self.servicio = servicio
         for objetivo, valor in (
             ("agente.api.get_conversation_service", lambda: servicio),
             ("agente.api.get_llm_adapter", lambda: self.llm),
@@ -56,11 +58,33 @@ class AsistenteTests(APITestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.client.force_authenticate(self.cliente)
+        self.conversation_id = None
 
     def _chat(self, mensaje):
-        return self.client.post(
-            "/api/v1/agente/acciones/chat/", {"message": mensaje, "thread_id": "t1"}, format="json"
+        datos = {"message": mensaje}
+        if self.conversation_id:
+            datos["conversation_id"] = self.conversation_id
+        respuesta = self.client.post("/api/v1/agente/acciones/chat/", datos, format="json")
+        if respuesta.status_code == 200:
+            self.conversation_id = respuesta.data["conversation_id"]
+        return respuesta
+
+    def _crear_tarjetas_demo(self):
+        from empresas.models import Categoria
+
+        categoria = Categoria.objects.create(nombre="Comida")
+        empresa = Empresa.objects.create(
+            nombre="Cafe Tarjetas",
+            email_contacto="tarjetas@paseo.bo",
+            categoria=categoria,
+            piso="2",
         )
+        producto = Producto.objects.create(
+            empresa=empresa,
+            nombre="Capuchino Tarjetas",
+            precio=Decimal("22"),
+        )
+        return empresa, producto
 
     def test_chat_usa_contexto_real_del_usuario(self):
         resp = self._chat("hola")
@@ -96,20 +120,176 @@ class AsistenteTests(APITestCase):
             [m["role"] for m in messages], ["user", "assistant", "user"]
         )
 
+    def test_chat_persiste_turnos_y_no_expone_thread_id_del_cliente(self):
+        respuesta = self._chat("hola")
+        mensajes = list(
+            MensajeJarvis.objects.filter(conversacion_id=respuesta.data["conversation_id"])
+            .order_by("creado_en", "id")
+        )
+        self.assertEqual(
+            [(mensaje.rol, mensaje.contenido) for mensaje in mensajes],
+            [
+                (MensajeJarvis.Rol.USUARIO, "hola"),
+                (MensajeJarvis.Rol.ASISTENTE, "Respuesta a: hola"),
+            ],
+        )
+
+    def test_historial_persiste_tarjetas_de_respuesta_de_texto(self):
+        empresa, producto = self._crear_tarjetas_demo()
+        texto = f"Te recomiendo {producto.nombre} de {empresa.nombre}."
+        with mock.patch.object(
+            self.servicio._graph,
+            "invoke",
+            return_value={"presentation": {"text": texto, "voz": texto, "accion": None}},
+        ):
+            respuesta = self._chat("recomiendame un café")
+
+        historial = self.client.get(
+            f"/api/v1/agente/conversaciones/{respuesta.data['conversation_id']}/mensajes/"
+        )
+        mensaje = historial.data[-1]
+        self.assertEqual(mensaje["productos"], respuesta.data["productos"])
+        self.assertEqual(mensaje["empresas"], respuesta.data["empresas"])
+        self.assertNotIn("metadatos", mensaje)
+
+    def test_chat_usa_thread_interno_opaco(self):
+        respuesta_grafo = {
+            "presentation": {"text": "Respuesta segura", "voz": "Respuesta segura", "accion": None},
+            "guardrail_triggered": False,
+        }
+        with mock.patch.object(self.servicio._graph, "invoke", return_value=respuesta_grafo) as invoke:
+            respuesta = self._chat("hola")
+
+        conversacion = ConversacionJarvis.objects.get(pk=respuesta.data["conversation_id"])
+        thread_usado = invoke.call_args.kwargs["config"]["configurable"]["thread_id"]
+        self.assertEqual(thread_usado, str(conversacion.thread_id))
+        self.assertNotEqual(thread_usado, str(conversacion.id))
+        self.assertNotIn("thread_id", respuesta.data)
+
+    def test_chat_rechaza_thread_id_del_cliente(self):
+        respuesta = self.client.post(
+            "/api/v1/agente/acciones/chat/",
+            {"message": "hola", "thread_id": "cliente-no-controla-esto"},
+            format="json",
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("thread_id", respuesta.data)
+
+    def test_acciones_no_exponen_thread_id(self):
+        conversacion = ConversacionJarvis.objects.create(usuario=self.cliente)
+        accion = AgentAction.objects.create(
+            usuario=self.cliente,
+            conversacion=conversacion,
+            thread_id=str(conversacion.thread_id),
+            tipo_accion="PRUEBA",
+        )
+        respuesta = self.client.get(f"/api/v1/agente/acciones/{accion.id}/")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data["conversation_id"], str(conversacion.id))
+        self.assertNotIn("thread_id", respuesta.data)
+
     def test_chat_responde_aunque_falle_el_llm(self):
         with mock.patch.object(self.llm, "chat", side_effect=LLMError("cuota agotada")):
             resp = self._chat("hola")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("no puedo responder", resp.data["text"])
+        self.assertEqual(
+            MensajeJarvis.objects.filter(conversacion_id=resp.data["conversation_id"])
+            .order_by("-creado_en", "-id")
+            .first()
+            .contenido,
+            resp.data["text"],
+        )
 
     def test_voz_transcribe_y_responde(self):
         audio = SimpleUploadedFile("nota.m4a", b"audio-falso", content_type="audio/mp4")
-        resp = self.client.post(
-            "/api/v1/agente/acciones/voz/", {"audio": audio, "thread_id": "t1"}, format="multipart"
-        )
+        respuesta_grafo = {
+            "presentation": {"text": "Respuesta por voz", "voz": "Respuesta por voz", "accion": None},
+        }
+        with mock.patch.object(self.servicio._graph, "invoke", return_value=respuesta_grafo) as invoke:
+            resp = self.client.post(
+                "/api/v1/agente/acciones/voz/",
+                {"audio": audio},
+                format="multipart",
+            )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["transcripcion"], "cuántos puntos tengo")
-        self.assertEqual(resp.data["text"], "Respuesta a: cuántos puntos tengo")
+        self.assertEqual(resp.data["text"], "Respuesta por voz")
+        self.assertIn("conversation_id", resp.data)
+        conversacion = ConversacionJarvis.objects.get(pk=resp.data["conversation_id"])
+        mensajes = list(conversacion.mensajes.order_by("creado_en", "id"))
+        self.assertEqual(
+            [(mensaje.rol, mensaje.origen, mensaje.contenido) for mensaje in mensajes],
+            [
+                (MensajeJarvis.Rol.USUARIO, MensajeJarvis.Origen.VOZ, "cuántos puntos tengo"),
+                (MensajeJarvis.Rol.ASISTENTE, MensajeJarvis.Origen.TEXTO, "Respuesta por voz"),
+            ],
+        )
+        self.assertEqual(
+            invoke.call_args.kwargs["config"]["configurable"]["thread_id"],
+            str(conversacion.thread_id),
+        )
+
+    def test_historial_persiste_tarjetas_de_respuesta_de_voz(self):
+        empresa, producto = self._crear_tarjetas_demo()
+        texto = f"Te recomiendo {producto.nombre} de {empresa.nombre}."
+        audio = SimpleUploadedFile("nota.m4a", b"audio-falso", content_type="audio/mp4")
+        with mock.patch.object(
+            self.servicio._graph,
+            "invoke",
+            return_value={"presentation": {"text": texto, "voz": texto, "accion": None}},
+        ):
+            respuesta = self.client.post("/api/v1/agente/acciones/voz/", {"audio": audio}, format="multipart")
+
+        historial = self.client.get(
+            f"/api/v1/agente/conversaciones/{respuesta.data['conversation_id']}/mensajes/"
+        )
+        mensaje = historial.data[-1]
+        self.assertEqual(mensaje["productos"], respuesta.data["productos"])
+        self.assertEqual(mensaje["empresas"], respuesta.data["empresas"])
+
+    def test_voz_continua_conversacion_activa_propia(self):
+        conversacion = ConversacionJarvis.objects.create(usuario=self.cliente)
+        MensajeJarvis.objects.create(
+            conversacion=conversacion,
+            rol=MensajeJarvis.Rol.USUARIO,
+            contenido="Mensaje escrito anterior",
+            origen=MensajeJarvis.Origen.TEXTO,
+        )
+        audio = SimpleUploadedFile("nota.m4a", b"audio-falso", content_type="audio/mp4")
+        with mock.patch.object(
+            self.servicio._graph,
+            "invoke",
+            return_value={"presentation": {"text": "Respuesta", "voz": "Respuesta", "accion": None}},
+        ):
+            respuesta = self.client.post(
+                "/api/v1/agente/acciones/voz/",
+                {"audio": audio, "conversation_id": str(conversacion.id)},
+                format="multipart",
+            )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.data["conversation_id"], conversacion.id)
+        self.assertEqual(conversacion.mensajes.filter(origen=MensajeJarvis.Origen.VOZ).count(), 1)
+
+    def test_voz_rechaza_thread_id_del_cliente(self):
+        audio = SimpleUploadedFile("nota.m4a", b"audio-falso", content_type="audio/mp4")
+        respuesta = self.client.post(
+            "/api/v1/agente/acciones/voz/",
+            {"audio": audio, "thread_id": "cliente-no-controla-esto"},
+            format="multipart",
+        )
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("thread_id", respuesta.data)
+
+    def test_accion_propuesta_desde_voz_se_asocia_a_la_conversacion(self):
+        recompensa = Recompensa.objects.first()
+        self.llm.herramienta = ("canjear_recompensa", {"recompensa_id": recompensa.id})
+        audio = SimpleUploadedFile("nota.m4a", b"audio-falso", content_type="audio/mp4")
+        respuesta = self.client.post("/api/v1/agente/acciones/voz/", {"audio": audio}, format="multipart")
+
+        self.assertEqual(respuesta.status_code, 200)
+        accion = AgentAction.objects.get(pk=respuesta.data["accion"]["id"])
+        self.assertEqual(accion.conversacion_id, respuesta.data["conversation_id"])
 
     def test_voz_rechaza_formato_desconocido(self):
         archivo = SimpleUploadedFile("virus.exe", b"x")
@@ -121,6 +301,16 @@ class AsistenteTests(APITestCase):
         with mock.patch.object(self.llm, "transcribe", side_effect=LLMError("sin modelo")):
             resp = self.client.post("/api/v1/agente/acciones/voz/", {"audio": audio}, format="multipart")
         self.assertEqual(resp.status_code, 503)
+        self.assertFalse(ConversacionJarvis.objects.exists())
+        self.assertFalse(MensajeJarvis.objects.exists())
+
+    def test_voz_vacia_no_crea_conversacion_ni_mensajes(self):
+        audio = SimpleUploadedFile("nota.m4a", b"x")
+        with mock.patch.object(self.llm, "transcribe", return_value=""):
+            resp = self.client.post("/api/v1/agente/acciones/voz/", {"audio": audio}, format="multipart")
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(ConversacionJarvis.objects.exists())
+        self.assertFalse(MensajeJarvis.objects.exists())
 
     def test_hablar_devuelve_mp3(self):
         with mock.patch("agente.api.sintetizar", return_value=b"ID3-mp3") as sintetizar:
@@ -165,9 +355,16 @@ class AccionesJarvisTests(AsistenteTests):
     test_chat_usa_contexto_real_del_usuario = test_chat_recuerda_el_hilo = None
     test_chat_responde_aunque_falle_el_llm = test_emociones_van_a_la_voz_y_no_a_la_pantalla = None
     test_voz_transcribe_y_responde = test_voz_rechaza_formato_desconocido = test_voz_sin_modelo_de_audio = None
+    test_voz_continua_conversacion_activa_propia = test_voz_rechaza_thread_id_del_cliente = None
+    test_accion_propuesta_desde_voz_se_asocia_a_la_conversacion = test_voz_vacia_no_crea_conversacion_ni_mensajes = None
     test_hablar_devuelve_mp3 = test_hablar_valida_texto_y_falla_con_gracia = None
     test_sin_elevenlabs_usa_edge_sin_etiquetas = test_si_falla_elevenlabs_respalda_con_edge = None
     test_requiere_autenticacion = None
+    test_chat_persiste_turnos_y_no_expone_thread_id_del_cliente = None
+    test_historial_persiste_tarjetas_de_respuesta_de_texto = None
+    test_chat_usa_thread_interno_opaco = test_chat_rechaza_thread_id_del_cliente = None
+    test_acciones_no_exponen_thread_id = None
+    test_historial_persiste_tarjetas_de_respuesta_de_voz = None
 
     """Jarvis propone acciones y solo se ejecutan al confirmar."""
 
@@ -197,13 +394,57 @@ class AccionesJarvisTests(AsistenteTests):
         accion = resp.data["accion"]
         self.assertIn("Parqueo", accion["resumen"])
         self.assertIn("Confirmar", resp.data["text"])
+        conversacion = ConversacionJarvis.objects.get(pk=resp.data["conversation_id"])
+        accion_bd = AgentAction.objects.get(pk=accion["id"])
+        self.assertEqual(accion_bd.conversacion_id, conversacion.id)
+        self.assertEqual(accion_bd.thread_id, str(conversacion.thread_id))
         self.assertEqual(self._saldo(), 5000)  # todavía no cobró
 
         ok = self._confirmar(accion["id"])
         self.assertEqual(ok.status_code, 200, ok.data)
         self.assertEqual(ok.data["resultado"]["tipo"], "canje")
+        self.assertEqual(
+            MensajeJarvis.objects.filter(conversacion=conversacion)
+            .order_by("-creado_en", "-id")
+            .first()
+            .contenido,
+            ok.data["text"],
+        )
         self.assertEqual(self._saldo(), 4950)
         self.assertEqual(self._confirmar(accion["id"]).status_code, 400)  # no se ejecuta dos veces
+
+    def test_rechazar_accion_persiste_mensaje_en_la_conversacion(self):
+        self.llm.herramienta = ("canjear_recompensa", {"recompensa_id": self.parqueo.id})
+        respuesta = self._chat("canjea")
+        conversacion = ConversacionJarvis.objects.get(pk=respuesta.data["conversation_id"])
+        accion_id = respuesta.data["accion"]["id"]
+
+        rechazo = self.client.post(f"/api/v1/agente/acciones/{accion_id}/rechazar/", {}, format="json")
+        self.assertEqual(rechazo.status_code, 200)
+        self.assertEqual(
+            conversacion.mensajes.order_by("-creado_en", "-id").first().contenido,
+            "Listo, no realicé esa acción.",
+        )
+        self.assertEqual(AgentAction.objects.get(pk=accion_id).estado, AgentAction.Estado.RECHAZADA)
+
+    def test_reanudar_accion_asociada_usa_thread_de_la_conversacion(self):
+        self.llm.herramienta = ("canjear_recompensa", {"recompensa_id": self.parqueo.id})
+        respuesta = self._chat("canjea")
+        accion = AgentAction.objects.select_related("conversacion").get(pk=respuesta.data["accion"]["id"])
+        accion.thread_id = "legacy-no-debe-usarse"
+        accion.save(update_fields=["thread_id"])
+
+        with mock.patch.object(
+            self.servicio._graph,
+            "invoke",
+            return_value={"presentation": {"text": "ok"}},
+        ) as invoke:
+            self.servicio.resume_confirmation(self.cliente, accion)
+
+        self.assertEqual(
+            invoke.call_args.kwargs["config"]["configurable"]["thread_id"],
+            str(accion.conversacion.thread_id),
+        )
 
     def test_reserva_con_monedas_y_cancelacion(self):
         from entretenimiento.models import ReservaCine
