@@ -45,5 +45,6 @@ Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clien
 - [[Levantar en VS Code]] — paso a paso
 - [[Cuentas de demo]] — usuarios y datos de prueba
 - [[Problemas comunes]] — puertos, pantalla en blanco, códigos
+- [[Pruebas e2e]] — 28 pruebas automáticas del panel de negocio, doble clic en `PRUEBAS.cmd`
 
 ## 📌 [[Pendientes]]
