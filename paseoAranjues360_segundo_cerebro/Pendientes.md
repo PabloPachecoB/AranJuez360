@@ -19,7 +19,7 @@ actualizado: 2026-10-03
 11. [ ] **Billetera Paseo** (2026-10-18, en planificación): responder las decisiones abiertas y luego construir la fase 1 → [[Billetera Paseo (saldo de regalo)]]
 12. [ ] **Ofertas 2x1 no se aplican al cobrar** (2026-10-19): "2x1 en capuchinos" de Café Aranjuez está vigente, pero el pedido cobra precio × cantidad (el 04/10 Jarvis armó 2 capuchinos por Bs 44). Decidir: estructurar las ofertas (tipo 2x1 / % / precio fijo) para que el backend las aplique, o que Jarvis aclare que la oferta es solo en el local → [[Comer y pedidos (PaseoYa)]]
 
-13. [ ] **Pruebas e2e** (2026-10-19): panel de negocio cubierto (28 ✅). Falta el flujo completo de compra cliente → negocio → monedas, → [[Pruebas e2e]]
+13. [ ] **Pruebas e2e** (2026-10-19): panel de negocio cubierto (28 ✅). Falta el flujo completo de compra cliente → negocio → monedas → [[Pruebas e2e]]
 
 ## 🔴 Prioridad 1 — mínimo del PDF
 - [x] Canje de recompensas en backend: descontar monedas → cupón → validar en caja (y Jarvis puede canjear con confirmación)
