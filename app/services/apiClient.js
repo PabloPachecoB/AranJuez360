@@ -21,6 +21,16 @@ async function expireSession(error) {
 }
 
 api.interceptors.request.use(async (config) => {
+  const esFormData = typeof FormData !== "undefined" && config.data instanceof FormData;
+  if (esFormData) {
+    // No fijar Content-Type: el adaptador añade multipart/form-data y su boundary correcto.
+    if (typeof config.headers?.setContentType === "function") {
+      config.headers.setContentType(undefined);
+    } else if (config.headers) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+  }
   const token = await getAccessToken();
   if (token && !config.headers?.Authorization) {
     config.headers = { ...config.headers, Authorization: `Bearer ${token}` };

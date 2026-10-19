@@ -27,6 +27,7 @@ import { getEmpresas } from "../services/directorioService";
 import { getOfertas } from "../services/empresasService";
 import { getMisPedidos } from "../services/pedidosService";
 import { getMonedero } from "../services/puntosService";
+import { abrirBorradorJarvis } from "../services/jarvisNavigation";
 
 // Atajos a las secciones de la app (los que no tienen pantalla propia le preguntan a Jarvis).
 const CHIPS = [
@@ -163,9 +164,9 @@ export default function HomeScreen({ navigation }) {
     setRefrescando(false);
   }, [recargarPerfil, cargarMonedero, cargarOfertas, cargarDiversion, cargarPedidos, cargarRestaurantes]);
 
-  const preguntarAJarvis = (pregunta) => navigation.navigate("Asistente", { pregunta });
+  const preguntarAJarvis = (pregunta) => abrirBorradorJarvis(navigation, { pregunta });
   const ir = (atajo) => (atajo.ruta ? navigation.navigate(atajo.ruta, atajo.params) : preguntarAJarvis(atajo.pregunta));
-  const abrirModoVoz = () => navigation.navigate("Asistente", { modoVoz: true });
+  const abrirModoVoz = () => abrirBorradorJarvis(navigation, { modoVoz: true });
 
   const buscar = () => {
     const texto = busqueda.trim();
@@ -271,7 +272,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <JarvisMini
             mensajes={mensajesJarvis}
-            onPress={() => navigation.navigate("Asistente")}
+            onPress={() => abrirBorradorJarvis(navigation)}
             onLongPress={abrirModoVoz}
           />
         </View>
@@ -332,7 +333,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.conciergeBotonTexto}>Hablar con Jarvis</Text>
               <Ionicons name="arrow-forward" size={18} color={STITCH.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.conciergeChat} onPress={() => navigation.navigate("Asistente")}
+            <TouchableOpacity style={styles.conciergeChat} onPress={() => abrirBorradorJarvis(navigation)}
               accessibilityLabel="Escribirle a Jarvis">
               <Ionicons name="chatbubble-ellipses" size={20} color={STITCH.white} />
             </TouchableOpacity>

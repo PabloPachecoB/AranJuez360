@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   RefreshControl,
   ScrollView,
@@ -151,6 +152,7 @@ export default function PorteriaScreen() {
         </TouchableOpacity>
       </View>
 
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={styles.pestanas}>
         {[["escanear", "Escanear", "scan"], ["eventos", "Eventos", "calendar"], ["cartelera", "Cartelera", "film"]].map(([id, texto, icono]) => (
           <TouchableOpacity key={id} onPress={() => setPestana(id)} style={[styles.pestana, pestana === id && styles.pestanaActiva]}>
@@ -161,7 +163,7 @@ export default function PorteriaScreen() {
       </View>
 
       {pestana === "escanear" ? (
-        <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {fase === "camara" ? (
             <>
               <Text style={styles.ayuda}>Escanea el QR de la invitación a una oficina, la entrada a un evento o el QR personal del cliente.</Text>
@@ -224,7 +226,7 @@ export default function PorteriaScreen() {
           ) : null}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.contenido}
+        <ScrollView contentContainerStyle={styles.contenido} keyboardDismissMode="on-drag"
           refreshControl={<RefreshControl refreshing={refrescando} tintColor={STITCH.white} onRefresh={refrescar} />}>
           {errorCarga ? <Text style={styles.ayuda}>{errorCarga}</Text> : null}
           {!datos && !errorCarga ? <ActivityIndicator size="large" color={STITCH.oro} style={{ marginTop: 60 }} /> : null}
@@ -266,6 +268,7 @@ export default function PorteriaScreen() {
           ) : null}
         </ScrollView>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

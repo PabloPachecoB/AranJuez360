@@ -8,9 +8,13 @@ acción tras la confirmación autenticada (interrupt de LangGraph).
 from functools import lru_cache
 from typing import Any, Dict
 
+from django.utils import timezone
+
 from ..contexto import construir_contexto
+from ..llm import get_llm_adapter
+from ..models import ConversacionJarvis, MensajeJarvis
 from .checkpoints import get_checkpoint_runtime
-from .graph import build_agent_graph
+from .graph import MAX_HISTORIAL, build_agent_graph
 
 
 class AgentConversationService:
@@ -21,24 +25,165 @@ class AgentConversationService:
     def _config(self, thread_id: str) -> Dict[str, Any]:
         return {"configurable": {"thread_id": thread_id}}
 
-    def chat(self, user, thread_id: str, message: str) -> Dict[str, Any]:
-        """Procesa un turno del usuario y devuelve {"text": respuesta}."""
+    @staticmethod
+    def _historial_desde_bd(conversacion: ConversacionJarvis) -> list[dict[str, str]]:
+        """Obtiene los últimos turnos en orden cronológico para el LLM."""
+        recientes = list(
+            MensajeJarvis.objects.filter(conversacion=conversacion)
+            .order_by("-creado_en", "-id")
+            .values("rol", "contenido")[:MAX_HISTORIAL]
+        )
+        roles = {
+            MensajeJarvis.Rol.USUARIO: "user",
+            MensajeJarvis.Rol.ASISTENTE: "assistant",
+        }
+        return [
+            {"role": roles[mensaje["rol"]], "content": mensaje["contenido"]}
+            for mensaje in reversed(recientes)
+            if mensaje["rol"] in roles and mensaje["contenido"].strip()
+        ]
+
+    @staticmethod
+    def _actualizar_conversacion(conversacion: ConversacionJarvis) -> None:
+        ConversacionJarvis.objects.filter(
+            pk=conversacion.pk,
+            archivada_en__isnull=True,
+        ).update(actualizada_en=timezone.now())
+
+    @staticmethod
+    def _titulo_fallback(mensaje_usuario: str) -> str:
+        """Título determinista y seguro si el modelo de títulos no responde."""
+        palabras = (mensaje_usuario or "").split()
+        titulo = " ".join(palabras[:6]).strip()
+        if not any(caracter.isalnum() for caracter in titulo):
+            return ""
+        return titulo[:ConversacionJarvis._meta.get_field("titulo").max_length].rstrip()
+
+    def _asignar_titulo_si_falta(
+        self,
+        conversacion: ConversacionJarvis,
+        mensaje_usuario: str,
+        respuesta_asistente: str,
+    ) -> None:
+        if (conversacion.titulo or "").strip():
+            return
+        try:
+            titulo = get_llm_adapter().generar_titulo(mensaje_usuario, respuesta_asistente)
+        except Exception:
+            # El título es una mejora no crítica: nunca debe afectar el turno.
+            titulo = ""
+        limite = ConversacionJarvis._meta.get_field("titulo").max_length
+        titulo = (titulo or "").strip()[:limite]
+        titulo = titulo or self._titulo_fallback(mensaje_usuario)
+        if titulo:
+            # Solo escribe sobre el valor realmente vacío; así no pisa un
+            # título creado o editado concurrentemente por otro proceso.
+            ConversacionJarvis.objects.filter(pk=conversacion.pk, titulo="").update(titulo=titulo)
+
+    @staticmethod
+    def _primer_mensaje_usuario(conversacion: ConversacionJarvis, respaldo: str) -> str:
+        return (
+            MensajeJarvis.objects.filter(
+                conversacion=conversacion,
+                rol=MensajeJarvis.Rol.USUARIO,
+            )
+            .order_by("creado_en", "id")
+            .values_list("contenido", flat=True)
+            .first()
+            or respaldo
+        )
+
+    def chat(
+        self,
+        user,
+        conversacion: ConversacionJarvis,
+        message: str,
+        origen: str = MensajeJarvis.Origen.TEXTO,
+    ) -> Dict[str, Any]:
+        """Procesa y persiste un turno de una conversación activa del usuario."""
+        if conversacion.usuario_id != user.id or conversacion.archivada_en is not None:
+            raise ValueError("La conversación no pertenece al usuario o está archivada.")
+        if not ConversacionJarvis.objects.filter(
+            pk=conversacion.pk,
+            usuario_id=user.id,
+            archivada_en__isnull=True,
+        ).exists():
+            raise ValueError("La conversación no pertenece al usuario o está archivada.")
+
+        contenido = (message or "").strip()
+        if not contenido:
+            raise ValueError("El mensaje no puede estar vacío.")
+        if origen not in MensajeJarvis.Origen.values:
+            raise ValueError("El origen del mensaje no es válido.")
+
+        # Cada operación de base de datos es breve: nunca se mantiene una
+        # transacción abierta mientras el proveedor LLM responde.
+        MensajeJarvis.objects.create(
+            conversacion=conversacion,
+            rol=MensajeJarvis.Rol.USUARIO,
+            contenido=contenido,
+            origen=origen,
+        )
+        self._actualizar_conversacion(conversacion)
+
+        thread_id = str(conversacion.thread_id)
         state = {
-            "messages": [{"role": "user", "content": message}],
+            # Esto mantiene el checkpoint operativo, pero el LLM recibirá
+            # ``history_messages`` desde BD y no este acumulado del checkpoint.
+            "messages": [{"role": "user", "content": contenido}],
+            "history_messages": self._historial_desde_bd(conversacion),
             "thread_id": thread_id,
+            "conversation_id": str(conversacion.id),
             "user_id": user.id,
-            # Se recalcula en cada turno: puntos y ofertas siempre al día.
             "authenticated_context": construir_contexto(user),
         }
         result = self._graph.invoke(state, config=self._config(thread_id))
-        return result.get("presentation") or {}
+        presentation = result.get("presentation") or {}
+
+        respuesta = (presentation.get("text") or "").strip()
+        if respuesta:
+            metadatos = (
+                {"guardrail_triggered": True}
+                if result.get("guardrail_triggered")
+                else {}
+            )
+            mensaje_asistente = MensajeJarvis.objects.create(
+                conversacion=conversacion,
+                rol=MensajeJarvis.Rol.ASISTENTE,
+                contenido=respuesta,
+                origen=MensajeJarvis.Origen.TEXTO,
+                metadatos=metadatos,
+            )
+            self._actualizar_conversacion(conversacion)
+            self._asignar_titulo_si_falta(
+                conversacion,
+                self._primer_mensaje_usuario(conversacion, contenido),
+                respuesta,
+            )
+            # Dato efímero para que la capa API pueda asociar tarjetas públicas
+            # con este turno exacto. Los endpoints lo eliminan antes de responder.
+            presentation["_mensaje_asistente_id"] = mensaje_asistente.pk
+        return presentation
 
     def resume_confirmation(self, user, accion) -> Dict[str, Any]:
         """Reanuda el grafo tras confirmar una acción pendiente (interrupt).
 
         TODO: usar el thread_id de la acción y pasar la decisión del usuario.
         """
-        config = self._config(accion.thread_id)
+        if accion.usuario_id != user.id:
+            raise ValueError("La acción no pertenece al usuario.")
+
+        thread_id = accion.thread_id
+        if accion.conversacion_id:
+            conversacion = accion.conversacion
+            if (
+                conversacion.usuario_id != user.id
+                or conversacion.archivada_en is not None
+            ):
+                raise ValueError("La conversación no pertenece al usuario o está archivada.")
+            thread_id = str(conversacion.thread_id)
+
+        config = self._config(thread_id)
         result = self._graph.invoke(None, config=config)
         return result.get("presentation") or {}
 

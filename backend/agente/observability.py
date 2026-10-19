@@ -9,5 +9,7 @@ import logging
 logger = logging.getLogger("agente")
 
 
-def trace_turn(thread_id: str, intent: str, **meta):
-    logger.info("agent.turn thread=%s intent=%s meta=%s", thread_id, intent, meta)
+def trace_turn(intent: str, **meta):
+    """Registra metadatos seguros de un turno, sin el hilo interno."""
+    meta.pop("thread_id", None)
+    logger.info("agent.turn intent=%s meta=%s", intent, meta)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import PrimaryButton from "../components/PrimaryButton";
@@ -84,7 +84,8 @@ export default function VerificarCodigoScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityLabel="Volver">
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
@@ -118,14 +119,16 @@ export default function VerificarCodigoScreen({ route, navigation }) {
           </Text>
         </TouchableOpacity>
         <Text style={styles.nota}>¿No lo ves? Revisa tu carpeta de spam o promociones.</Text>
-      </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  container: { flex: 1, padding: 24 },
+  flex: { flex: 1 },
+  container: { flexGrow: 1, padding: 24, paddingBottom: 48 },
   back: { alignSelf: "flex-start" },
   icono: { alignSelf: "center", marginTop: 24, marginBottom: 12 },
   title: { fontSize: 24, fontWeight: "800", color: COLORS.text, textAlign: "center" },

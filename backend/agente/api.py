@@ -6,10 +6,14 @@ estado conversacional ni al checkpoint).
 """
 
 import re
+from uuid import UUID
 
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -24,11 +28,15 @@ from fidelizacion.services import ReglaNegocioError
 from . import herramientas
 from .agent import get_conversation_service
 from .llm import LLMError, get_llm_adapter
-from .models import AgentAction
+from .models import AgentAction, ConversacionJarvis, MensajeJarvis
 from .serializers import (
     AgentActionSerializer,
     AgentChatRequestSerializer,
     AgentVozRequestSerializer,
+    ConversacionJarvisCreateSerializer,
+    ConversacionJarvisDetailSerializer,
+    ConversacionJarvisListSerializer,
+    MensajeJarvisSerializer,
 )
 from .voz import MAX_CARACTERES, VozError, quitar_emociones, sintetizar
 
@@ -49,7 +57,7 @@ def _empresas_mencionadas(request, texto: str) -> list:
         if not hallado:  # \b evita que "Tigo" coincida dentro de "contigo"
             continue
         fichas.append((hallado.start(), {
-            "id": empresa.id, "nombre": empresa.nombre, "piso": empresa.piso, "local": empresa.local,
+            "id": empresa.id, "nombre": empresa.nombre, "piso": empresa.piso,
             "categoria_nombre": empresa.categoria.nombre if empresa.categoria else None,
             "logo": request.build_absolute_uri(empresa.logo.url) if empresa.logo else None,
         }))
@@ -101,6 +109,91 @@ def _productos_mencionados(request, texto: str) -> list:
     return [ficha for _, ficha in sorted(fichas, key=lambda par: par[0])][:MAX_PLATOS_FICHA]
 
 
+def _persistir_tarjetas_jarvis(conversacion, resultado: dict, empresas: list, productos: list) -> None:
+    """Guarda solamente tarjetas públicas en el turno de Jarvis recién creado."""
+    mensaje_id = resultado.pop("_mensaje_asistente_id", None)
+    if not mensaje_id:
+        return
+    mensaje = MensajeJarvis.objects.filter(
+        pk=mensaje_id,
+        conversacion=conversacion,
+        rol=MensajeJarvis.Rol.ASISTENTE,
+    ).first()
+    if not mensaje:
+        return
+    metadatos = dict(mensaje.metadatos or {})
+    metadatos["empresas"] = empresas
+    metadatos["productos"] = productos
+    mensaje.metadatos = metadatos
+    mensaje.save(update_fields=["metadatos"])
+
+
+class ConversacionJarvisViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Historial de Jarvis del usuario autenticado.
+
+    Las conversaciones archivadas se ocultan y se comportan como inexistentes.
+    El borrado de la API es lógico: conserva mensajes para auditoría.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ConversacionJarvis.objects.filter(
+            usuario=self.request.user,
+            archivada_en__isnull=True,
+        )
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return ConversacionJarvisCreateSerializer
+        if self.action == "list":
+            return ConversacionJarvisListSerializer
+        return ConversacionJarvisDetailSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(
+            ConversacionJarvisDetailSerializer(serializer.instance).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        # El archivado y el rechazo de propuestas pendientes forman una sola
+        # operación de auditoría; no contiene ninguna invocación al LLM.
+        with transaction.atomic():
+            conversacion = self.get_object()
+            ahora = timezone.now()
+            archivadas = ConversacionJarvis.objects.filter(
+                pk=conversacion.pk,
+                usuario=request.user,
+                archivada_en__isnull=True,
+            ).update(archivada_en=ahora, actualizada_en=ahora)
+            if not archivadas:
+                raise Http404
+            AgentAction.objects.filter(
+                conversacion=conversacion,
+                estado=AgentAction.Estado.PENDIENTE,
+            ).update(estado=AgentAction.Estado.RECHAZADA)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get"])
+    def mensajes(self, request, pk=None):
+        conversacion = self.get_object()
+        mensajes = conversacion.mensajes.order_by("creado_en", "id")
+        return Response(MensajeJarvisSerializer(mensajes, many=True).data)
+
+
 class AgentActionViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
@@ -108,19 +201,46 @@ class AgentActionViewSet(
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return AgentAction.objects.filter(usuario=self.request.user)
+        queryset = AgentAction.objects.filter(usuario=self.request.user).select_related("conversacion")
+        conversation_id = self.request.query_params.get("conversation_id")
+        if conversation_id is not None:
+            try:
+                conversation_id = UUID(conversation_id)
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise ValidationError({"conversation_id": "Debe ser un UUID válido."}) from exc
+            # El queryset ya está aislado por usuario: un UUID ajeno no revela
+            # su existencia y simplemente devuelve una lista vacía.
+            queryset = queryset.filter(conversacion_id=conversation_id)
+        return queryset
 
     @action(detail=False, methods=["post"])
     def chat(self, request):
         serializer = AgentChatRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        thread_id = data.get("thread_id") or f"user-{request.user.id}"
-        result = get_conversation_service().chat(
-            request.user, thread_id, data["message"]
-        )
-        return Response({**result, "empresas": _empresas_mencionadas(request, result.get("text")),
-                         "productos": _productos_mencionados(request, result.get("text"))})
+        conversation_id = data.get("conversation_id")
+        if conversation_id:
+            conversacion = get_object_or_404(
+                ConversacionJarvis,
+                pk=conversation_id,
+                usuario=request.user,
+                archivada_en__isnull=True,
+            )
+        else:
+            conversacion = ConversacionJarvis.objects.create(usuario=request.user)
+        try:
+            result = get_conversation_service().chat(
+                request.user, conversacion, data["message"]
+            )
+        except ValueError as exc:
+            # Una conversación archivada entre la consulta y el servicio se
+            # comporta como inexistente, igual que en el resto de la API.
+            raise Http404 from exc
+        empresas = _empresas_mencionadas(request, result.get("text"))
+        productos = _productos_mencionados(request, result.get("text"))
+        _persistir_tarjetas_jarvis(conversacion, result, empresas, productos)
+        return Response({**result, "conversation_id": conversacion.id,
+                         "empresas": empresas, "productos": productos})
 
     @action(detail=False, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def voz(self, request):
@@ -142,11 +262,30 @@ class AgentActionViewSet(
                 {"detail": "No se escuchó nada en el audio. Intenta hablar más cerca del micrófono."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        thread_id = data.get("thread_id") or f"user-{request.user.id}"
-        result = get_conversation_service().chat(request.user, thread_id, transcripcion)
-        return Response({**result, "transcripcion": transcripcion,
-                         "empresas": _empresas_mencionadas(request, result.get("text")),
-                         "productos": _productos_mencionados(request, result.get("text"))})
+        conversation_id = data.get("conversation_id")
+        if conversation_id:
+            conversacion = get_object_or_404(
+                ConversacionJarvis,
+                pk=conversation_id,
+                usuario=request.user,
+                archivada_en__isnull=True,
+            )
+        else:
+            conversacion = ConversacionJarvis.objects.create(usuario=request.user)
+        try:
+            result = get_conversation_service().chat(
+                request.user,
+                conversacion,
+                transcripcion,
+                origen=MensajeJarvis.Origen.VOZ,
+            )
+        except ValueError as exc:
+            raise Http404 from exc
+        empresas = _empresas_mencionadas(request, result.get("text"))
+        productos = _productos_mencionados(request, result.get("text"))
+        _persistir_tarjetas_jarvis(conversacion, result, empresas, productos)
+        return Response({**result, "conversation_id": conversacion.id, "transcripcion": transcripcion,
+                         "empresas": empresas, "productos": productos})
 
     @action(detail=False, methods=["get"])
     def hablar(self, request):
@@ -174,6 +313,17 @@ class AgentActionViewSet(
         accion = self.get_object()
         if accion.estado != AgentAction.Estado.PENDIENTE:
             return Response({"detail": "Esta acción ya no está pendiente."}, status=status.HTTP_400_BAD_REQUEST)
+        if accion.conversacion_id:
+            conversacion = accion.conversacion
+            if conversacion.usuario_id != request.user.id:
+                raise Http404
+            if conversacion.archivada_en is not None:
+                accion.estado = AgentAction.Estado.RECHAZADA
+                accion.save(update_fields=["estado"])
+                return Response(
+                    {"detail": "La conversación fue archivada; la propuesta fue rechazada."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         if timezone.now() - accion.fecha_creacion > timedelta(minutes=VIGENCIA_PROPUESTA_MIN):
             accion.estado = AgentAction.Estado.RECHAZADA
             accion.save(update_fields=["estado"])
@@ -194,14 +344,45 @@ class AgentActionViewSet(
             accion.resultado = {"error": str(exc)}
             accion.save(update_fields=["estado", "resultado"])
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        accion.estado = AgentAction.Estado.EJECUTADA
-        accion.resultado = resultado
-        accion.save(update_fields=["estado", "resultado"])
-        return Response({"text": quitar_emociones(texto), "voz": texto, "resultado": resultado})
+        texto_visible = quitar_emociones(texto)
+        # La herramienta ya terminó: solo se abre una transacción breve para
+        # dejar juntos el resultado de la acción y su mensaje auditable.
+        with transaction.atomic():
+            accion.estado = AgentAction.Estado.EJECUTADA
+            accion.resultado = resultado
+            accion.save(update_fields=["estado", "resultado"])
+            if accion.conversacion_id:
+                conversacion = accion.conversacion
+                MensajeJarvis.objects.create(
+                    conversacion=conversacion,
+                    rol=MensajeJarvis.Rol.ASISTENTE,
+                    contenido=texto_visible,
+                    origen=MensajeJarvis.Origen.TEXTO,
+                )
+                ConversacionJarvis.objects.filter(
+                    pk=conversacion.pk,
+                    archivada_en__isnull=True,
+                ).update(actualizada_en=timezone.now())
+        return Response({"text": texto_visible, "voz": texto, "resultado": resultado})
 
     @action(detail=True, methods=["post"])
     def rechazar(self, request, pk=None):
         accion = self.get_object()
-        accion.estado = AgentAction.Estado.RECHAZADA
-        accion.save(update_fields=["estado"])
+        if accion.estado != AgentAction.Estado.PENDIENTE:
+            return Response({"detail": "Esta acción ya no está pendiente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            accion.estado = AgentAction.Estado.RECHAZADA
+            accion.save(update_fields=["estado"])
+            if accion.conversacion_id and accion.conversacion.archivada_en is None:
+                MensajeJarvis.objects.create(
+                    conversacion=accion.conversacion,
+                    rol=MensajeJarvis.Rol.ASISTENTE,
+                    contenido="Listo, no realicé esa acción.",
+                    origen=MensajeJarvis.Origen.TEXTO,
+                )
+                ConversacionJarvis.objects.filter(
+                    pk=accion.conversacion_id,
+                    archivada_en__isnull=True,
+                ).update(actualizada_en=timezone.now())
         return Response({"status": "rechazada"})

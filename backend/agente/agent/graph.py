@@ -21,7 +21,7 @@ from usuarios.models import Usuario
 from .. import herramientas
 from ..llm import LLMError, get_llm_adapter
 
-from ..models import AgentAction
+from ..models import AgentAction, ConversacionJarvis
 from ..voz import en_bolivianos, quitar_emociones
 from .guardrails import (
     MENSAJE_MONTO_NO_VERIFICADO,
@@ -70,6 +70,10 @@ def _ejecutar_tool(state: AgentState) -> dict:
 
 def _historial(state: AgentState) -> list:
     """Últimos mensajes del hilo en formato {role, content} para el LLM."""
+    historial_bd = state.get("history_messages")
+    if historial_bd is not None:
+        return historial_bd[-MAX_HISTORIAL:]
+
     historial = []
     for msg in state.get("messages", [])[-MAX_HISTORIAL:]:
         if isinstance(msg, HumanMessage):
@@ -85,16 +89,36 @@ def _proponer_accion(state: AgentState, nombre: str, argumentos: dict):
     El texto lo arma el backend (no el modelo) para que nunca diga que ya lo hizo.
     """
     user = Usuario.objects.get(pk=state["user_id"])
+    conversacion = None
+    conversation_id = state.get("conversation_id")
+    if conversation_id:
+        try:
+            conversacion = ConversacionJarvis.objects.get(
+                pk=conversation_id,
+                usuario=user,
+                archivada_en__isnull=True,
+            )
+        except ConversacionJarvis.DoesNotExist:
+            return "[sympathetic] Esta conversación ya no está disponible.", None
     try:
         resumen, payload = herramientas.preparar(nombre, user, argumentos)
     except ReglaNegocioError as exc:
         return f"[sympathetic] {exc}", None
     # Una sola propuesta abierta por conversación: la anterior queda descartada.
-    AgentAction.objects.filter(
-        usuario=user, thread_id=state.get("thread_id", ""), estado=AgentAction.Estado.PENDIENTE
-    ).update(estado=AgentAction.Estado.RECHAZADA)
+    pendientes = AgentAction.objects.filter(usuario=user, estado=AgentAction.Estado.PENDIENTE)
+    if conversacion:
+        pendientes.filter(conversacion=conversacion).update(estado=AgentAction.Estado.RECHAZADA)
+    else:
+        # Voz y acciones previas a la FK no tienen conversación persistente.
+        pendientes.filter(
+            conversacion__isnull=True,
+            thread_id=state.get("thread_id", ""),
+        ).update(estado=AgentAction.Estado.RECHAZADA)
     accion = AgentAction.objects.create(
-        usuario=user, thread_id=state.get("thread_id", ""), tipo_accion=nombre,
+        usuario=user,
+        conversacion=conversacion,
+        thread_id=state.get("thread_id", ""),
+        tipo_accion=nombre,
         payload={**payload, "resumen": resumen},
     )
     # Jarvis no lee montos ni totales: la tarjeta de la app muestra el detalle exacto que calculó el backend.

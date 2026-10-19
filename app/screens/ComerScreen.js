@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -109,6 +111,7 @@ export default function ComerScreen({ navigation, route }) {
         </View>
       </View>
 
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={styles.pestanas}>
         {[{ id: "menu", texto: "Menú", icono: "restaurant" }, { id: "pedidos", texto: "Mis pedidos", icono: "receipt" }].map((p) => (
           <TouchableOpacity key={p.id} onPress={() => setPestana(p.id)} style={[styles.pestana, pestana === p.id && styles.pestanaActiva]}>
@@ -147,6 +150,7 @@ export default function ComerScreen({ navigation, route }) {
       ) : null}
 
       <ScrollView contentContainerStyle={[styles.contenido, flujo.unidades ? { paddingBottom: 110 } : null]}
+        keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}>
         {error ? <Text style={styles.vacio}>{error}</Text> : null}
 
@@ -201,6 +205,7 @@ export default function ComerScreen({ navigation, route }) {
       </ScrollView>
 
       {flujo.elementos}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

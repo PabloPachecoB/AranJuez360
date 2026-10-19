@@ -3,8 +3,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -224,6 +226,7 @@ export default function OficinasScreen({ navigation, route }) {
         </View>
       </View>
 
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={styles.pestanas}>
         {PESTANAS.map((p) => (
           <TouchableOpacity key={p.id} onPress={() => setPestana(p.id)}
@@ -235,7 +238,7 @@ export default function OficinasScreen({ navigation, route }) {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled"
+      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}>
         {pestana === "oficinas" ? (
           oficinas === null ? <ActivityIndicator color={STITCH.primary} style={{ marginTop: 40 }} /> :
@@ -329,6 +332,7 @@ export default function OficinasScreen({ navigation, route }) {
           }) : <Text style={styles.vacio}>Aún no tienes visitas. Solicita una desde la pestaña “Solicitar”.</Text>
         ) : null}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {detalle ? <DetalleOficina id={detalle} onCerrar={() => setDetalle(null)} onSolicitar={irASolicitar} /> : null}
 

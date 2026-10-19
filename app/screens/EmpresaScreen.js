@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { precioVigente, useFlujoPedido } from "../components/FlujoPedido";
 import { getEmpresa } from "../services/directorioService";
+import { abrirBorradorJarvis } from "../services/jarvisNavigation";
 
 const hhmm = (t) => (t || "").slice(0, 5);
 const bs = (n) => `Bs ${Number(n).toLocaleString("es-BO", { maximumFractionDigits: 2 })}`;
@@ -220,7 +221,7 @@ export default function EmpresaScreen({ navigation, route }) {
         ) : null}
 
         <TouchableOpacity style={styles.jarvis}
-          onPress={() => navigation.navigate("Asistente", { pregunta: `Cuéntame de ${e.nombre} y cómo llego` })}>
+          onPress={() => abrirBorradorJarvis(navigation, { pregunta: `Cuéntame de ${e.nombre} y cómo llego` })}>
           <Ionicons name="sparkles" size={18} color={STITCH.white} />
           <Text style={styles.jarvisTexto}>Preguntar a Jarvis</Text>
         </TouchableOpacity>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -127,6 +129,7 @@ export default function DirectorioScreen({ navigation, route }) {
         </View>
       </View>
 
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={styles.buscador}>
         <Ionicons name="search" size={18} color={STITCH.primary} />
         <TextInput style={styles.buscadorInput} value={texto} onChangeText={setTexto} returnKeyType="search"
@@ -178,7 +181,7 @@ export default function DirectorioScreen({ navigation, route }) {
         </>
       ) : null}
 
-      <ScrollView contentContainerStyle={styles.contenido}
+      <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}>
         {error ? <Text style={styles.vacio}>{error}</Text> : null}
 
@@ -213,6 +216,7 @@ export default function DirectorioScreen({ navigation, route }) {
           empresas.map((e) => <Tarjeta key={e.id} empresa={e} onPress={() => abrir(e.id)} />)
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

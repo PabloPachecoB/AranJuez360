@@ -1,5 +1,4 @@
-# Panel web (admin, mini-sistemas de empresas, /sitio y /activar) servido por Caddy,
-# que además hace de proxy hacia el backend y saca el certificado HTTPS solo.
+# Panel web servido por Caddy interno; HTTPS lo termina el Caddy compartido.
 FROM node:20-alpine AS build
 WORKDIR /web
 COPY package.json package-lock.json ./

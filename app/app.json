@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.pablopacheco.paseoaranjuez360",
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
         "USE_BIOMETRIC",
