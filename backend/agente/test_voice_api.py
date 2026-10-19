@@ -133,18 +133,78 @@ class VoiceApiTests(AgentApiTestMixin, APITestCase):
         from . import voz
 
         cache.clear()
-        with mock.patch.dict("os.environ", {"ELEVENLABS_API_KEY": ""}), mock.patch.object(voz, "_edge", return_value=b"mp3") as edge:
+        with mock.patch.dict("os.environ", {"JARVIS_TTS_PROVIDER": "", "ELEVENLABS_API_KEY": ""}), mock.patch.object(voz, "_edge", return_value=b"mp3") as edge:
             self.assertEqual(voz.sintetizar("[warmly] Hola prueba-edge"), b"mp3")
         edge.assert_called_once()
 
     def test_si_falla_elevenlabs_respalda_con_edge(self):
         from . import voz
 
-        with mock.patch.dict("os.environ", {"ELEVENLABS_API_KEY": "x"}), mock.patch.object(
+        with mock.patch.dict("os.environ", {"JARVIS_TTS_PROVIDER": "elevenlabs", "ELEVENLABS_API_KEY": "x"}), mock.patch.object(
             voz, "_elevenlabs", side_effect=voz.VozError("sin créditos")
         ), mock.patch.object(voz, "_edge", return_value=b"mp3-edge"):
             self.assertEqual(voz.sintetizar("Hola prueba-respaldo"), b"mp3-edge")
         self.assertEqual(voz.quitar_emociones("[sighs] Lo siento.  [warmly] Ya cerró."), "Lo siento. Ya cerró.")
+
+    def test_fish_audio_recibe_etiquetas_y_configuracion(self):
+        from . import voz
+
+        with mock.patch.dict("os.environ", {
+            "JARVIS_TTS_PROVIDER": "fish_audio",
+            "FISH_AUDIO_API_KEY": "clave-de-prueba",
+            "FISH_AUDIO_MODEL": "s2.1-pro-free",
+            "FISH_AUDIO_VOICE_ID": "voz-de-prueba",
+        }), mock.patch.object(voz, "_fish_audio", return_value=b"mp3-fish") as fish:
+            self.assertEqual(voz.sintetizar("[warmly] Hola prueba-fish"), b"mp3-fish")
+        fish.assert_called_once_with("[warmly] Hola prueba-fish", "clave-de-prueba")
+
+    def test_fish_audio_usa_api_mp3_modelo_y_timeout(self):
+        from . import voz
+
+        respuesta = mock.Mock(status_code=200, content=b"mp3-fish")
+        with mock.patch.dict("os.environ", {
+            "FISH_AUDIO_MODEL": "s2.1-pro-free", "FISH_AUDIO_VOICE_ID": "voz-de-prueba",
+        }), mock.patch.object(voz.requests, "post", return_value=respuesta) as post:
+            self.assertEqual(voz._fish_audio("[excited] Hola", "clave-de-prueba"), b"mp3-fish")
+        post.assert_called_once_with(
+            "https://api.fish.audio/v1/tts",
+            headers={"Authorization": "Bearer clave-de-prueba", "model": "s2.1-pro-free"},
+            json={"text": "[excited] Hola", "reference_id": "voz-de-prueba", "format": "mp3"},
+            timeout=30,
+        )
+
+    def test_fish_sin_clave_usa_edge_y_falla_remota_tambien(self):
+        from . import voz
+
+        with mock.patch.dict("os.environ", {"JARVIS_TTS_PROVIDER": "fish_audio", "FISH_AUDIO_API_KEY": ""}), mock.patch.object(
+            voz, "_edge", return_value=b"mp3-edge"
+        ) as edge:
+            self.assertEqual(voz.sintetizar("Hola fish-sin-clave"), b"mp3-edge")
+        edge.assert_called_once()
+
+        with mock.patch.dict("os.environ", {"JARVIS_TTS_PROVIDER": "fish_audio", "FISH_AUDIO_API_KEY": "x"}), mock.patch.object(
+            voz, "_fish_audio", side_effect=voz.VozError("Fish Audio devolvió HTTP 503.")
+        ), mock.patch.object(voz, "_edge", return_value=b"mp3-respaldo"):
+            self.assertEqual(voz.sintetizar("Hola fish-falla-remota"), b"mp3-respaldo")
+
+    def test_cache_separa_proveedor_de_voz(self):
+        from django.core.cache import cache
+
+        from . import voz
+
+        cache.clear()
+        texto = "Cache por proveedor prueba"
+        with mock.patch.dict("os.environ", {
+            "JARVIS_TTS_PROVIDER": "elevenlabs", "ELEVENLABS_API_KEY": "eleven-key",
+            "ELEVENLABS_MODEL": "eleven_v3", "ELEVENLABS_VOICE_ID": "voz-a",
+        }), mock.patch.object(voz, "_elevenlabs", return_value=b"audio-eleven"):
+            self.assertEqual(voz.sintetizar(texto), b"audio-eleven")
+        with mock.patch.dict("os.environ", {
+            "JARVIS_TTS_PROVIDER": "fish_audio", "FISH_AUDIO_API_KEY": "fish-key",
+            "FISH_AUDIO_MODEL": "s2.1-pro", "FISH_AUDIO_VOICE_ID": "voz-b",
+        }), mock.patch.object(voz, "_fish_audio", return_value=b"audio-fish") as fish:
+            self.assertEqual(voz.sintetizar(texto), b"audio-fish")
+        fish.assert_called_once()
 
     def test_hablar_valida_texto_y_falla_con_gracia(self):
         self.assertEqual(self.client.get("/api/v1/agente/acciones/hablar/").status_code, 400)
