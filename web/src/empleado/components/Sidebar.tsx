@@ -50,7 +50,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
             <div className="flex items-center justify-between mb-space-sm">
               <div className="flex items-center gap-space-sm">
                 <div className="h-8 w-8 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">storefront</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">storefront</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
@@ -67,7 +67,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
                 onClick={onCerrar}
                 aria-label="Cerrar menu"
               >
-                <span className="material-symbols-outlined text-[22px]">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[22px]">close</span>
               </button>
             </div>
             {negocio && (
@@ -89,7 +89,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
                   </span>
                 </div>
                 <div className="flex items-center gap-space-xs mt-1 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[14px]">store</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[14px]">store</span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">
                     Piso {negocio.piso} - Local {negocio.local}
                   </span>
@@ -111,7 +111,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
                 }
               >
                 <div className="flex items-center gap-space-sm">
-                  <span className="material-symbols-outlined text-[20px]">{icono}</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[20px]">{icono}</span>
                   <span className="font-body-md text-body-md">{etiqueta}</span>
                 </div>
                 {to === "/pedidos" && nuevos > 0 && (
@@ -129,6 +129,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-space-xs">
                   <span
+                    aria-hidden="true"
                     className={
                       "material-symbols-outlined text-[16px] " +
                       (negocio.activo ? "text-secondary" : "text-on-surface-variant")
@@ -158,7 +159,7 @@ export function Sidebar({ abierto, onCerrar }: Props) {
             onClick={cerrarSesion}
             className="flex items-center gap-space-xs px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-error-container/40 hover:text-error font-label-md text-label-md font-semibold transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">logout</span>
             Cerrar sesión
           </button>
         </div>

@@ -17,7 +17,7 @@ export function Header({ onAbrirMenu }: Props) {
           onClick={onAbrirMenu}
           aria-label="Abrir menú"
         >
-          <span className="material-symbols-outlined text-[24px]">menu</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[24px]">menu</span>
         </button>
         <div className="min-w-0">
           <h2 className="font-headline-sm text-headline-sm text-on-surface truncate">

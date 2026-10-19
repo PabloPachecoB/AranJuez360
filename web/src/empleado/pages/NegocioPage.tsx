@@ -99,7 +99,7 @@ export function NegocioPage() {
       {/* Resumen de ventas */}
       <div className="flex flex-col gap-space-sm">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[20px]">analytics</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-primary text-[20px]">analytics</span>
           <h2 className="font-headline-sm text-headline-sm text-on-surface">Resumen de ventas y rendimiento</h2>
         </div>
         <p className="font-body-sm text-body-sm text-on-surface-variant">
@@ -110,7 +110,7 @@ export function NegocioPage() {
             <div className="flex items-start justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant font-medium">Total vendido</span>
               <div className="p-2.5 bg-primary-fixed/50 text-primary rounded-lg">
-                <span className="material-symbols-outlined text-[20px]">payments</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]">payments</span>
               </div>
             </div>
             <span className="font-price-display text-display text-on-surface tracking-tight mt-1">
@@ -123,7 +123,7 @@ export function NegocioPage() {
                 Pedidos entregados
               </span>
               <div className="p-2.5 bg-secondary-container/60 text-on-secondary-container rounded-lg">
-                <span className="material-symbols-outlined text-[20px]">task_alt</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]">task_alt</span>
               </div>
             </div>
             <span className="font-price-display text-display text-on-surface tracking-tight mt-1">
@@ -134,7 +134,7 @@ export function NegocioPage() {
             <div className="flex items-start justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant font-medium">Ticket promedio</span>
               <div className="p-2.5 bg-surface-container-high text-tertiary rounded-lg">
-                <span className="material-symbols-outlined text-[20px]">receipt</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]">receipt</span>
               </div>
             </div>
             <span className="font-price-display text-display text-on-surface tracking-tight mt-1">
@@ -145,7 +145,7 @@ export function NegocioPage() {
             <div className="flex items-start justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant font-medium">Producto estrella</span>
               <div className="p-2.5 bg-primary-fixed text-primary rounded-lg shrink-0">
-                <span className="material-symbols-outlined text-[20px]">local_cafe</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]">local_cafe</span>
               </div>
             </div>
             <span className="font-headline-sm text-headline-sm text-on-surface truncate mt-1">
@@ -173,29 +173,29 @@ export function NegocioPage() {
                   Nombre, tipo y correo los administra Paseo Aranjuez; el resto lo completas tú.
                 </p>
               </div>
-              <span className="material-symbols-outlined text-primary text-[24px]">edit_document</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary text-[24px]">edit_document</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
               <div className="flex flex-col gap-1.5">
-                <label className={labelClase}>Teléfono</label>
-                <input name="telefono" className={inputClase} defaultValue={negocio.telefono} />
+                <label htmlFor="negocio-telefono" className={labelClase}>Teléfono</label>
+                <input id="negocio-telefono" name="telefono" className={inputClase} defaultValue={negocio.telefono} />
               </div>
               <div className="grid grid-cols-2 gap-space-sm">
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelClase}>Piso / Nivel</label>
-                  <input name="piso" className={inputClase} defaultValue={negocio.piso} />
+                  <label htmlFor="negocio-piso" className={labelClase}>Piso / Nivel</label>
+                  <input id="negocio-piso" name="piso" className={inputClase} defaultValue={negocio.piso} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelClase}>Local #</label>
-                  <input name="local" className={inputClase} defaultValue={negocio.local} />
+                  <label htmlFor="negocio-local" className={labelClase}>Local #</label>
+                  <input id="negocio-local" name="local" className={inputClase} defaultValue={negocio.local} />
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className={`${labelClase} flex items-center gap-1.5`}>
-                <span className="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
                 Horario de atención
               </label>
               {diasAbiertos.length > 0 ? (
@@ -205,7 +205,7 @@ export function NegocioPage() {
                       key={d.dia}
                       className="font-body-sm text-body-sm bg-surface-container-low px-2.5 py-1 rounded-full text-on-surface-variant"
                     >
-                      {d.dia_nombre.slice(0, 3)} {d.abre}–{d.cierra}
+                      {d.dia_nombre.slice(0, 3)} {d.abre?.slice(0, 5)}–{d.cierra?.slice(0, 5)}
                     </span>
                   ))}
                 </div>
@@ -215,16 +215,17 @@ export function NegocioPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className={`${labelClase} flex items-center gap-1.5`}>
-                <span className="material-symbols-outlined text-[16px] text-primary">navigation</span>
+              <label htmlFor="negocio-referencia" className={`${labelClase} flex items-center gap-1.5`}>
+                <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-primary">navigation</span>
                 Referencia de llegada
               </label>
-              <input name="referencia" className={inputClase} defaultValue={negocio.referencia} />
+              <input id="negocio-referencia" name="referencia" className={inputClase} defaultValue={negocio.referencia} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className={labelClase}>Descripción del negocio</label>
+              <label htmlFor="negocio-descripcion" className={labelClase}>Descripción del negocio</label>
               <textarea
+                id="negocio-descripcion"
                 name="descripcion"
                 className="w-full p-3 bg-surface-container-low rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary transition-all resize-none"
                 rows={3}
@@ -235,12 +236,12 @@ export function NegocioPage() {
 
           <div className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
             <h3 className="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary text-[22px]">toggle_on</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[22px]">toggle_on</span>
               Visibilidad y estado operativo
             </h3>
             <div className="flex items-center justify-between p-space-md bg-surface-container-low rounded-lg">
               <div className="flex items-start gap-space-sm pr-space-md">
-                <span className="material-symbols-outlined text-secondary text-[24px] mt-0.5">store</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[24px] mt-0.5">store</span>
                 <div className="flex flex-col">
                   <span className="font-label-md text-label-md text-on-surface font-bold">
                     Negocio activo y abierto
@@ -269,7 +270,7 @@ export function NegocioPage() {
               disabled={guardando}
               className="px-space-xl py-3 bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm rounded-lg shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[20px]">save</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">save</span>
               <span>{guardando ? "Guardando..." : "Guardar cambios"}</span>
             </button>
           </div>
@@ -280,7 +281,7 @@ export function NegocioPage() {
           <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="p-space-md bg-surface-container-low flex items-center justify-between">
               <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">visibility</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[16px]">visibility</span>
                 Vista previa para el cliente
               </span>
               {negocio.activo && (
@@ -304,7 +305,7 @@ export function NegocioPage() {
               <p className="font-body-sm text-body-sm text-on-surface-variant">{negocio.descripcion}</p>
               <div className="p-space-sm bg-surface-container-low rounded-lg flex flex-col gap-1 text-on-surface-variant text-body-sm font-body-sm">
                 <div className="flex items-center gap-1.5 text-on-surface font-semibold">
-                  <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[16px] text-primary">location_on</span>
                   {negocio.referencia || "Sin referencia"}
                 </div>
               </div>

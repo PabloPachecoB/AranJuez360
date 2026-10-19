@@ -150,7 +150,7 @@ export function PedidosPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg relative z-10">
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-space-xs px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed mb-space-sm">
-              <span className="material-symbols-outlined text-[15px]">verified_user</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[15px]">verified_user</span>
               <span className="font-badge-code text-badge-code uppercase tracking-wider">Mostrador y Despacho</span>
             </div>
             <h2 className="font-headline-md text-headline-md text-on-surface tracking-tight">
@@ -165,7 +165,7 @@ export function PedidosPage() {
             className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-sm w-full lg:w-auto"
           >
             <div className="relative min-w-[260px] flex-1 sm:flex-initial">
-              <span className="material-symbols-outlined absolute left-3.5 top-3 text-outline text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-3.5 top-3 text-outline text-[20px]">
                 qr_code_scanner
               </span>
               <input
@@ -180,7 +180,7 @@ export function PedidosPage() {
               disabled={validando}
               className="flex items-center justify-center gap-space-xs px-space-lg py-3 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm shadow-md hover:bg-primary-container active:scale-[0.98] transition-all disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[20px]">check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">check_circle</span>
               <span className="whitespace-nowrap">{validando ? "Validando..." : "Validar y Entregar"}</span>
             </button>
           </form>
@@ -194,13 +194,13 @@ export function PedidosPage() {
             }`}
           >
             <div className="flex items-center gap-space-sm">
-              <span className="material-symbols-outlined text-[20px]">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">
                 {mensajeValidacion.tipo === "ok" ? "task_alt" : "error"}
               </span>
               <span className="font-label-md text-label-md">{mensajeValidacion.texto}</span>
             </div>
-            <button type="button" className="hover:opacity-70" onClick={() => setMensajeValidacion(null)}>
-              <span className="material-symbols-outlined text-[18px]">close</span>
+            <button type="button" className="hover:opacity-70" onClick={() => setMensajeValidacion(null)} aria-label="Cerrar mensaje">
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
         )}
@@ -212,7 +212,7 @@ export function PedidosPage() {
           <div className="flex items-center justify-between mb-space-sm">
             <span className="font-label-md text-label-md text-on-surface-variant">Por preparar</span>
             <div className="w-8 h-8 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary">
-              <span className="material-symbols-outlined text-[18px]">soup_kitchen</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">soup_kitchen</span>
             </div>
           </div>
           <span className="font-display text-display text-on-surface font-extrabold">{kpis.porPreparar}</span>
@@ -221,7 +221,7 @@ export function PedidosPage() {
           <div className="flex items-center justify-between mb-space-sm">
             <span className="font-label-md text-label-md text-on-surface-variant">Listos para retiro</span>
             <div className="w-8 h-8 rounded-lg bg-primary-fixed flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[18px]">shopping_bag</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">shopping_bag</span>
             </div>
           </div>
           <span className="font-display text-display text-primary font-extrabold">{kpis.listos}</span>
@@ -230,7 +230,7 @@ export function PedidosPage() {
           <div className="flex items-center justify-between mb-space-sm">
             <span className="font-label-md text-label-md text-on-surface-variant">Entregados hoy</span>
             <div className="w-8 h-8 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary">
-              <span className="material-symbols-outlined text-[18px]">done_all</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">done_all</span>
             </div>
           </div>
           <span className="font-display text-display text-secondary font-extrabold">{kpis.entregadosHoy}</span>
@@ -239,7 +239,7 @@ export function PedidosPage() {
           <div className="flex items-center justify-between mb-space-sm">
             <span className="font-label-md text-label-md text-on-surface-variant">Facturado hoy</span>
             <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface">
-              <span className="material-symbols-outlined text-[18px]">payments</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">payments</span>
             </div>
           </div>
           <span className="font-display text-display text-on-surface font-extrabold">Bs {kpis.facturadoHoy}</span>
@@ -320,7 +320,7 @@ export function PedidosPage() {
                           className="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-xs transition-all flex items-center gap-1 disabled:opacity-60"
                           onClick={() => onAvanzar(pedido)}
                         >
-                          <span className="material-symbols-outlined text-[16px]">{ICONO_ACCION[pedido.estado]}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">{ICONO_ACCION[pedido.estado]}</span>
                           {ETIQUETA_ACCION[pedido.estado]}
                         </button>
                       )}
@@ -345,8 +345,9 @@ export function PedidosPage() {
                           className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/30 transition-colors disabled:opacity-60"
                           onClick={() => onCancelar(pedido)}
                           title="Cancelar"
+                          aria-label="Cancelar pedido"
                         >
-                          <span className="material-symbols-outlined text-[18px]">close</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
                         </button>
                       )}
                     </div>
@@ -369,7 +370,7 @@ export function PedidosPage() {
       {pedidosFinalizados.length > 0 && (
         <div className="flex flex-col bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
           <div className="p-space-md flex items-center gap-space-xs">
-            <span className="material-symbols-outlined text-secondary text-[22px]">history</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-secondary text-[22px]">history</span>
             <h3 className="font-headline-sm text-headline-sm text-on-surface">Historial reciente</h3>
           </div>
           <div className="w-full overflow-x-auto">

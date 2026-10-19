@@ -43,10 +43,10 @@ Las pruebas en sí son de Paseo 360 (pantallas, botones, usuarios de demo). Lo q
 5. **Buscar por lo que ve el usuario** (botón "Guardar", fila "Capuchino"), no por clases CSS: aguanta cambios de diseño.
 6. **Un lanzador de doble clic** (`PRUEBAS.cmd`) para que cualquiera del equipo las corra.
 
-## Hallazgos en la app
-- Los íconos `material-symbols` son texto dentro del mismo elemento ("location_on Frente a…"): buscar ese texto **exacto** falla. Ojo también para lectores de pantalla.
-- En **Mi negocio** (`NegocioPage.tsx`) y el modal de producto, los `<label>` **no están asociados** a su campo (sin `htmlFor`): las pruebas tienen que usar `name`, placeholder o posición. Es un problema de accesibilidad → conviene corregir.
-- `/negocio` muestra el horario con segundos ("10:00:00–21:00:00").
+## Hallazgos en la app (✅ corregidos 2026-10-19)
+- ✅ En **Mi negocio** (`NegocioPage.tsx`) y el modal de producto, los `<label>` no estaban asociados a su campo → ahora con `htmlFor`/`id`; las pruebas buscan por nombre del campo (`getByLabel`), así que si se vuelve a romper, fallan.
+- ✅ Los íconos `material-symbols` se leían como texto ("location_on Frente a…") → `aria-hidden` en todo el panel del negocio (`web/src/empleado/`). Los botones que eran solo ícono (cerrar modal, cerrar mensaje, cancelar pedido) llevan `aria-label`. El resto de la web (admin, paseo360) todavía no.
+- ✅ `/negocio` mostraba el horario con segundos ("10:00:00–21:00:00") → ahora "10:00–21:00" (la prueba 8.1 lo verifica).
 
 ## Falta
 - **Flujo completo de compra:** cliente pide → negocio prepara → entrega con código → cliente gana monedas. Es la prueba de más valor y no existe.

@@ -70,7 +70,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
         <div className="px-space-lg pt-space-lg pb-space-md flex items-start justify-between">
           <div className="flex flex-col">
             <div className="flex items-center gap-space-xs text-primary mb-1">
-              <span className="material-symbols-outlined text-[18px]">verified</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">verified</span>
               <span className="font-badge-code text-badge-code uppercase font-bold tracking-wider">
                 Catálogo de la app
               </span>
@@ -83,18 +83,20 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
             type="button"
             className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
             onClick={onCerrar}
+            aria-label="Cerrar"
           >
-            <span className="material-symbols-outlined text-[22px]">close</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[22px]">close</span>
           </button>
         </div>
 
         <div className="overflow-y-auto px-space-lg py-space-md flex flex-col gap-space-lg text-on-surface">
           <div className="flex flex-col gap-space-md">
             <div className="flex flex-col gap-1.5">
-              <label className={labelClase}>
+              <label htmlFor="producto-nombre" className={labelClase}>
                 Nombre del producto <span className="text-primary">*</span>
               </label>
               <input
+                id="producto-nombre"
                 required
                 className={inputClase}
                 placeholder="Ej. Latte Vainilla 350ml"
@@ -103,8 +105,9 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className={labelClase}>Descripción</label>
+              <label htmlFor="producto-descripcion" className={labelClase}>Descripción</label>
               <textarea
+                id="producto-descripcion"
                 className={`${inputClase} resize-y`}
                 rows={2}
                 placeholder="Ingredientes, volumen o detalles principales..."
@@ -116,14 +119,14 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
 
           <div className="p-space-md bg-surface-container-low rounded-xl flex flex-col gap-space-md">
             <div className="flex items-center gap-space-xs">
-              <span className="material-symbols-outlined text-primary text-[20px]">local_offer</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary text-[20px]">local_offer</span>
               <span className="font-headline-sm text-headline-sm font-bold text-on-surface">
                 Precio, stock y promoción
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
               <div className="flex flex-col gap-1.5">
-                <label className={labelClase}>
+                <label htmlFor="producto-precio" className={labelClase}>
                   Precio regular (Bs) <span className="text-primary">*</span>
                 </label>
                 <div className="relative">
@@ -131,6 +134,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
                     Bs
                   </span>
                   <input
+                    id="producto-precio"
                     required
                     type="number"
                     min={0}
@@ -142,10 +146,11 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className={labelClase}>
+                <label htmlFor="producto-stock" className={labelClase}>
                   Stock <span className="text-primary">*</span>
                 </label>
                 <input
+                  id="producto-stock"
                   required
                   type="number"
                   min={0}
@@ -175,7 +180,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
               {datos.en_promocion && (
                 <div className="pt-space-sm border-t border-surface-container-highest grid grid-cols-1 md:grid-cols-2 gap-space-md items-center">
                   <div className="flex flex-col gap-1.5">
-                    <label className="font-label-md text-label-md text-primary font-bold">
+                    <label htmlFor="producto-precio-promocion" className="font-label-md text-label-md text-primary font-bold">
                       Precio promocional (Bs)
                     </label>
                     <div className="relative">
@@ -183,6 +188,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
                         Bs
                       </span>
                       <input
+                        id="producto-precio-promocion"
                         required
                         type="number"
                         min={0}
@@ -206,7 +212,7 @@ export function ProductoFormModal({ productoExistente, onGuardar, onCerrar, guar
           <div className="p-space-md bg-surface-container-low rounded-lg flex items-center justify-between">
             <div className="flex items-center gap-space-sm">
               <div className="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[18px]">visibility</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-label-md text-label-md font-bold text-on-surface">

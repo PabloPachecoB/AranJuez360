@@ -17,9 +17,9 @@ test.describe('Productos', () => {
     // Nombre único: la base e2e se conserva entre corridas.
     const nombre = `Latte Vainilla ${Date.now()}`;
     await page.getByRole('button', { name: 'Nuevo producto' }).click();
-    await page.getByPlaceholder('Ej. Latte Vainilla 350ml').fill(nombre);
-    await page.getByRole('spinbutton').nth(0).fill('28');
-    await page.getByRole('spinbutton').nth(1).fill('10');
+    await page.getByLabel('Nombre del producto').fill(nombre);
+    await page.getByLabel('Precio regular (Bs)').fill('28');
+    await page.getByLabel('Stock').fill('10');
     await page.getByRole('button', { name: 'Guardar', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(nombre) })).toContainText('Bs 28.00');
   });
@@ -27,7 +27,7 @@ test.describe('Productos', () => {
   test('2.3 guardar sin nombre no crea el producto', async ({ page }) => {
     await page.getByRole('button', { name: 'Nuevo producto' }).click();
     await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-    const campoNombre = page.getByPlaceholder('Ej. Latte Vainilla 350ml');
+    const campoNombre = page.getByLabel('Nombre del producto');
     await expect(campoNombre).toBeVisible();
     expect(await campoNombre.evaluate((el: HTMLInputElement) => el.validity.valueMissing)).toBe(true);
   });
@@ -35,9 +35,9 @@ test.describe('Productos', () => {
   test('2.4 cancelar no crea el producto', async ({ page }) => {
     const nombre = `No guardar ${Date.now()}`;
     await page.getByRole('button', { name: 'Nuevo producto' }).click();
-    await page.getByPlaceholder('Ej. Latte Vainilla 350ml').fill(nombre);
+    await page.getByLabel('Nombre del producto').fill(nombre);
     await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(page.getByPlaceholder('Ej. Latte Vainilla 350ml')).toHaveCount(0);
+    await expect(page.getByLabel('Nombre del producto')).toHaveCount(0);
     await expect(page.getByRole('row', { name: new RegExp(nombre) })).toHaveCount(0);
   });
 
@@ -69,7 +69,7 @@ test.describe('Productos', () => {
     const nombre = await crearProducto(page, 'Editar');
     await page.getByRole('row', { name: new RegExp(nombre) }).getByRole('button', { name: 'Editar' }).click();
     await expect(page.getByRole('heading', { name: 'Editar producto' })).toBeVisible();
-    await page.getByRole('spinbutton').nth(0).fill('27');
+    await page.getByLabel('Precio regular (Bs)').fill('27');
     await page.getByRole('button', { name: 'Guardar', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(nombre) })).toContainText('Bs 27.00');
   });
@@ -85,9 +85,9 @@ test.describe('Productos', () => {
 async function crearProducto(page: Page, prefijo: string) {
   const nombre = `${prefijo} ${Date.now()}`;
   await page.getByRole('button', { name: 'Nuevo producto' }).click();
-  await page.getByPlaceholder('Ej. Latte Vainilla 350ml').fill(nombre);
-  await page.getByRole('spinbutton').nth(0).fill('20');
-  await page.getByRole('spinbutton').nth(1).fill('5');
+  await page.getByLabel('Nombre del producto').fill(nombre);
+  await page.getByLabel('Precio regular (Bs)').fill('20');
+  await page.getByLabel('Stock').fill('5');
   await page.getByRole('button', { name: 'Guardar', exact: true }).click();
   await expect(page.getByRole('row', { name: new RegExp(nombre) })).toBeVisible();
   return nombre;

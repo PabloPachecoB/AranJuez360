@@ -17,14 +17,14 @@ test.describe('Mi negocio y horarios', () => {
   test('4.2 editar información comercial persiste', async ({ page }) => {
     await page.goto('/negocio');
     const referencia = `Frente a la fuente ${Date.now()}`;
-    await page.locator('input[name="telefono"]').fill('71234567');
-    await page.locator('input[name="referencia"]').fill(referencia);
+    await page.getByLabel('Teléfono').fill('71234567');
+    await page.getByLabel('Referencia de llegada').fill(referencia);
     await page.getByRole('button', { name: 'Guardar cambios' }).click();
     await expect(page.getByText('¡Cambios guardados!')).toBeVisible();
     // Vista previa: el texto va junto al ícono location_on, por eso no se busca exacto.
     await expect(page.getByText(referencia)).toBeVisible();
     await page.reload();
-    await expect(page.locator('input[name="referencia"]')).toHaveValue(referencia);
+    await expect(page.getByLabel('Referencia de llegada')).toHaveValue(referencia);
   });
 
   test('8.1 guardar horario se refleja en Mi negocio', async ({ page }) => {
@@ -37,7 +37,8 @@ test.describe('Mi negocio y horarios', () => {
     await expect(page.getByText('Horarios guardados.')).toBeVisible();
 
     await page.goto('/negocio');
-    await expect(page.getByText(/^Lun .*20:00/)).toBeVisible();
+    // Sin segundos: "Lun 10:00–20:00", no "10:00:00–20:00:00".
+    await expect(page.getByText(/^Lun \d\d:\d\d–20:00$/)).toBeVisible();
     await expect(page.getByText(/^Dom /)).toHaveCount(0);
   });
 });

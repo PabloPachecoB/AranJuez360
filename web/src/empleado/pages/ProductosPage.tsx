@@ -140,7 +140,7 @@ export function ProductosPage() {
             </span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-fixed rounded-full shadow-sm">
-            <span className="material-symbols-outlined text-primary text-[15px]">local_offer</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[15px]">local_offer</span>
             <span className="font-label-md text-label-md text-on-primary-fixed-variant font-semibold">
               En promoción: <span className="font-bold">{kpis.enPromocion}</span>
             </span>
@@ -156,7 +156,7 @@ export function ProductosPage() {
 
       <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_2px_12px_rgba(19,27,46,0.04)] mb-space-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
         <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-3 text-on-surface-variant text-[20px]">
+          <span aria-hidden="true" className="material-symbols-outlined absolute left-3.5 top-3 text-on-surface-variant text-[20px]">
             search
           </span>
           <input
@@ -189,7 +189,7 @@ export function ProductosPage() {
             className="flex items-center gap-space-xs bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-label-md px-5 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95"
             onClick={abrirNuevo}
           >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add_circle</span>
             <span>Nuevo producto</span>
           </button>
         </div>
@@ -262,7 +262,7 @@ export function ProductosPage() {
                           </span>
                         ) : stockBajo ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-md text-label-md font-bold">
-                            <span className="material-symbols-outlined text-[14px]">warning</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[14px]">warning</span>
                             {producto.stock} · Stock bajo
                           </span>
                         ) : (
@@ -275,7 +275,7 @@ export function ProductosPage() {
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {producto.en_promocion ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-fixed text-primary font-label-sm text-label-sm font-bold shadow-xs">
-                            <span className="material-symbols-outlined text-[13px]">percent</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[13px]">percent</span>
                             En promoción
                           </span>
                         ) : (
@@ -295,14 +295,14 @@ export function ProductosPage() {
                             className="p-1.5 rounded-lg text-primary hover:bg-primary-fixed transition-colors flex items-center gap-1 font-label-md text-label-md font-bold"
                             onClick={() => abrirEdicion(producto)}
                           >
-                            <span className="material-symbols-outlined text-[17px]">edit</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[17px]">edit</span>
                             <span>Editar</span>
                           </button>
                           <button
                             className="p-1.5 rounded-lg text-error hover:bg-error-container transition-colors flex items-center gap-1 font-label-md text-label-md font-medium"
                             onClick={() => eliminar(producto)}
                           >
-                            <span className="material-symbols-outlined text-[17px]">delete</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[17px]">delete</span>
                             <span>Eliminar</span>
                           </button>
                         </div>
