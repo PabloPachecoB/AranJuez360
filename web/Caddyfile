@@ -1,14 +1,15 @@
-# {$DOMINIO} viene de deploy/.env (ej. paseo360.com). Caddy obtiene y renueva el HTTPS solo.
-{$DOMINIO} {
+# Este Caddy solo sirve internamente en la red Docker. El Caddy compartido
+# gestiona hostname, HTTPS y los puertos públicos del VPS.
+:80 {
 	encode gzip
 
-	# Backend Django: API, refresh de tokens, admin de Django e invitaciones con QR.
+	# Backend Django: API, refresh de tokens, admin e invitaciones con QR.
 	@backend path /api/* /auth/* /admin/* /invitacion/*
 	handle @backend {
 		reverse_proxy backend:8000
 	}
 
-	# Archivos de Django: estáticos del admin e imágenes subidas (logos, fotos, pósters).
+	# Estáticos del admin e imágenes subidas (logos, fotos, pósters).
 	handle_path /static/* {
 		root * /srv/static
 		file_server

@@ -1,5 +1,7 @@
-# Despliegue de Paseo Aranjuez 360 en un VPS: PostgreSQL + backend Django + Caddy (web y HTTPS).
-# Uso (en el VPS, dentro de deploy/):  docker compose up -d --build
+# Compose de la aplicación AranJuez360. El proxy público se administra por
+# separado con docker-compose.proxy.yml y comparte la red externa "proxy".
+name: aranjuez360
+
 services:
   db:
     image: postgres:16-alpine
@@ -33,23 +35,27 @@ services:
   web:
     build: ../web
     restart: unless-stopped
-    environment:
-      DOMINIO: ${DOMINIO}
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
       - media:/srv/media:ro
       - static:/srv/static:ro
-      - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - backend
+    # Alias estable para que el Caddy compartido lo encuentre en otro Compose.
+    expose:
+      - "80"
+    networks:
+      default:
+      proxy:
+        aliases:
+          - aranjuez360-web
 
 volumes:
   postgres:
   media:
   static:
   datos:
-  caddy_data:
-  caddy_config:
+
+networks:
+  proxy:
+    external: true
+    name: proxy
