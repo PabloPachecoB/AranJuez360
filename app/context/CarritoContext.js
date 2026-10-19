@@ -40,11 +40,18 @@ export function CarritoProvider({ children }) {
   /** Vacía el carrito y empieza con este producto (cuando se cambia de local). */
   const empezarCon = useCallback((producto) => setItems({ [producto.id]: { producto, cantidad: 1 } }), []);
   const vaciar = useCallback(() => setItems({}), []);
+  /** Reemplaza los productos del carrito por su versión actual (precios del momento); quita los que ya no están. */
+  const actualizarPrecios = useCallback((vigentes) => setItems((prev) => {
+    const porId = Object.fromEntries(vigentes.map((p) => [p.id, p]));
+    return Object.fromEntries(Object.entries(prev)
+      .filter(([id]) => porId[id])
+      .map(([id, it]) => [id, { ...it, producto: { ...it.producto, ...porId[id] } }]));
+  }), []);
   const cantidadDe = useCallback((productoId) => items[productoId]?.cantidad || 0, [items]);
 
   const valor = useMemo(
-    () => ({ lista, unidades, total, local, cambiar, quitar, empezarCon, vaciar, cantidadDe }),
-    [lista, unidades, total, local, cambiar, quitar, empezarCon, vaciar, cantidadDe],
+    () => ({ lista, unidades, total, local, cambiar, quitar, empezarCon, vaciar, cantidadDe, actualizarPrecios }),
+    [lista, unidades, total, local, cambiar, quitar, empezarCon, vaciar, cantidadDe, actualizarPrecios],
   );
   return <CarritoContext.Provider value={valor}>{children}</CarritoContext.Provider>;
 }

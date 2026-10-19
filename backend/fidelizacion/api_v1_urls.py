@@ -29,6 +29,7 @@ urlpatterns = [
     path("puntos/codigo/<str:codigo>/", views.resolver_codigo, name="puntos-codigo"),
     path("puntos/escanear/", views.escanear, name="puntos-escanear"),
     path("puntos/conversion/", views.conversion, name="puntos-conversion"),
+    path("billetera/cotizaciones/", views.cotizaciones_dolar, name="billetera-cotizaciones"),
     path("canjes/validar/<str:codigo>/", views.validar_canje, name="validar-canje"),
     path("admin/configuracion-puntos/", views.configuracion_puntos, name="admin-configuracion-puntos"),
 ] + router.urls

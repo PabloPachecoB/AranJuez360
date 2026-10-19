@@ -27,6 +27,7 @@ Plataforma (app + web) para gestionar el ecosistema de **Paseo Aranjuez**: clien
 - [[Jarvis (asistente IA)]] — recomienda con datos reales y muestra fichas
 - [[Fidelización]] — puntos por **visita** (portería) y por **compra** (caja)
 - [[Monedero y recompensas]] — monedas, progreso, catálogo
+- [[Billetera Paseo (saldo de regalo)]] — 🧭 en planificación: saldo en Bs por devolución de compras, para gastar solo en el Paseo
 - [[Oficinas e invitaciones]] — QR para invitados (implementado)
 - [[Dashboard admin]] — métricas para tomar decisiones
 - [[Asistente de análisis (admin)]] — chat de IA para el admin: datos reales, patrones y campañas

@@ -4,6 +4,10 @@ Flujo seguro: el LLM solo elige la herramienta y sus argumentos. `preparar` vali
 con datos reales del backend y arma un resumen; la acción queda PENDIENTE y recién
 se ejecuta cuando el usuario toca "Confirmar" en la app (`ejecutar`). El modelo
 nunca mueve monedas por sí solo.
+
+Los montos los calcula siempre el backend, nunca el modelo. El payload guarda el monto
+que vio el usuario en la propuesta: si el negocio cambió un precio antes de confirmar,
+la acción no se ejecuta (el QR o el cobro nunca difieren de lo que el usuario aceptó).
 """
 
 from datetime import datetime, timedelta
@@ -24,6 +28,15 @@ DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "doming
 
 def _m(valor) -> str:
     return f"{Decimal(valor):.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _mismo_monto(aceptado, actual, que: str):
+    """Propuestas viejas no traen el monto: se ejecutan como antes. Si cambió, se pide proponer de nuevo."""
+    if aceptado is not None and Decimal(str(aceptado)) != Decimal(str(actual)):
+        raise ReglaNegocioError(
+            f"{que} cambió desde que te lo propuse: ahora es {_m(actual)} (antes {_m(aceptado)}). "
+            "Pídemelo de nuevo para confirmarlo con el monto actualizado."
+        )
 
 
 def _cuando(momento) -> str:
@@ -54,11 +67,15 @@ def _preparar_reserva(user, args):
         pago = f"para pagar Bs {_m(cotizacion['total_bs'])} en boletería"
     else:
         pago = "para pagar en boletería"
-    payload = {"funcion_id": funcion.id, "cantidad": cantidad, "metodo": metodo}
+    payload = {"funcion_id": funcion.id, "cantidad": cantidad, "metodo": metodo,
+               "total_bs": str(cotizacion["total_bs"]), "monedas": str(cotizacion["monedas"])}
     return f"Reservar {detalle}, {pago}", payload
 
 
 def _ejecutar_reserva(user, payload):
+    cotizacion = cine.cotizar(cine.funcion_reservable(payload["funcion_id"]), payload["cantidad"], payload["metodo"])
+    _mismo_monto(payload.get("total_bs"), cotizacion["total_bs"], "El precio de las entradas (Bs)")
+    _mismo_monto(payload.get("monedas"), cotizacion["monedas"], "El costo en monedas")
     reserva = cine.reservar(user, payload["funcion_id"], payload["cantidad"], payload["metodo"])
     texto = (
         f"[excited] ¡Listo! Tus entradas para {reserva.funcion.pelicula.titulo} están reservadas. "
@@ -82,11 +99,13 @@ def _preparar_canje(user, args):
     lugar = f" en {recompensa.empresa.nombre}" if recompensa.empresa else ""
     return (
         f"Canjear {recompensa.nombre}{lugar} por {_m(recompensa.costo_puntos)} monedas",
-        {"recompensa_id": recompensa.id},
+        {"recompensa_id": recompensa.id, "costo_puntos": str(recompensa.costo_puntos)},
     )
 
 
 def _ejecutar_canje(user, payload):
+    _mismo_monto(payload.get("costo_puntos"), puntos.recompensa_activa(payload["recompensa_id"]).costo_puntos,
+                 "El costo en monedas")
     canje = puntos.canjear_recompensa(user, payload["recompensa_id"])
     return (
         f"[excited] ¡Canjeado! {canje.recompensa.nombre} ya es tuyo. Muestra el código {canje.codigo} para usarlo.",
@@ -165,25 +184,34 @@ def _preparar_pedido(user, args):
             raise ReglaNegocioError(f"Necesitan al menos {pedidos.MINUTOS_MINIMOS_RESERVA} minutos para prepararlo. ¿Otra hora?")
         if retiro > ahora + timedelta(days=pedidos.DIAS_MAXIMOS_RESERVA):
             raise ReglaNegocioError(f"Puedo reservar con hasta {pedidos.DIAS_MAXIMOS_RESERVA} días de anticipación.")
-    total = sum(pedidos.precio_vigente(productos[i["producto_id"]]) * i["cantidad"] for i in items)
-    detalle = ", ".join(f"{i['cantidad']} {productos[i['producto_id']].nombre}" for i in items)
+    lineas = []
+    for i in items:
+        producto = productos[i["producto_id"]]
+        precio = pedidos.precio_vigente(producto)
+        lineas.append({"nombre": producto.nombre, "cantidad": i["cantidad"], "precio": str(precio),
+                       "subtotal": str(precio * i["cantidad"])})
+    total = sum(Decimal(linea["subtotal"]) for linea in lineas)
+    detalle = ", ".join(f"{linea['cantidad']} {linea['nombre']}" for linea in lineas)
     cuando = f"para retirar {_cuando(retiro)}" if retiro else "para retirar apenas esté listo"
     ubicacion = f" (piso {empresa.piso})" if empresa.piso else ""
     return (
         f"Pedir {detalle} en {empresa.nombre}{ubicacion} por Bs {_m(total)}, {cuando}. Lo pagas con QR al confirmar",
-        {"empresa_id": empresa.id, "items": items, "retiro": retiro.isoformat() if retiro else None},
+        {"empresa_id": empresa.id, "items": items, "retiro": retiro.isoformat() if retiro else None,
+         "total": str(total),
+         # Lo que muestra la tarjeta de la app: lo arma el backend, Jarvis no lo dice en voz alta.
+         "detalle": {"local": f"{empresa.nombre}{ubicacion}", "lineas": lineas, "total": str(total),
+                     "retiro": cuando[0].upper() + cuando[1:]}},
     )
 
 
 def _ejecutar_pedido(user, payload):
     retiro = datetime.fromisoformat(payload["retiro"]) if payload.get("retiro") else None
     try:
-        pedido = pedidos.crear_pedido(user, payload["empresa_id"], payload["items"], retiro)
+        pedido = pedidos.crear_pedido(user, payload["empresa_id"], payload["items"], retiro, payload.get("total"))
     except pedidos.ReglaNegocioError as exc:
         raise ReglaNegocioError(str(exc))
     return (
-        f"[excited] ¡Listo! Tu pedido en {pedido.empresa.nombre} te espera. Págalo con el QR que te muestro "
-        f"en los próximos {pedidos.MINUTOS_PARA_PAGAR} minutos y luego lo sigues en Comer, Mis pedidos.",
+        f"[excited] ¡Listo! Aquí está tu QR para pagar. Tienes {pedidos.MINUTOS_PARA_PAGAR} minutos.",
         {"tipo": "pedido", "id": pedido.id},
     )
 

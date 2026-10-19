@@ -55,10 +55,13 @@ def precio_vigente(producto: Producto) -> Decimal:
 
 
 @transaction.atomic
-def crear_pedido(cliente: Usuario, empresa_id: int, items: list[dict], retiro_programado=None) -> Pedido:
+def crear_pedido(cliente: Usuario, empresa_id: int, items: list[dict], retiro_programado=None,
+                 total_esperado=None) -> Pedido:
     """items: [{"producto_id": int, "cantidad": int}, ...], todos del mismo negocio
     (un pedido = un solo negocio, como define el documento base del equipo).
-    retiro_programado: hora de retiro reservada (None = lo antes posible)."""
+    retiro_programado: hora de retiro reservada (None = lo antes posible).
+    total_esperado: el total que vio el cliente (carrito o propuesta de Jarvis). Si el negocio cambió un
+    precio entretanto, no se crea el pedido: el QR nunca cobra un monto distinto al que el cliente aceptó."""
     if retiro_programado is not None:
         ahora = timezone.now()
         if retiro_programado < ahora + timedelta(minutes=MINUTOS_MINIMOS_RESERVA):
@@ -94,6 +97,11 @@ def crear_pedido(cliente: Usuario, empresa_id: int, items: list[dict], retiro_pr
         precio = precio_vigente(producto)
         total += precio * cantidad
         items_a_crear.append((producto, cantidad, precio))
+    if total_esperado is not None and total != Decimal(str(total_esperado)):
+        raise ReglaNegocioError(
+            f"El precio cambió: ahora el total es Bs {total:.2f} (viste Bs {Decimal(str(total_esperado)):.2f}). "
+            "Revisa el pedido y confírmalo de nuevo."
+        )
 
     pedido = Pedido.objects.create(
         cliente=cliente, empresa=empresa, total=total, retiro_programado=retiro_programado,

@@ -479,3 +479,75 @@ class RachaParqueoTests(APITestCase):
         resp = self._canjear()  # el mismo día: la racha empezó de cero
         self.assertEqual(resp.status_code, 400)
         self.assertIn("Llevas 0", resp.data["detail"])
+
+
+class CotizacionesTests(APITestCase):
+    PORTADA_BCB = (
+        '<article class="bcb-kpi2-card is-tc-oficial has-range-label"><div class="bcb-kpi2-asof">'
+        '<time datetime="2026-10-19">VIGENTE PARA EL LUNES 19 DE OCTUBRE, 2026</time></div>'
+        '<span class="bcb-tco-num">11,69</span></article>'
+        '<article class="otra"><span class="bcb-tco-num">99,99</span></article>'
+    )
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.cliente = Usuario.objects.create_user("cli-cot", password="x", rol=Usuario.Rol.CLIENTE)
+
+    def _respuestas(self, bcb_ok=True, p2p_ok=True):
+        from unittest import mock
+
+        import requests
+
+        def get(url, **kwargs):
+            if not bcb_ok:
+                raise requests.ConnectionError("sin red")
+            return mock.Mock(content=self.PORTADA_BCB.encode(), raise_for_status=lambda: None)
+
+        def post(url, json=None, **kwargs):
+            if not p2p_ok:
+                raise requests.ConnectionError("sin red")
+            precios = ["11.85", "11.86", "11.86"] if json["tradeType"] == "BUY" else ["11.80", "11.81", "11.82"]
+            datos = {"data": [{"adv": {"price": p}} for p in precios]}
+            return mock.Mock(json=lambda: datos, raise_for_status=lambda: None)
+
+        return mock.patch("fidelizacion.cotizaciones.requests.get", get), mock.patch(
+            "fidelizacion.cotizaciones.requests.post", post
+        )
+
+    def test_lee_oficial_del_bcb_y_usdt_de_binance(self):
+        g, p = self._respuestas()
+        self.client.force_authenticate(self.cliente)
+        with g, p:
+            data = self.client.get("/api/v1/billetera/cotizaciones/").data
+        self.assertEqual(data["oficial"]["valor"], "11.69")
+        self.assertEqual(data["oficial"]["fecha"], "2026-10-19")
+        self.assertIn("19 de octubre", data["oficial"]["detalle"])
+        self.assertEqual(data["usdt"]["valor"], "11.84")  # (11.86 + 11.81) / 2
+        self.assertFalse(data["oficial"]["desactualizada"])
+
+    def test_si_la_fuente_falla_usa_el_ultimo_valor_bueno(self):
+        from django.core.cache import cache
+
+        self.client.force_authenticate(self.cliente)
+        g, p = self._respuestas()
+        with g, p:
+            self.client.get("/api/v1/billetera/cotizaciones/")
+        cache.delete("cotizacion:oficial")  # vence la caché fresca
+        g, p = self._respuestas(bcb_ok=False)
+        with g, p:
+            data = self.client.get("/api/v1/billetera/cotizaciones/").data
+        self.assertEqual(data["oficial"]["valor"], "11.69")
+        self.assertTrue(data["oficial"]["desactualizada"])
+
+    def test_sin_ningun_dato_no_inventa(self):
+        self.client.force_authenticate(self.cliente)
+        g, p = self._respuestas(bcb_ok=False, p2p_ok=False)
+        with g, p:
+            data = self.client.get("/api/v1/billetera/cotizaciones/").data
+        self.assertIsNone(data["oficial"])
+        self.assertIsNone(data["usdt"])
+
+    def test_requiere_sesion(self):
+        self.assertEqual(self.client.get("/api/v1/billetera/cotizaciones/").status_code, 401)

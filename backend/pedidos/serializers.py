@@ -14,6 +14,8 @@ class CrearPedidoSerializer(serializers.Serializer):
     items = ItemCarritoSerializer(many=True)
     # Reserva: hora a la que el cliente retira (vacío = lo antes posible).
     retiro_programado = serializers.DateTimeField(required=False, allow_null=True)
+    # Total que el cliente vio en el carrito: si no coincide con los precios actuales, no se crea el pedido.
+    total_esperado = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
 
 
 class PedidoItemSerializer(serializers.ModelSerializer):

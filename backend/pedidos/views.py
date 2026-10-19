@@ -52,6 +52,7 @@ class MisPedidosViewSet(
             entrada.validated_data["empresa"],
             entrada.validated_data["items"],
             entrada.validated_data.get("retiro_programado"),
+            entrada.validated_data.get("total_esperado"),
         )
         return Response(PedidoSerializer(pedido).data, status=status.HTTP_201_CREATED)
 

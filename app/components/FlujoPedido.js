@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { FUENTES, SOMBRA, STITCH } from "../constants/theme";
 import { useCarrito } from "../context/CarritoContext";
-import { crearPedido } from "../services/pedidosService";
+import { crearPedido, getProductos } from "../services/pedidosService";
 import { AvisoOtroLocal, bs, CarritoSheet } from "./CarritoSheet";
 import { PagoQRModal } from "./PedidoComer";
 
@@ -38,12 +38,22 @@ export function useFlujoPedido({ onPagoCerrado, mostrarBarra = true } = {}) {
         local.empresa,
         carrito.lista.map(({ producto, cantidad }) => ({ producto_id: producto.id, cantidad })),
         retiroProgramado,
+        Number(carrito.total).toFixed(2),
       );
       carrito.vaciar();
       setVerCarrito(false);
       setPago(pedido);
     } catch (err) {
       setError(err.message);
+      // El negocio cambió un precio: el carrito pasa a los precios actuales para que el cliente vea el total real.
+      if (/precio cambió/i.test(err.message || "")) {
+        try {
+          const vigentes = await getProductos({ empresa: local.empresa });
+          carrito.actualizarPrecios(vigentes.map((p) => ({ ...p, precio: precioVigente(p) })));
+        } catch {
+          // Si no se pudo recargar, el mensaje ya pide revisar el pedido.
+        }
+      }
     } finally {
       setEnviando(false);
     }

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from usuarios.permissions import EsAdmin, EsCaja, EsCliente, EsEmpresa, EsPortero
 
-from . import services
+from . import cotizaciones, services
 from .models import (
     Canje,
     ConfiguracionPuntos,
@@ -317,6 +317,14 @@ def conversion(request):
     if request.user.rol not in ("ADMIN", "NEGOCIO", "CAJERO"):
         raise NotFound()
     return Response(services.conversion())
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def cotizaciones_dolar(request):
+    """Cotización del dólar (oficial del BCB y USDT P2P) para mostrar la Billetera Paseo en Bs."""
+    oficial, usdt = cotizaciones.cotizaciones()
+    return Response({"oficial": oficial, "usdt": usdt})
 
 
 @api_view(["GET", "POST"])

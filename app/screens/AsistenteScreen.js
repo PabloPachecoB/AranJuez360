@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -134,8 +133,11 @@ export default function AsistenteScreen({ navigation, route }) {
         pedidoId: resultado.tipo === "pedido" ? resultado.id : null,
       }));
       hablar(data.voz || data.text);
-      // Pedido de comida: se abre el cobro con QR en el mismo chat.
-      if (resultado.tipo === "pedido") abrirPago(resultado.id);
+      // Pedido de comida: el QR de cobro aparece de inmediato (también si estaba en modo voz).
+      if (resultado.tipo === "pedido") {
+        setModoVoz(false);
+        abrirPago(resultado.id);
+      }
     } catch (err) {
       marcarAccion(accion.id, "fallida");
       agregar(mensaje("error", err.message));
@@ -240,6 +242,21 @@ export default function AsistenteScreen({ navigation, route }) {
 
   const estadoAvatar = grabando ? "escuchando" : pensando ? "pensando" : hablando ? "hablando" : "inactivo";
   const ultimo = (rol) => [...mensajes].reverse().find((m) => m.rol === rol);
+
+  // Respuesta con tarjetas: se muestra desde su comienzo (si se baja al final, el texto queda arriba, oculto).
+  useEffect(() => {
+    const ultimoItem = mensajes[mensajes.length - 1];
+    const conTarjetas = ultimoItem?.rol === "jarvis" && (ultimoItem.accion || ultimoItem.codigo
+      || ultimoItem.productos?.length || ultimoItem.empresas?.length);
+    const espera = setTimeout(() => {
+      if (conTarjetas) lista.current?.scrollToIndex({ index: mensajes.length - 1, viewPosition: 0, animated: true });
+      else lista.current?.scrollToEnd({ animated: true });
+    }, 120);
+    return () => clearTimeout(espera);
+  }, [mensajes]);
+  useEffect(() => {
+    if (pensando) lista.current?.scrollToEnd({ animated: true });
+  }, [pensando]);
   const ultimoMensaje = mensajes[mensajes.length - 1];
 
   return (
@@ -268,7 +285,7 @@ export default function AsistenteScreen({ navigation, route }) {
           data={mensajes}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.lista}
-          onContentSizeChange={() => lista.current?.scrollToEnd({ animated: true })}
+          onScrollToIndexFailed={() => lista.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <Burbuja item={item} onEscuchar={() => hablarComoJarvis(item.voz || item.texto)}
               onConfirmar={confirmar} onCancelar={cancelar} onPagar={abrirPago}
@@ -359,14 +376,25 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
   }
   const esUsuario = item.rol === "usuario";
   return (
-    <View style={[styles.burbuja, esUsuario ? styles.usuario : styles.jarvis]}>
-      {item.esVoz ? (
-        <View style={styles.etiquetaVoz}>
-          <Ionicons name="mic" size={12} color={COLORS.secondary} />
-          <Text style={styles.etiquetaVozTexto}>Nota de voz</Text>
-        </View>
-      ) : null}
-      <Text style={esUsuario ? styles.textoUsuario : styles.textoJarvis}>{item.texto}</Text>
+    <View style={esUsuario ? styles.filaUsuario : styles.filaJarvis}>
+      <View style={[styles.burbuja, esUsuario ? styles.usuario : styles.jarvis]}>
+        {item.esVoz ? (
+          <View style={styles.etiquetaVoz}>
+            <Ionicons name="mic" size={12} color={COLORS.secondary} />
+            <Text style={styles.etiquetaVozTexto}>Nota de voz</Text>
+          </View>
+        ) : null}
+        <Text style={esUsuario ? styles.textoUsuario : styles.textoJarvis}>{item.texto}</Text>
+        {!esUsuario ? (
+          <TouchableOpacity onPress={onEscuchar} style={styles.escuchar} accessibilityLabel="Escuchar respuesta">
+            <Ionicons name="play-circle-outline" size={16} color={COLORS.muted} />
+            <Text style={styles.textoMuted}>Escuchar</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {/* Tarjetas debajo del globo, a todo el ancho: se leen sin deslizar hacia el costado. */}
+      {item.accion ? <TarjetaAccion accion={item.accion} onConfirmar={onConfirmar} onCancelar={onCancelar} /> : null}
       {item.codigo ? (
         <View style={styles.codigo}>
           <Text style={styles.codigoEtiqueta}>Tu código</Text>
@@ -377,37 +405,34 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
       {item.pedidoId ? (
         <TouchableOpacity style={styles.pagar} onPress={() => onPagar(item.pedidoId)}>
           <Ionicons name="qr-code" size={16} color={COLORS.white} />
-          <Text style={styles.pagarTexto}>Pagar / ver mi pedido</Text>
+          <Text style={styles.pagarTexto}>Ver mi QR de pago</Text>
         </TouchableOpacity>
       ) : null}
-      {item.accion ? <TarjetaAccion accion={item.accion} onConfirmar={onConfirmar} onCancelar={onCancelar} /> : null}
-      {item.productos?.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
-          {item.productos.map((p) => (
-            <View key={p.id} style={styles.plato}>
-              {p.foto ? <Image source={{ uri: p.foto }} style={styles.platoFoto} /> : (
-                <View style={[styles.platoFoto, styles.fichaLogoVacio]}>
-                  <Ionicons name="restaurant" size={26} color={COLORS.white} />
-                </View>
-              )}
-              <View style={styles.platoCuerpo}>
-                <Text style={styles.fichaNombre} numberOfLines={2}>{p.nombre}</Text>
-                <Text style={styles.textoMuted} numberOfLines={1}>
-                  {p.empresa_nombre}{p.piso ? ` · ${p.piso === "PB" ? "PB" : `piso ${p.piso}`}` : ""}
-                </Text>
-                <Text style={styles.platoPrecio}>Bs {Number(p.precio)}</Text>
-                <TouchableOpacity style={styles.platoBoton} onPress={() => onPedirPlato(p)}
-                  accessibilityLabel={`Pedir ${p.nombre}`}>
-                  <Ionicons name="bag-add" size={14} color={COLORS.white} />
-                  <Text style={styles.platoBotonTexto}>Pedir</Text>
-                </TouchableOpacity>
-              </View>
+      {item.productos?.map((p) => (
+        <View key={p.id} style={styles.plato}>
+          {p.foto ? <Image source={{ uri: p.foto }} style={styles.platoFoto} /> : (
+            <View style={[styles.platoFoto, styles.fichaLogoVacio]}>
+              <Ionicons name="restaurant" size={22} color={COLORS.white} />
             </View>
-          ))}
-        </ScrollView>
-      ) : null}
+          )}
+          <View style={styles.flex}>
+            <Text style={styles.fichaNombre} numberOfLines={2}>{p.nombre}</Text>
+            <Text style={styles.textoMuted} numberOfLines={1}>
+              {p.empresa_nombre}{p.piso ? ` · ${p.piso === "PB" ? "PB" : `piso ${p.piso}`}` : ""}
+            </Text>
+            <Text style={styles.platoPrecio}>
+              Bs {Number(p.precio).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.platoBoton} onPress={() => onPedirPlato(p)}
+            accessibilityLabel={`Pedir ${p.nombre}`}>
+            <Ionicons name="bag-add" size={15} color={COLORS.white} />
+            <Text style={styles.platoBotonTexto}>Pedir</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
       {item.empresas?.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fichas}>
+        <View style={styles.locales}>
           {item.empresas.map((e) => (
             <TouchableOpacity key={e.id} style={styles.ficha} onPress={() => onAbrirEmpresa(e.id)}
               accessibilityLabel={`Ver ${e.nombre}`}>
@@ -422,15 +447,10 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
                   {e.piso ? (e.piso === "PB" ? "Planta baja" : `Piso ${e.piso}`) : e.categoria_nombre || "Ver ficha"}
                 </Text>
               </View>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.muted} />
             </TouchableOpacity>
           ))}
-        </ScrollView>
-      ) : null}
-      {!esUsuario ? (
-        <TouchableOpacity onPress={onEscuchar} style={styles.escuchar} accessibilityLabel="Escuchar respuesta">
-          <Ionicons name="play-circle-outline" size={16} color={COLORS.muted} />
-          <Text style={styles.textoMuted}>Escuchar</Text>
-        </TouchableOpacity>
+        </View>
       ) : null}
     </View>
   );
@@ -438,21 +458,22 @@ function Burbuja({ item, onEscuchar, onConfirmar, onCancelar, onAbrirEmpresa, on
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  fichas: { gap: 8, paddingTop: 10 },
-  plato: { width: 170, backgroundColor: COLORS.white, borderRadius: 14, overflow: "hidden", borderWidth: 1,
-    borderColor: "#E2E8F0" },
-  platoFoto: { width: "100%", height: 92, backgroundColor: "#E2E8F0" },
-  platoCuerpo: { padding: 8, gap: 2 },
+  filaJarvis: { alignSelf: "stretch", gap: 8 },
+  filaUsuario: { alignSelf: "stretch", alignItems: "flex-end" },
+  plato: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: COLORS.white, borderRadius: 14,
+    padding: 8, borderWidth: 1, borderColor: "#E2E8F0" },
+  platoFoto: { width: 64, height: 64, borderRadius: 10, backgroundColor: "#E2E8F0" },
   platoPrecio: { fontSize: 15, fontWeight: "800", color: COLORS.primary, marginTop: 2 },
-  platoBoton: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-    backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 7 },
+  platoBoton: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primary,
+    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   platoBotonTexto: { color: COLORS.white, fontWeight: "700", fontSize: 13 },
-  ficha: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.white, borderRadius: 12,
-    padding: 8, borderWidth: 1, borderColor: "#E2E8F0", maxWidth: 210 },
-  fichaLogo: { width: 40, height: 40, borderRadius: 10 },
+  locales: { gap: 6 },
+  ficha: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: COLORS.white, borderRadius: 12,
+    padding: 8, borderWidth: 1, borderColor: "#E2E8F0" },
+  fichaLogo: { width: 36, height: 36, borderRadius: 10 },
   fichaLogoVacio: { backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
   fichaLetra: { color: COLORS.white, fontWeight: "800" },
-  fichaTexto: { flexShrink: 1 },
+  fichaTexto: { flex: 1 },
   fichaNombre: { fontSize: 14, fontWeight: "700", color: COLORS.text },
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 10,
@@ -465,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center" },
   titulo: { fontSize: 17, fontWeight: "800", color: COLORS.text },
   subtitulo: { fontSize: 12, color: COLORS.muted },
-  lista: { padding: 16, gap: 10 },
+  lista: { padding: 16, gap: 14 },
   burbuja: { maxWidth: "85%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
   jarvis: { alignSelf: "flex-start", backgroundColor: COLORS.white, borderWidth: 1, borderColor: "#E2E8F0",
     borderBottomLeftRadius: 4 },
@@ -492,11 +513,12 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center" },
   botonGrabando: { backgroundColor: COLORS.danger, transform: [{ scale: 1.15 }] },
   deshabilitado: { opacity: 0.5 },
-  codigo: { marginTop: 10, backgroundColor: COLORS.bg, borderRadius: 12, padding: 10, alignItems: "center" },
+  codigo: { backgroundColor: COLORS.white, borderRadius: 14, padding: 12, alignItems: "center", borderWidth: 1,
+    borderColor: "#E2E8F0" },
   codigoEtiqueta: { fontSize: 11, color: COLORS.muted, fontWeight: "700" },
   codigoValor: { fontSize: 24, fontWeight: "800", letterSpacing: 4, color: COLORS.primary },
   qr: { marginTop: 8, padding: 8, backgroundColor: "#fff", borderRadius: 10 },
-  pagar: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+  pagar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
     backgroundColor: COLORS.primary, borderRadius: 999, paddingVertical: 10 },
   pagarTexto: { color: COLORS.white, fontWeight: "700", fontSize: 14 },
 });

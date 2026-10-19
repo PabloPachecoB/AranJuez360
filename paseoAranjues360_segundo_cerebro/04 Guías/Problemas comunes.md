@@ -48,3 +48,12 @@ Estás con la cuenta de admin en la app; entra con `cliente@paseo.bo`.
 3. Logos `.webp`: en Windows hay que registrar el tipo (`mimetypes.add_type("image/webp", ".webp")` en `settings.py`), si no salen como `octet-stream`.
 4. Solo 12 tiendas tienen portada y galería; las demás muestran logo. → [[Directorio y rubros]]
 5. En Expo web, un `ScrollView` horizontal dentro de una columna puede colapsar: usar `style={{ flexGrow: 0 }}`.
+
+## El celular se queda en "Opening project" / no llega a la PC (2026-10-19)
+**Causa encontrada:** el agente de seguridad **Wazuh** de la PC bloqueó la IP del celular. Crea reglas de firewall de entrada "WAZUH ACTIVE RESPONSE BLOCKED IP", que ganan a la regla que permite Node.
+- Prueba rápida: en el celular abrir `http://<IP de la PC>:8082/status` → debe decir `packager-status:running`.
+- Ver bloqueos: `Get-NetFirewallRule -DisplayName "WAZUH ACTIVE RESPONSE BLOCKED IP" | Get-NetFirewallAddressFilter`
+- Quitar el bloqueo del celular (PowerShell **como administrador**, cambiar la IP):
+  `Get-NetFirewallRule -DisplayName "WAZUH ACTIVE RESPONSE BLOCKED IP" | Where-Object { ($_ | Get-NetFirewallAddressFilter).RemoteAddress -contains "192.168.0.7" } | Remove-NetFirewallRule`
+- Si vuelve a pasar: agregar la red local a la lista blanca (`white_list`) de Wazuh.
+- No era el router: el celular sí abría `http://192.168.0.1`.

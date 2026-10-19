@@ -24,9 +24,10 @@ export async function getProductos(filtros = {}) {
 /**
  * Un pedido = un solo negocio. items: [{ producto_id, cantidad }].
  * retiroProgramado: ISO de la hora reservada para retirar (null = lo antes posible).
+ * totalEsperado: el total del carrito; si el negocio cambió un precio, el backend rechaza el pedido.
  */
-export const crearPedido = (empresa, items, retiroProgramado = null) =>
-  llamar("post", "/pedidos/", { empresa, items, retiro_programado: retiroProgramado });
+export const crearPedido = (empresa, items, retiroProgramado = null, totalEsperado = null) =>
+  llamar("post", "/pedidos/", { empresa, items, retiro_programado: retiroProgramado, total_esperado: totalEsperado });
 export const getMisPedidos = async () => lista(await llamar("get", "/pedidos/"));
 export const getPedido = (id) => llamar("get", `/pedidos/${id}/`);
 /** Demo: paga el QR desde la app, como si el banco confirmara el cobro. */

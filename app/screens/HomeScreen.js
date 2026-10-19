@@ -462,6 +462,20 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         ) : null}
 
+        {/* Billetera Paseo (simulación del módulo en planificación) */}
+        {user?.rol === "CLIENTE" ? (
+          <TouchableOpacity style={styles.cine} onPress={() => navigation.navigate("Billetera")}>
+            <View style={[styles.cineIcono, { backgroundColor: "#166534" }]}>
+              <Ionicons name="wallet" size={22} color={STITCH.white} />
+            </View>
+            <View style={styles.flex1}>
+              <Text style={styles.cineTitulo}>Billetera Paseo · simulación</Text>
+              <Text style={styles.cineTexto} numberOfLines={1}>Saldo de regalo en USD para gastar en el Paseo</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={STITCH.outline} />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Aranjuez Oficinas */}
         <TouchableOpacity style={styles.cine} onPress={() => navigation.navigate("Oficinas")}>
           <View style={[styles.cineIcono, { backgroundColor: STITCH.primaryContainer }]}>

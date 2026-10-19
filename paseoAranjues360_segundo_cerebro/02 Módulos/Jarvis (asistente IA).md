@@ -34,3 +34,17 @@ Buscador del Inicio, botón central (modo voz), tarjeta "Hablar con Jarvis", bot
 
 ## Archivos clave
 `backend/agente/contexto.py` · `backend/agente/api.py` (`_empresas_mencionadas`) · `app/screens/AsistenteScreen.js`
+
+## 🔒 Montos y cobros: nunca dependen de lo que diga Jarvis (2026-10-19)
+- **Los montos los calcula el backend**: el modelo solo elige el plato, la función o la recompensa y la cantidad. El resumen de la propuesta, el total del pedido y el **QR** salen de la base de datos.
+- **Candado de precio**: la propuesta guarda el monto que vio el usuario. Si el negocio cambia el precio antes de "Confirmar", no se crea el pedido / reserva / canje y Jarvis pide proponerlo de nuevo. Lo mismo en el carrito de la app (`total_esperado`): si cambió, el pedido se rechaza y el carrito se actualiza con los precios reales.
+- **Montos en texto libre verificados** (`agent/guardrails.py`, `montos_sin_respaldo`): cada "N bolivianos" o "N monedas" tiene que salir de los datos del turno (precio × cantidad de los platos que nombra, saldo, costos). Si no, se le pide corregir una vez; si insiste, responde sin el monto. Los montos en letras no se aceptan (el prompt pide cifras).
+- **"Toca Confirmar" sin propuesta se quita**: caso real del 19/10 (5 lattes en HOY HAY, QR correcto de Bs 100): Jarvis después "corrigió" un 50 que nadie dijo y volvió a pedir Confirmar sin botón.
+- Datos en tiempo real: el contexto se arma desde la base en **cada mensaje**; lo que un negocio cambia en su panel lo ve Jarvis en el siguiente mensaje.
+- Límite conocido: números sin unidad ("no 50") no se verifican.
+
+## 💬 Chat ordenado y pedido sin montos en la voz (2026-10-19)
+- Jarvis **informa** lo que hay (platos, locales) sin decir precios ni totales: cada plato que nombra aparece abajo como tarjeta con foto, local, piso, **precio real** y botón **Pedir**.
+- Al pedir, Jarvis solo dice "Te lo dejo listo. Revisa el detalle y toca Confirmar". La tarjeta **"Tu pedido"** la arma el backend: cada plato con cantidad × precio = subtotal, **total exacto** y hora de retiro. Botón "Confirmar y pagar".
+- Al confirmar: "¡Listo! Aquí está tu QR para pagar" y el **QR se abre solo** (también desde el modo voz, que se cierra para mostrarlo).
+- Tarjetas en lista vertical a todo el ancho (antes eran filas horizontales dentro del globo) y el chat se posiciona al **comienzo** de la respuesta, no al final.

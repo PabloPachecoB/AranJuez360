@@ -359,3 +359,31 @@ class AdminSupervisaPedidosTests(APITestCase):
         self.assertEqual(self.client.get("/api/v1/admin/pedidos/?buscar=waffle").data["count"], 1)
         resumen = self.client.get("/api/v1/admin/pedidos/resumen/").data
         self.assertEqual((resumen["por_estado"]["PENDIENTE_PAGO"], resumen["pedidos"]), (1, 1))
+
+
+class TotalEsperadoTests(CrearPedidoTests):
+    """El QR nunca cobra un monto distinto al que el cliente vio en su carrito."""
+
+    def _crear_con_total(self, total):
+        self.client.force_authenticate(self.cliente)
+        return self.client.post(
+            "/api/v1/pedidos/",
+            {"empresa": self.empresa.pk, "items": [{"producto_id": self.capuchino.pk, "cantidad": 2}],
+             "total_esperado": total},
+            format="json",
+        )
+
+    def test_total_igual_crea_el_pedido(self):
+        resp = self._crear_con_total("44.00")
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data["total"], "44.00")
+
+    def test_si_el_negocio_cambio_el_precio_no_crea_el_pedido(self):
+        from pedidos.models import Pedido
+
+        Producto.objects.filter(pk=self.capuchino.pk).update(precio=Decimal("25.00"))
+        resp = self._crear_con_total("44.00")  # el carrito tenía el precio viejo
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("precio cambió", str(resp.data))
+        self.assertIn("50.00", str(resp.data))
+        self.assertFalse(Pedido.objects.exists())

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { COLORS } from "../constants/colors";
 import { useUserContext } from "../context/UserContext";
 import AsistenteScreen from "../screens/AsistenteScreen";
+import BilleteraScreen from "../screens/BilleteraScreen";
 import DesbloqueoScreen from "../screens/DesbloqueoScreen";
 import ComerScreen from "../screens/ComerScreen";
 import DirectorioScreen from "../screens/DirectorioScreen";
@@ -44,6 +45,7 @@ export default function StackNavigator() {
           <Stack.Screen name="Directorio" component={DirectorioScreen} />
           <Stack.Screen name="Empresa" component={EmpresaScreen} />
           <Stack.Screen name="Comer" component={ComerScreen} />
+          <Stack.Screen name="Billetera" component={BilleteraScreen} />
         </>
       ) : estado === "bloqueado" ? (
         <Stack.Screen name="Desbloqueo" component={DesbloqueoScreen} />

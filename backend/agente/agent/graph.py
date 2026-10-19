@@ -23,7 +23,14 @@ from ..llm import LLMError, get_llm_adapter
 
 from ..models import AgentAction
 from ..voz import en_bolivianos, quitar_emociones
-from .guardrails import MENSAJE_SIN_ACCION, guard_unverified_action_claim, promete_accion_sin_herramienta
+from .guardrails import (
+    MENSAJE_MONTO_NO_VERIFICADO,
+    MENSAJE_SIN_ACCION,
+    guard_unverified_action_claim,
+    montos_sin_respaldo,
+    promete_accion_sin_herramienta,
+    quitar_confirmar_sin_accion,
+)
 from .state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -90,8 +97,32 @@ def _proponer_accion(state: AgentState, nombre: str, argumentos: dict):
         usuario=user, thread_id=state.get("thread_id", ""), tipo_accion=nombre,
         payload={**payload, "resumen": resumen},
     )
-    texto = f"[warmly] Te lo dejo listo: {resumen}. Toca Confirmar para terminar."
-    return texto, {"id": accion.id, "tipo": nombre, "resumen": resumen}
+    # Jarvis no lee montos ni totales: la tarjeta de la app muestra el detalle exacto que calculó el backend.
+    texto = "[warmly] Te lo dejo listo. Revisa el detalle y toca Confirmar."
+    return texto, {"id": accion.id, "tipo": nombre, "resumen": resumen, "detalle": payload.get("detalle")}
+
+
+def _verificar_montos(system: str, state: AgentState, draft: str) -> str:
+    """Texto libre del modelo: cada monto (Bs o monedas) debe salir de los datos reales del contexto.
+
+    Si inventa uno, se le pide una vez que lo corrija; si insiste, no se muestra ningún monto. Además se
+    quita "toca Confirmar" cuando en este turno no hubo propuesta (no hay botón que tocar).
+    """
+    dudosos = montos_sin_respaldo(en_bolivianos(draft or ""), system)
+    if dudosos:
+        logger.warning("Jarvis dio montos que no están en los datos: %s", dudosos)
+        aviso = {
+            "role": "user",
+            "content": f"(Instrucción interna: estos montos no están en los datos: {', '.join(dudosos)}. "
+                       "Responde de nuevo usando solo precios y monedas exactos de los datos, escritos con "
+                       "cifras, o sin dar montos. No llames herramientas.)",
+        }
+        try:
+            corregido = get_llm_adapter().chat(system, [*_historial(state), aviso])
+        except (LLMError, ValueError):
+            corregido = ""
+        draft = corregido if corregido and not montos_sin_respaldo(en_bolivianos(corregido), system)             else MENSAJE_MONTO_NO_VERIFICADO
+    return quitar_confirmar_sin_accion(draft) or "¿En qué más te ayudo?"
 
 
 def _presentar(state: AgentState) -> dict:
@@ -118,6 +149,8 @@ def _presentar(state: AgentState) -> dict:
                 draft = MENSAJE_SIN_ACCION
         if llamadas:
             draft, accion = _proponer_accion(state, *llamadas[0])
+        else:
+            draft = _verificar_montos(system, state, draft)
         # Los [id] son internos: si el modelo los repite, se quitan (la voz los leería en voz alta).
         draft = en_bolivianos(re.sub(r"\s*\[\d+\]", "", draft or "").strip()) or "¿En qué puedo ayudarte?"
     except (LLMError, ValueError) as exc:

@@ -16,6 +16,8 @@ actualizado: 2026-10-03
 8. [x] ~~Jarvis sin LLM~~: funciona con Qwen cloud (`qwen3.8-flash`, probado 2026-10-04). Antes:: en las pruebas salió "cuota agotada" (Qwen) y ElevenLabs sin créditos. Levantar Ollama con `qwen3:8b` o cargar saldo antes de la demo → [[Jarvis (asistente IA)]]
 9. [ ] **Gestión de cajeros por la empresa** (crear/desactivar): no hay API; hoy se crean desde el admin de Django
 10. [ ] **Presentación y demo** (ver sección 🎤) + **APK con EAS** para mostrar en el teléfono sin Expo Go.
+11. [ ] **Billetera Paseo** (2026-10-18, en planificación): responder las decisiones abiertas y luego construir la fase 1 → [[Billetera Paseo (saldo de regalo)]]
+12. [ ] **Ofertas 2x1 no se aplican al cobrar** (2026-10-19): "2x1 en capuchinos" de Café Aranjuez está vigente, pero el pedido cobra precio × cantidad (el 04/10 Jarvis armó 2 capuchinos por Bs 44). Decidir: estructurar las ofertas (tipo 2x1 / % / precio fijo) para que el backend las aplique, o que Jarvis aclare que la oferta es solo en el local → [[Comer y pedidos (PaseoYa)]]
 
 ## 🔴 Prioridad 1 — mínimo del PDF
 - [x] Canje de recompensas en backend: descontar monedas → cupón → validar en caja (y Jarvis puede canjear con confirmación)
@@ -62,10 +64,11 @@ actualizado: 2026-10-03
 - [x] Commit y push de lo del 2026-10-03 (`95cd469`, rama `integracion-equipo`, PR #7)
 
 ## ⚙️ Producción
-- [ ] Docker Compose (Django + PostgreSQL + Redis + Caddy) → [[Despliegue VPS]]
+- [x] Docker Compose (Django + PostgreSQL + Caddy) desplegado en `179.236.240.61` → [[Despliegue VPS]]
+- [ ] **Actualizar el VPS** (corre la versión del 2026-10-04; faltan los commits de `deploy/vps-setup`)
 - [ ] En el servidor: correr los comandos de carga (las imágenes `mediafiles/` no van en git) y servir `/media/` con Caddy
 - [ ] SMTP real para correos
-- [ ] Dominio + HTTPS
+- [x] HTTPS con sslip.io (https://179-236-240-61.sslip.io) · [ ] dominio propio
 - [ ] Build de la app con EAS (APK para la demo)
 - [ ] Redis como caché (sin él, el límite de intentos de login no se comparte entre workers) y correos en segundo plano
 - [ ] Revisar el aviso de facturación de la cuenta de GitHub (aparece arriba en el repo)

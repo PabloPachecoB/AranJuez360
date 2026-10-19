@@ -60,3 +60,6 @@ Formato: **fecha — decisión** · por qué.
 - **HOY HAY ya tiene cuenta** (`demo.hoyhay@paseo.bo`), pedido del usuario para validar su panel.
 - **Diseño web unificado** en azul marino + dorado (la paleta del admin y de la app); se retira el terracota de PaseoYa. Oficinas con el mismo menú que negocios. → [[Diseño unificado de la web]]
 - **Menú del admin completo**: se quita "Jarvis" y las demás opciones (Categorías, Representantes, Equipo, Reportes, Auditoría, Configuración) tienen página con datos reales. La auditoría se arma con lo que ya registra cada módulo, sin tabla nueva.
+
+## 2026-10-18
+- **Billetera Paseo con proveedores externos**: no manejamos dinero ni la seguridad de los pagos. Una pasarela boliviana cobra (QR/tarjeta, dinero directo a cada negocio) y un motor de gift cards/cashback guarda el saldo de regalo; la app del Paseo solo muestra y pide por API. Los puntos siguen siendo nuestros. → [[Billetera Paseo (saldo de regalo)]]
