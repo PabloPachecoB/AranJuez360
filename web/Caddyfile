@@ -1,5 +1,11 @@
 # Este Caddy solo sirve internamente en la red Docker. El Caddy compartido
 # gestiona hostname, HTTPS y los puertos públicos del VPS.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 :80 {
 	encode gzip
 
