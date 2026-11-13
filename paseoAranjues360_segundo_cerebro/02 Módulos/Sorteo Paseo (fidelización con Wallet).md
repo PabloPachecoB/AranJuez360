@@ -92,6 +92,27 @@ Total: **~6–8 semanas de desarrollo**, con los trámites corriendo en paralelo
 - Para el banner por cliente hace falta publicar las imágenes en una URL pública **imposible de adivinar** y sin datos personales.
 - Probado en Google Wallet el 2026-11-13: la tarjeta se actualiza sola en el teléfono al cambiarla por la API (`ClienteWallet` en `wallet_google.py`).
 
+## 📓 Bitácora 2026-11-13: qué hicimos y por qué
+| Qué | Por qué |
+|---|---|
+| Se diseñó el sorteo (1 punto cada Bs 200 con sobrante acumulado) a partir del módulo de UPilot | UPilot solo tiene sellos por compra con un premio fijo; el Paseo necesita puntos por monto, validación diferida y sorteo |
+| La acreditación pasa al admin del Paseo; los negocios solo registran | El riesgo principal es que un empleado se asigne puntos a sí mismo o a un familiar; hoy en `SolicitudPuntos` el mismo cajero aprueba |
+| Wallet obligatorio desde el piloto, antes que la app | El Paseo quiere que los clientes acumulen ya; la cuenta de fidelización se vincula a la app después, con correo o celular verificado |
+| Reglas de la campaña fijas al lanzar | Cambiarlas a mitad del sorteo cambiaría las participaciones de todos; para otra estrategia, campaña nueva |
+| Emisor de Google de ThinkUSoft (aprobado 2026-11-12) | Ya está aprobado para publicar; el pase lleva la marca del Paseo. Los pases no se pueden mover de emisor |
+| La llave de la cuenta de servicio está en `C:\Users\pabli\.upilot\upilot-wallet.json` (fuera del repo) y el Issuer ID solo en `backend/.env` | Para que nunca entren a git; el Issuer ID se obtuvo preguntándole a la API con esa llave |
+| Tarjeta probada en Google Wallet real (clase de prueba `paseo_sorteo_prueba`, pase `PA-TEST01`) | Se comprobó que el QR sale bien (no negro) y que **el pase se actualiza solo** al cambiarlo por la API |
+| Frente con dos filas (puntos/participaciones y te faltan/pendientes/sorteo) | Al personalizar el frente, Google deja de mostrar los puntos solos; hay que ponerlos explícitos |
+| Banner de progreso por cliente en lugar de animación | Ni Google ni Apple permiten animaciones; la barra que se llena compra a compra da la sensación de tarjeta viva |
+| Fuente Manrope en el banner | La fuente de Pillow no tiene tildes («participación» salía con un cuadrado) |
+| Logo 360 (sello dorado + 360 ancho) | Elegido por el usuario; el sello encaja en el círculo del logo y el 360 ancho va en el encabezado de Android |
+| Commit `477ebe1` en `integracion-equipo` (sin push) | Solo archivos del Wallet; los cambios pendientes del usuario quedaron fuera |
+
+**Bloqueado / pendiente**
+- **Logo y banners por cliente sin publicar:** hace falta subirlos al VPS. Desde Claude Code no hubo acceso (el sistema bloqueó entrar a producción). Hasta entonces la tarjeta real muestra el ícono temporal.
+- **iPhone:** falta la cuenta de Apple Developer (99 USD). La maqueta está aprobada; no hay código de pases de Apple todavía.
+- **Fase 1:** campañas, registro de compras en el panel de negocio, validación en el admin y actualización del pase al validar.
+
 ## ❓ Por confirmar
 1. **Envío del código al celular:** WhatsApp, SMS o ambos, y su costo.
 2. **Lista de empleados y familiares** para las reglas de elegibilidad: quién la mantiene.
