@@ -63,3 +63,7 @@ Formato: **fecha — decisión** · por qué.
 
 ## 2026-10-18
 - **Billetera Paseo con proveedores externos**: no manejamos dinero ni la seguridad de los pagos. Una pasarela boliviana cobra (QR/tarjeta, dinero directo a cada negocio) y un motor de gift cards/cashback guarda el saldo de regalo; la app del Paseo solo muestra y pide por API. Los puntos siguen siendo nuestros. → [[Billetera Paseo (saldo de regalo)]]
+
+## 2026-11-13
+- **Sorteo Paseo con tarjeta en Wallet**: 1 punto por cada Bs 200 validados, con sobrante acumulado entre locales. Va dentro del panel de negocio, Apple y Google Wallet son obligatorios desde el piloto y la tarjeta se usa antes de la app (registro con correo y celular; el cliente elige con cuál verificarse). La acreditación la hace un validador del mall, no el cajero. → [[Sorteo Paseo (fidelización con Wallet)]]
+- **La fidelización la administra solo el admin del Paseo Aranjuez** (campañas, validación, excepciones, alertas, sorteo). **Los negocios solo registran compras.** Tarjeta en Google Wallet con el emisor de ThinkUSoft, logo 360 y banner de progreso por cliente.

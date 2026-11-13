@@ -22,3 +22,4 @@ edge-tts==7.2.8          # voz de Jarvis (voces neuronales, sin API key)
 # --- Utilidades ---
 python-dotenv==1.1.0
 requests==2.32.3
+cryptography==50.0.2       # firma RS256 de los pases de Google Wallet (PyJWT)
