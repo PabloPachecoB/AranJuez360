@@ -6,6 +6,8 @@ actualizado: 2026-11-13
 
 # Sorteo Paseo (fidelización con Wallet)
 
+> **Actualización 2026-11-17 — decisión vigente:** cada negocio escanea la Wallet, verifica el monto y el comprobante de su local y aprueba la compra. El admin del Paseo supervisa y audita. Esto sustituye las indicaciones históricas de esta nota que exigen un validador del mall o dicen que los negocios solo registran. La prueba de Google Wallet sí existe; el circuito completo de compras aún no. La guía de implementación vigente es `docs/FIDELIZACION_EQUIPO.md`, en el mismo repositorio, con ramas `feature/fidelizacion-frontend` y `feature/fidelizacion-backend` hacia `integracion-equipo`.
+
 > **Idea:** el cliente acumula **1 punto por cada Bs 200** de compras validadas en los comercios del Paseo, y cada punto le da **una participación en el sorteo**. La tarjeta vive en **Apple Wallet y Google Wallet** y se usa desde antes de que salga la app. Referencia: el módulo de tarjetas Wallet de UPilot (ThinkUSoft). Nada implementado todavía.
 
 ## ⚠️ El riesgo principal

@@ -8,11 +8,21 @@ Documentos del equipo en [`docs/`](./docs): documento base de la hackathon
 ([`BASE_PROYECTO_PASEO.md`](./docs/BASE_PROYECTO_PASEO.md)) y módulo PaseoYa
 ([`PASEOYA_MODULO.md`](./docs/PASEOYA_MODULO.md)).
 
+## Trabajo en equipo: negocios y fidelización Wallet
+
+Base compartida: **`integracion-equipo`**. Frontend: **`feature/fidelizacion-frontend`**.
+Backend: **`feature/fidelizacion-backend`**. Los pull requests se dirigen a `integracion-equipo`.
+
+Leer la [guía de trabajo de fidelización](./docs/FIDELIZACION_EQUIPO.md) antes de empezar:
+incluye alcance, carpetas, tareas, integración y criterios de aceptación.
+Decisión vigente: **cada negocio escanea la Wallet, verifica y aprueba las compras de su local**;
+el admin del Paseo supervisa y audita. El flujo nuevo todavía está pendiente de implementación.
+
 ## Estructura
 
 ```
 app/              # app móvil (Expo / React Native): clientes y porteros
-web/              # web (React + Vite): dashboard admin (negocios y oficinas: pendiente)
+web/              # web (React + Vite): paneles de admin, negocios, cajeros y oficinas
 docs/             # documentos del equipo y presentación
 backend/
   paseo_erp/      # proyecto Django (settings, urls, API v1)
