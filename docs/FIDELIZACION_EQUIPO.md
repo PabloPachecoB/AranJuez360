@@ -13,6 +13,29 @@ Cada Bs 200 acumulados en compras aprobadas de locales participantes equivale a 
 El sobrante se conserva entre compras y locales de la campaña. Los puntos del sorteo son independientes
 de las monedas y recompensas actuales de Paseo Points; no cambiar sus reglas ni reutilizar su saldo.
 
+## Prioridad de entrega: sacar Wallet y conectar negocios/admin
+
+Orden acordado el 2026-11-17. El primer objetivo es completar el circuito de fidelización Wallet.
+Las tareas se reparten por área, sin responsables individuales confirmados todavía.
+
+| Entrega | Backend / Wallet | Frontend negocios / admin | Resultado verificable |
+|---|---|---|---|
+| 1. Cuenta y tarjeta | Registro con nombres, apellidos, correo y celular; verificación del contacto elegido; código opaco; campaña y estado del pase; emisión Google Wallet | Registro público, recuperación y botón para guardar la tarjeta; vista de puntos y progreso | Un cliente real guarda su tarjeta y su código resuelve su cuenta |
+| 2. Compra en el negocio | API de resolución, evidencia, aprobación, idempotencia y actualización reintentable del pase | Escáner y código manual; formulario con comprobante, monto y foto; resumen y aprobación por el negocio; historial del local | Bs 150 + Bs 80 aprobados producen 1 punto, 1 participación y Bs 30 de sobrante en Wallet |
+| 3. Supervisión del Paseo | API de participantes/ranking, ficha, historial, acceso protegido a facturas, texto OCR y auditoría | Lista con contactos y filtros; ficha al hacer clic; detalle de compra con imagen y texto de factura | ADMIN puede revisar quién acumula más, sus compras y quién las aprobó |
+| 4. Piloto completo | Pruebas de permisos, duplicados concurrentes, devoluciones y reintentos; Apple Wallet y credenciales pendientes | Prueba en dispositivos reales y flujo completo con negocio/admin | Circuito probado y fallos documentados antes de lanzar |
+
+Frontend y backend pueden avanzar en paralelo con el contrato compartido. Integrar en este orden mediante PR
+hacia `integracion-equipo`; no esperar a terminar todas las pantallas para conectar la primera entrega.
+El registro público pasa a ser parte de la primera entrega, porque la tarjeta se usa antes de la app.
+Google Wallet es el primer hito técnico aprovechando la prueba existente. Apple Wallet sigue dentro del alcance
+acordado del piloto; no dar por lanzado el piloto completo mientras falten cuenta/certificados e implementación Apple.
+Publicar también los logos y banners necesarios para la tarjeta real.
+
+Para este alcance se priorizan Wallet, web de negocios y admin. La vinculación posterior con la app,
+otras mejoras generales y las automatizaciones promocionales no deben bloquear la integración de este circuito.
+El sorteo final y sus reglas siguen pendientes según su planificación; no confundir el pase de prueba con una campaña lanzada.
+
 ## Ramas y colaboración
 
 | Rama | Trabajo |
@@ -108,7 +131,7 @@ en el panel admin existente, con navegación lista → ficha del participante �
 - Mostrar estados de carga, QR inválido/revocado, comprobante duplicado, permiso denegado y error de red.
 - Historial limitado al local con detalle y estado de sincronización de Wallet.
 - Admin: lista/ranking, búsqueda y filtros, ficha de participante, historial y visor de factura con texto OCR.
-- Registro público y vista de progreso del cliente en una entrega posterior, coordinada con cuentas del backend.
+- Registro público y vista de progreso del cliente en la primera entrega, coordinada con cuentas del backend.
 - Reutilizar autenticación y diseño existentes; aislar el código nuevo en `web/src/fidelizacion/`.
 - Mientras no exista API, usar datos simulados solo en desarrollo e indicar claramente la simulación.
 
