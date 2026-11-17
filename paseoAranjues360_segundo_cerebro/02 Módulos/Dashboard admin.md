@@ -32,4 +32,16 @@ Todos aceptan `?desde=YYYY-MM-DD&hasta=YYYY-MM-DD`.
 Horas pico → reforzar seguridad/eventos · clientes dormidos → promoción · tiendas sin actividad → visibilidad · días flojos → puntos dobles.
 
 ## Pendiente
+
+### Fidelización Wallet — alcance acordado 2026-11-17
+
+Pendiente de implementación. El admin tendrá una lista de participantes con nombres, apellidos,
+correo, celular, puntos, participaciones, monto aprobado y última actividad; búsqueda, filtros y ranking
+ordenable por puntos, monto o compras. Al pulsar un participante abrirá su ficha e historial completo.
+Cada compra permitirá ver la imagen PNG/JPG de la factura y su texto OCR, los datos registrados,
+el negocio y operador que aprobó, fechas y auditoría. El OCR debe mostrar su estado y conservar
+el original al corregirse; no modifica automáticamente el monto aprobado. Acceso a imágenes y datos protegido.
+El negocio sigue aprobando sus propias compras; el admin supervisa. Especificación y criterios:
+`docs/FIDELIZACION_EQUIPO.md`.
+
 Oficinas (invitados), promociones, eventos, exportar Excel/PDF, pantallas de porteros/recompensas/configuración. Ver [[Mapa de módulos]].

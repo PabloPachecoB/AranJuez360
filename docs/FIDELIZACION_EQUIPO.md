@@ -62,12 +62,52 @@ su aprobación y actualización del pase. Apple Wallet sigue pendiente de cuenta
 
 Escanear el QR identifica al titular del pase; no demuestra por sí mismo que la compra sea real.
 
+## Admin del Paseo: participantes, ranking y comprobantes
+
+Alcance solicitado el 2026-11-17, pendiente de implementación. Incorporar una sección «Fidelización»
+en el panel admin existente, con navegación lista → ficha del participante → detalle de compra.
+
+### Lista y seguimiento
+
+- Mostrar nombres, apellidos, correo y celular, con estado de verificación de cada contacto.
+- Mostrar puntos, participaciones, monto aprobado acumulado, sobrante, cantidad de compras y última actividad.
+- Orden inicial por puntos de mayor a menor; permitir ordenar también por monto aprobado, compras y última actividad.
+- Buscar por nombre, apellido, correo, celular o código de tarjeta. Filtrar por campaña, local y periodo; paginar en servidor.
+- Mostrar resumen de participantes, compras aprobadas, monto aprobado y puntos de la campaña seleccionada.
+- El ranking se calcula con compras aprobadas netas de devoluciones, nunca con importes pendientes o rechazados.
+  Indicar si los indicadores corresponden a la campaña completa o al periodo/local filtrado; el saldo del pase
+  siempre corresponde a la campaña completa. Resolver empates de forma estable por identificador de participante.
+
+### Ficha al hacer clic en una persona
+
+- Cabecera con nombres, apellidos, correo, celular, código de tarjeta, fecha de registro y contactos verificados.
+- Resumen de puntos, participaciones, monto aprobado, sobrante y monto faltante para el próximo punto.
+- Historial paginado de compras: fecha, local, comprobante, monto, estado, operador que aprobó y fecha de aprobación.
+- Incluir compras anuladas/devueltas y sus motivos, con acceso al historial de cambios. Mostrar por separado
+  movimientos de puntos y compras: una compra menor a Bs 200 puede sumar solo sobrante.
+- Al pulsar una compra, abrir su comprobante y auditoría sin perder los filtros de la lista.
+
+### Imagen y texto de la factura
+
+- Visor ampliable de la imagen del comprobante (PNG o JPG), conservando el archivo original y su relación con la compra.
+- Mostrar junto a la imagen el texto extraído mediante OCR y los campos registrados: número/serie,
+  fecha, monto y local. Identificar cuáles son datos del registro y cuáles fueron leídos de la imagen.
+- Estados del OCR: pendiente, procesando, completado o fallido. Si falla o el documento es ilegible,
+  mantener la imagen accesible y mostrar la incidencia; no inventar texto ni montos.
+- Conservar el texto OCR original. Las correcciones manuales se guardan por separado con autor y fecha.
+  La lectura automática no aprueba la compra ni modifica su monto aprobado; discrepancias requieren revisión.
+- Proveedor/motor OCR por definir en backend. No prometer extracción infalible ni presentar esta función como existente.
+- Solo ADMIN puede consultar la lista completa y contactos completos. El negocio conserva acceso a sus propias
+  compras y comprobantes con los datos mínimos del cliente. Aplicar permisos también a archivos y texto OCR;
+  no publicar facturas mediante URLs permanentes de libre acceso.
+
 ## Frontend: tareas
 
 - Añadir acceso para NEGOCIO y CAJERO, escáner, permiso de cámara e ingreso manual.
 - Crear formulario con validación, foto, resumen y aprobación explícita.
 - Mostrar estados de carga, QR inválido/revocado, comprobante duplicado, permiso denegado y error de red.
 - Historial limitado al local con detalle y estado de sincronización de Wallet.
+- Admin: lista/ranking, búsqueda y filtros, ficha de participante, historial y visor de factura con texto OCR.
 - Registro público y vista de progreso del cliente en una entrega posterior, coordinada con cuentas del backend.
 - Reutilizar autenticación y diseño existentes; aislar el código nuevo en `web/src/fidelizacion/`.
 - Mientras no exista API, usar datos simulados solo en desarrollo e indicar claramente la simulación.
@@ -82,11 +122,17 @@ Escanear el QR identifica al titular del pase; no demuestra por sí mismo que la
   como parte de la clave, ni bloquear por error números iguales de locales distintos.
 - Guardar evidencia con acceso autenticado, operador y hora de aprobación; no permitir editar compras aprobadas directamente.
 - Alertar sobre montos/frecuencia inusuales y concentración de compras; el admin puede investigar y corregir con trazabilidad.
+- Registrar nombres, apellidos, correo y celular en la cuenta de fidelización; conservar verificación de contactos.
+- API admin paginada para ranking, participantes y detalle/historial; agregados coherentes con filtros y devoluciones.
+- Almacenamiento privado de comprobantes y proceso OCR reintentable; guardar texto original, estado y correcciones auditadas.
 
 ## Contrato de integración: primera entrega compartida
 
 Antes de conectar pantallas, acordar y documentar rutas y ejemplos reales de petición/respuesta para:
 resolver QR, registrar/aprobar compra, listar historial y consultar progreso del cliente.
+Incluir para ADMIN: lista/ranking y resumen, ficha de participante, historial de compras, detalle del comprobante,
+acceso autorizado a imagen y consulta del texto OCR con estado y correcciones. Acordar campos de paginación,
+orden, filtros y alcance de los agregados. El contrato del negocio no debe exponer el directorio completo de clientes.
 Estas rutas nuevas todavía no existen. Usar un espacio separado del API de puntos actual.
 
 La resolución devuelve identificador interno y nombre reducido; la aprobación recibe referencia del cliente,
@@ -105,6 +151,11 @@ Frontend y backend deben mantener los mismos ejemplos para simulación y pruebas
 - Devolver la compra de Bs 80 del ejemplo deja Bs 150 y anula la participación, con auditoría.
 - Fallar la actualización de Wallet no pierde la compra ni obliga a registrarla otra vez.
 - Las monedas actuales de Paseo Points siguen funcionando igual.
+- ADMIN puede buscar por contacto, ordenar participantes por puntos y abrir una ficha con nombres, apellidos,
+  correo, celular e historial; la imagen y el texto corresponden exactamente a la compra seleccionada.
+- Ranking y saldo reflejan devoluciones; filtros y paginación conservan totales coherentes y orden estable.
+- OCR pendiente/fallido no impide revisar la imagen ni altera el monto aprobado. Correcciones conservan el original y auditoría.
+- NEGOCIO/CAJERO no acceden al ranking global ni a comprobantes, texto OCR o contactos de otros locales manipulando IDs/URLs.
 
 Validación por PR: frontend ejecuta `npm run build` en `web/` y prueba flujo móvil/cámara;
 backend añade pruebas de permisos, cálculos, reversión e idempotencia (concurrencia en PostgreSQL).

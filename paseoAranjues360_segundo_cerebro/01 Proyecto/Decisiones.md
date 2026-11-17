@@ -75,3 +75,4 @@ Formato: **fecha — decisión** · por qué.
 - **Mismo repositorio, ramas separadas:** `feature/fidelizacion-frontend` y `feature/fidelizacion-backend`, con PR hacia `integracion-equipo`.
 - Acumulación: Bs 200 aprobados = 1 punto y 1 participación, conservando sobrante. No modifica las monedas actuales de la app.
 - Plan y tareas vigentes: `docs/FIDELIZACION_EQUIPO.md`. El flujo nuevo sigue pendiente de implementación.
+- **Supervisión de fidelización:** el admin verá lista/ranking de participantes con nombres, apellidos, correo y celular. Al pulsar uno accederá a su historial y al detalle de cada compra, con imagen PNG/JPG del comprobante y texto OCR, datos registrados y auditoría. Los comprobantes tendrán acceso protegido; el OCR no acredita puntos ni cambia montos automáticamente. Pendiente de desarrollo.
