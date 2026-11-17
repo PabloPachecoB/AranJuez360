@@ -16,7 +16,21 @@ de las monedas y recompensas actuales de Paseo Points; no cambiar sus reglas ni 
 ## Prioridad de entrega: sacar Wallet y conectar negocios/admin
 
 Orden acordado el 2026-11-17. El primer objetivo es completar el circuito de fidelización Wallet.
-Las tareas se reparten por área, sin responsables individuales confirmados todavía.
+Las tareas se reparten por área; los responsables confirmados se indican abajo.
+
+### Responsables confirmados
+
+| Área | Responsable | Alcance |
+|---|---|---|
+| Wallet Android (Google Wallet) | Alan | Guardado de tarjeta, presentación de puntos/progreso, QR y verificación de actualizaciones en Android real |
+| Wallet iOS (Apple Wallet) | Pablo | Cuenta/certificados necesarios, emisión del pase, QR y verificación de actualizaciones en iPhone real |
+| Web de negocios y panel admin del nuevo módulo | Por asignar | Escaneo, aprobación de compras, ranking, historial y visor de facturas |
+| Backend compartido de fidelización | Por asignar | Cuentas, campañas, compras, puntos, permisos y auditoría |
+
+Alan y Pablo coordinan con backend el mismo código de cliente, reglas de acumulación y estado del pase.
+La asignación por plataforma no implica crear otro repositorio ni duplicar saldos.
+Los cambios de interfaz van en `feature/fidelizacion-frontend` y los de emisión/actualización del servidor
+en `feature/fidelizacion-backend`; coordinar archivos compartidos y abrir PR hacia `integracion-equipo`.
 
 | Entrega | Backend / Wallet | Frontend negocios / admin | Resultado verificable |
 |---|---|---|---|
