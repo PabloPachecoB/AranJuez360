@@ -1,0 +1,144 @@
+{
+  "nota": "Menús de muestra para la demo. Los platos salen del rubro que cada local publica en paseoaranjuez.com; los precios son REFERENCIALES (calibrados con un almuerzo con bebida de ~Bs 51 y una cerveza de ~Bs 18 en Cochabamba, expatistan.com, 2026) hasta que cada negocio cargue los suyos desde su panel.",
+  "menus": {
+    "Almacén de Pizzas": [
+      ["Pizzas", "Pizza personal margarita", "Salsa de tomate, mozzarella y albahaca.", 38],
+      ["Pizzas", "Pizza mediana pepperoni", "Para compartir entre 2 o 3 personas.", 75],
+      ["Pizzas", "Pizza familiar hawaiana", "Jamón y piña, 8 porciones.", 110],
+      ["Bebidas", "Gaseosa 500 ml", "", 10]
+    ],
+    "Açaí Golden": [
+      ["Bowls", "Bowl de açaí clásico", "Açaí con granola, plátano y miel.", 35],
+      ["Bowls", "Bowl de açaí con frutos rojos", "Frutilla, arándano, granola y leche condensada.", 42],
+      ["Helados", "Copa de helado de açaí", "Dos bolas con topping a elección.", 25],
+      ["Bebidas", "Batido de açaí", "", 28]
+    ],
+    "Bypass Burger": [
+      ["Hamburguesas", "Hamburguesa clásica con papas", "Carne de res, queso, lechuga y tomate.", 38],
+      ["Hamburguesas", "Hamburguesa doble bacon", "Doble carne, cheddar y tocino.", 52],
+      ["Sándwiches", "Lomito completo", "Lomo, huevo, queso y papas fritas.", 45],
+      ["Bebidas", "Limonada", "", 12]
+    ],
+    "Chotto Matte": [
+      ["Nikkei", "Makis acevichados (10 piezas)", "Langostino empanizado con salsa acevichada.", 65],
+      ["Nikkei", "Ceviche nikkei", "Pescado fresco con leche de tigre y ají amarillo.", 70],
+      ["Calientes", "Ramen de cerdo", "Caldo intenso, chashu, huevo y cebollín.", 58],
+      ["Bebidas", "Limonada de hierbabuena", "", 15]
+    ],
+    "Deli Stambul": [
+      ["Turco", "Kebab de pollo", "Pan pita, pollo marinado, verduras y salsa de yogur.", 40],
+      ["Turco", "Plato shawarma mixto", "Carne y pollo con arroz, hummus y ensalada.", 55],
+      ["Turco", "Falafel (6 unidades)", "Con hummus y pan pita.", 32],
+      ["Postres", "Baklava", "Masa filo con nueces y miel.", 18]
+    ],
+    "Flavor Burst": [
+      ["Helados", "Helado artesanal (2 bolas)", "", 18],
+      ["Frapés", "Frapé de oreo", "", 28],
+      ["Café", "Capuchino", "", 16],
+      ["Frapés", "Frapé de caramelo", "", 28]
+    ],
+    "HOY HAY": [
+      ["Café", "Café americano", "", 14],
+      ["Café", "Latte de vainilla", "", 20],
+      ["Para picar", "Sándwich de pollo y palta", "En pan ciabatta.", 32],
+      ["Postres", "Torta de chocolate", "Porción.", 22]
+    ],
+    "Helados Vacafría": [
+      ["Helados", "Cono simple", "Una bola a elección.", 10],
+      ["Helados", "Copa Vacafría", "Tres bolas, crema, salsa y galleta.", 30],
+      ["Helados", "Banana split", "", 32],
+      ["Bebidas", "Malteada de frutilla", "", 22]
+    ],
+    "La Sanguchería Cafe": [
+      ["Sándwiches", "Sándwich de chola", "Cerdo al horno, escabeche y locoto.", 30],
+      ["Sándwiches", "Sándwich de lomo", "Con queso y papas al hilo.", 38],
+      ["Hamburguesas", "Hamburguesa de la casa", "", 35],
+      ["Pollo", "Sándwich de pollo crispy", "", 32]
+    ],
+    "PARRILLEROS": [
+      ["Parrilla", "Parrillada para dos", "Chorizo, costilla, pollo y lomo con yuca y ensalada.", 150],
+      ["Parrilla", "Bife de chorizo 300 g", "Con papas y ensalada.", 85],
+      ["Parrilla", "Choripán", "", 25],
+      ["Bebidas", "Jarra de limonada", "", 25]
+    ],
+    "Pawitos": [
+      ["Bebidas", "Bebida arcoíris", "Las bebidas de colores de la casa.", 22],
+      ["Bebidas", "Soda italiana", "Sabores a elección.", 18],
+      ["Postres", "Waffle con helado", "", 28],
+      ["Café", "Frapé de chocolate", "", 25]
+    ],
+    "Solo Pastas": [
+      ["Pastas", "Spaghetti a la boloñesa", "", 45],
+      ["Pastas", "Fettuccine Alfredo", "Salsa de crema y parmesano.", 48],
+      ["Pastas", "Lasaña de carne", "", 55],
+      ["Pastas", "Ravioles de ricota y espinaca", "Con salsa pomodoro.", 52]
+    ],
+    "Tunari Express": [
+      ["Comida nacional", "Pique macho", "Carne, salchicha, papas, locoto y huevo. Para dos.", 80],
+      ["Comida nacional", "Charque de llama", "Con mote, huevo y queso.", 50],
+      ["Comida nacional", "Silpancho", "Con arroz, papa y ensalada.", 38],
+      ["Comida nacional", "Chorizo chuquisaqueño", "Con ensalada y papa.", 35]
+    ],
+    "Waffle King": [
+      ["Waffles", "Waffle de Nutella y frutilla", "", 32],
+      ["Waffles", "Waffle de dulce de leche", "", 28],
+      ["Waffles", "Waffle con helado", "", 30],
+      ["Bebidas", "Chocolate caliente", "", 16]
+    ],
+    "Yummy Candy Bar": [
+      ["Dulces", "Vaso de gomitas (250 g)", "", 20],
+      ["Dulces", "Algodón de azúcar", "", 12],
+      ["Dulces", "Caja de chocolates surtidos", "", 35],
+      ["Bebidas", "Malteada de cookies", "", 25]
+    ],
+    "Brocheta King": [
+      ["Brochetas", "Brocheta de res", "Con papas fritas y ensalada.", 48],
+      ["Brochetas", "Brocheta mixta", "Res, pollo y chorizo.", 55],
+      ["Para compartir", "Pique a lo macho", "Para dos.", 85],
+      ["Bebidas", "Cerveza nacional", "", 18],
+      ["Bebidas", "Frapé de frutilla", "", 22]
+    ],
+    "CAYENNA": [
+      ["Tragos", "Mojito", "", 35],
+      ["Para picar", "Nachos con cheddar y guacamole", "", 45],
+      ["Carnes", "Lomo a la pimienta", "Con papas rústicas.", 75],
+      ["Postres", "Brownie con helado", "", 28]
+    ],
+    "Chipotle Mexican Food": [
+      ["Mexicana", "Burrito de carne", "Con arroz, frijoles, queso y pico de gallo.", 42],
+      ["Mexicana", "Tacos al pastor (3)", "", 38],
+      ["Mexicana", "Quesadilla de pollo", "", 35],
+      ["Para picar", "Nachos supremos", "", 40]
+    ],
+    "Churros Calientes": [
+      ["Churros", "Churros con chocolate (6)", "", 22],
+      ["Churros", "Churros rellenos de dulce de leche (3)", "", 18],
+      ["Bebidas", "Frapé de café", "", 22],
+      ["Hamburguesas", "Hamburguesa clásica", "", 32]
+    ],
+    "Monalisa Bier Haus": [
+      ["Cervezas", "Cerveza artesanal 500 ml", "", 25],
+      ["Para compartir", "Alitas BBQ (12)", "", 65],
+      ["Carnes", "Codillo de cerdo", "Con chucrut y puré.", 90],
+      ["Pastas", "Pasta carbonara", "", 55]
+    ],
+    "Patanegra, cocina española": [
+      ["Tapas", "Calamares a la romana", "", 65],
+      ["Arroces", "Paella de mariscos (2 personas)", "", 160],
+      ["Tapas", "Tortilla española", "", 40],
+      ["Ensaladas", "Ensalada mediterránea", "", 45]
+    ],
+    "Rissi's": [
+      ["Pastas", "Fettuccine al pesto", "", 55],
+      ["Pastas", "Lasaña bolognesa", "", 60],
+      ["Pizzas", "Pizza margherita", "", 58],
+      ["Cócteles", "Aperol spritz", "", 40]
+    ],
+    "Cinnabon": [
+      ["Rollos", "Classic Roll", "El rollo de canela original con glaseado.", 28],
+      ["Rollos", "Minibon (2)", "", 30],
+      ["Rollos", "BonBites (4)", "", 22],
+      ["Bebidas", "Mochalatta", "", 25]
+    ]
+  }
+}

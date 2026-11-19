@@ -1,0 +1,4 @@
+{$DOMINIO} {
+	encode gzip
+	reverse_proxy aranjuez360-web:80
+}

@@ -1,0 +1,28 @@
+# Este Caddy solo sirve internamente en la red Docker. El Caddy compartido
+# gestiona hostname, HTTPS y los puertos públicos del VPS.
+:80 {
+	encode gzip
+
+	# Backend Django: API, refresh de tokens, admin e invitaciones con QR.
+	@backend path /api/* /auth/* /admin/* /invitacion/*
+	handle @backend {
+		reverse_proxy backend:8000
+	}
+
+	# Estáticos del admin e imágenes subidas (logos, fotos, pósters).
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# Panel web (React): cualquier otra ruta cae en index.html.
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+}
