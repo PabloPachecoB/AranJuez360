@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { matchPath, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Sidebar } from "./empleado/components/Sidebar";
 import { Header } from "./empleado/components/Header";
 import { ProductosPage } from "./empleado/pages/ProductosPage";
@@ -67,7 +67,10 @@ function Contenido() {
     return <Paseo360><Routes><Route path="/activar/:token" element={<Activar />} /></Routes></Paseo360>;
   }
   // Sorteo Paseo (Wallet): registro público y tarjeta de puntos, sin sesión.
-  if (pathname.startsWith("/fidelizacion/")) {
+  if (
+    matchPath("/fidelizacion/registro", pathname) ||
+    matchPath("/fidelizacion/mi-tarjeta/:codigo", pathname)
+  ) {
     return (
       <Routes>
         <Route path="/fidelizacion/registro" element={<RegistroPage />} />
