@@ -6,27 +6,42 @@ guarda en Google Wallet.
 
 ## Estado actual
 
-- `RegistroPage.tsx` y `MiTarjetaPage.tsx` están construidas con **datos
-  simulados** (`datosSimulados.ts`) porque todavía no existe ningún endpoint
-  HTTP que conecte esto con `backend/fidelizacion/wallet_google.py` — ver
-  `docs/FIDELIZACION_EQUIPO.md`.
-- El botón "Agregar a Google Wallet" está deshabilitado a propósito: el enlace
-  real lo tiene que firmar el backend (`enlace_guardar` / `enlace_guardar_existente`
-  en `wallet_google.py`), que necesita la clave de cuenta de servicio de Google
-  (hoy solo la tiene Pablo, fuera del repo).
+- `RegistroPage.tsx` muestra un código fijo de ejemplo al "crear" la cuenta —
+  todavía no existe el endpoint de registro real (es tarea de "Backend
+  compartido de fidelización", sin asignar). Ver `docs/FIDELIZACION_EQUIPO.md`.
+- `MiTarjetaPage.tsx` muestra **puntos y participaciones simulados**
+  (`datosSimulados.ts`) por la misma razón — falta el backend de compras.
+- El botón **"Agregar a Google Wallet" sí es real**: llama a
+  `POST /api/v1/sorteo-paseo/wallet/publicar/` (nuevo, en
+  `backend/fidelizacion/wallet_android_views.py`), que publica el pase en la
+  cuenta real de Google Wallet y devuelve el enlace de guardado. Ese endpoint
+  es un puente mínimo — no guarda nada en base de datos, solo conecta el botón
+  con la cuenta real (criterio de aceptación de la issue #42).
 
 ## Rutas públicas (sin sesión)
 
 - `/fidelizacion/registro` — alta de la tarjeta.
 - `/fidelizacion/mi-tarjeta/:codigo` — puntos, participaciones y progreso.
 
-## Qué falta para conectar con el backend real
+## Qué falta para conectar del todo con el backend real
 
-1. Que exista un endpoint `POST` de registro y uno `GET` que resuelva un
-   código a su `EstadoTarjeta` (mismos campos que el dataclass en
-   `wallet_google.py`: `codigo`, `puntos`, `participaciones`, `faltan_bs`,
-   `pendientes`, `fecha_sorteo`, `primer_nombre`).
-2. Reemplazar `datosSimulados.ts` por llamadas con `api()` de `src/api/client.ts`.
-3. Que el backend exponga el enlace real de "Agregar a Google Wallet" (firmado
-   con la clave de servicio) para habilitar el botón.
-4. Probar todo en un Android físico — Wallet no se comporta bien en emulador.
+1. Que exista un endpoint de registro y uno que resuelva un código a su
+   `EstadoTarjeta` real (mismos campos que el dataclass en `wallet_google.py`:
+   `codigo`, `puntos`, `participaciones`, `faltan_bs`, `pendientes`,
+   `fecha_sorteo`, `primer_nombre`) — tarea de "Backend compartido de
+   fidelización".
+2. Reemplazar `datosSimulados.ts` por esas llamadas reales (el publicado a
+   Wallet, en `api.ts`, ya es real).
+3. Probar todo en un Android físico — Wallet no se comporta bien en emulador.
+
+## Configuración local para probar el publicado real
+
+`backend/.env` necesita (clave JSON fuera del repo, nunca en git):
+```
+GOOGLE_WALLET_ISSUER_ID=...
+GOOGLE_WALLET_KEY_PATH=/ruta/a/upilot-wallet.json
+GOOGLE_WALLET_LOGO_URL=https://.../logo-360-sello-wallet.png
+GOOGLE_WALLET_LOGO_ANCHO_URL=https://.../logo-360-ancho-wallet.png
+```
+Mientras no haya VPS con dominio (tarea aparte), sirve una URL temporal de
+`raw.githubusercontent.com` para los logos.

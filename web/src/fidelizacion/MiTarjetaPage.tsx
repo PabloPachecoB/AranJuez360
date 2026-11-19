@@ -1,22 +1,39 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { publicarEnWallet } from "./api";
 import { obtenerTarjetaSimulada } from "./datosSimulados";
 import type { EstadoTarjeta } from "./tipos";
 
 /**
  * Pantalla de puntos y progreso del Sorteo Paseo (tarea "Completar Google Wallet
- * en Android", issue #42). Usa datos simulados hasta que exista el endpoint real
- * (ver docs/FIDELIZACION_EQUIPO.md) y un link real de "Agregar a Google Wallet"
- * firmado por el backend con GOOGLE_WALLET_*.
+ * en Android", issue #42). Los puntos/participaciones todavía son datos simulados
+ * (falta el "Backend compartido de fidelización", sin asignar) pero el botón de
+ * Wallet sí publica un pase real, vía POST /api/v1/sorteo-paseo/wallet/publicar/.
  */
 export function MiTarjetaPage() {
   const { codigo } = useParams<{ codigo: string }>();
   const [tarjeta, setTarjeta] = useState<EstadoTarjeta | null>(null);
+  const [publicando, setPublicando] = useState(false);
+  const [errorWallet, setErrorWallet] = useState<string | null>(null);
 
   useEffect(() => {
     if (!codigo) return;
     obtenerTarjetaSimulada(codigo).then(setTarjeta);
   }, [codigo]);
+
+  async function agregarAWallet() {
+    if (!tarjeta) return;
+    setPublicando(true);
+    setErrorWallet(null);
+    try {
+      const { enlace_wallet } = await publicarEnWallet(tarjeta);
+      window.open(enlace_wallet, "_blank");
+    } catch {
+      setErrorWallet("No se pudo conectar con Google Wallet. Intenta de nuevo.");
+    } finally {
+      setPublicando(false);
+    }
+  }
 
   if (!tarjeta) {
     return (
@@ -61,15 +78,17 @@ export function MiTarjetaPage() {
 
       <button
         type="button"
-        disabled
-        title="Falta el endpoint del backend que firme el enlace real de Google Wallet"
+        onClick={agregarAWallet}
+        disabled={publicando}
         className="h-12 px-space-lg rounded-lg bg-primary text-on-primary font-headline-sm text-headline-sm disabled:opacity-60 flex items-center gap-2"
       >
-        Agregar a Google Wallet
+        {publicando ? "Conectando con Google Wallet..." : "Agregar a Google Wallet"}
       </button>
+      {errorWallet && <p className="font-body-sm text-body-sm text-error">{errorWallet}</p>}
       <p className="font-body-sm text-body-sm text-on-surface-variant text-center max-w-sm">
-        Datos de ejemplo — todavía no está conectado al backend real. Cada Bs 200 en compras validadas es
-        1 punto y 1 participación; lo que sobra se guarda para la siguiente compra.
+        Los puntos de arriba son de ejemplo (falta el backend de compras) pero el botón sí publica un
+        pase real en tu Google Wallet. Cada Bs 200 en compras validadas es 1 punto y 1 participación; lo
+        que sobra se guarda para la siguiente compra.
       </p>
     </main>
   );
