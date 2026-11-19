@@ -17,6 +17,8 @@ import EmpresaApp from "./paseo360/empresa/EmpresaApp";
 import Activar from "./paseo360/pages/Activar";
 import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
+import { RegistroPage } from "./fidelizacion/RegistroPage";
+import { MiTarjetaPage } from "./fidelizacion/MiTarjetaPage";
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
 
@@ -63,6 +65,15 @@ function Contenido() {
   }
   if (pathname.startsWith("/activar/")) {
     return <Paseo360><Routes><Route path="/activar/:token" element={<Activar />} /></Routes></Paseo360>;
+  }
+  // Sorteo Paseo (Wallet): registro público y tarjeta de puntos, sin sesión.
+  if (pathname.startsWith("/fidelizacion/")) {
+    return (
+      <Routes>
+        <Route path="/fidelizacion/registro" element={<RegistroPage />} />
+        <Route path="/fidelizacion/mi-tarjeta/:codigo" element={<MiTarjetaPage />} />
+      </Routes>
+    );
   }
 
   if (cargando) {
