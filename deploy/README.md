@@ -240,6 +240,47 @@ sudo docker compose down -v
 cualquier respaldo necesario. No ejecutes `down` para el Compose del Caddy al
 retirar una aplicación.
 
+## IP real del visitante y límites del Sorteo Paseo
+
+El registro público de la tarjeta (`/tarjeta`) limita las peticiones por IP. Entre el visitante y Django hay dos
+Caddy (el compartido y el de la web), y por defecto el segundo reemplaza `X-Forwarded-For` por la IP del primero:
+sin configuración, todos los visitantes parecerían uno solo y bastaría una persona para agotar el límite de todos.
+
+`web/Caddyfile` ya lo resuelve: confía en el Caddy compartido (`trusted_proxies static private_ranges`) y le pasa a
+Django la IP real en la cabecera `X-Client-IP`, que el cliente no puede falsificar. Django la lee solo si
+`SORTEO_IP_HEADER=X-Client-IP` está en `deploy/.env` (viene así en `.env.example`). Nunca se lee `X-Forwarded-For`.
+
+Tras actualizar, valida el Caddyfile de la web (no lo valida `config --quiet`):
+
+```bash
+sudo docker compose -f docker-compose.yml run --build --rm --no-deps web validate --config /etc/caddy/Caddyfile --adapter caddyfile
+```
+
+Si el backend no recibe una IP válida en esa cabecera, escribe una vez por proceso en el log
+`SORTEO_IP_HEADER=X-Client-IP está configurado pero la petición no trae una IP válida`:
+
+```bash
+sudo docker compose -f docker-compose.yml logs backend | grep SORTEO_IP_HEADER
+```
+
+Los contadores de los límites viven en una caché de archivos dentro del contenedor (`/tmp/paseo_sorteo_throttle`),
+compartida por los 3 workers de gunicorn; se reinician al recrear el contenedor.
+
+### Tarea diaria del sorteo
+
+Programa una vez al día la limpieza de códigos de verificación viejos, cuentas nunca verificadas y consultas de caja
+antiguas (la auditoría de registro, verificación y revocación se conserva):
+
+```bash
+sudo docker compose -f docker-compose.yml exec -T backend python manage.py limpiar_sorteo
+```
+
+### Quien quedó bloqueado por pedir demasiados códigos
+
+Si alguien pidió códigos a nombre de otra persona y esta ya no puede pedir el suyo («Pediste demasiados códigos
+hoy»), en el admin de Django (`/admin/` → Sorteo Paseo → Cuentas de fidelización) selecciona su cuenta y usa la acción
+«Desbloquear los envíos de código».
+
 ## Comandos de operación
 
 Desde `AranJuez360/deploy`:

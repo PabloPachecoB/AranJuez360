@@ -80,6 +80,13 @@ class EstadoTarjeta:
     pendientes: int
     fecha_sorteo: str  # texto ya formateado, ej. «20 dic»
     primer_nombre: str = ""  # opcional; solo el primer nombre
+    # Identificador estable del pase en Google. Si se deja vacío se usa el código del QR (pases de prueba).
+    # Con `pase_id`, revocar el código del QR no obliga a volver a guardar la tarjeta.
+    pase_id: str = ""
+
+    @property
+    def id_pase(self) -> str:
+        return self.pase_id or self.codigo
 
 
 def _https_opcional(valor: str, nombre: str) -> str:
@@ -181,7 +188,7 @@ def clase_lealtad(cfg: ConfigWallet) -> dict:
 def objeto_lealtad(cfg: ConfigWallet, estado: EstadoTarjeta) -> dict:
     pendientes = f"{estado.pendientes} compra{'s' if estado.pendientes != 1 else ''}"
     objeto = {
-        "id": cfg.objeto_id(estado.codigo),
+        "id": cfg.objeto_id(estado.id_pase),
         "classId": cfg.clase_id,
         "state": "ACTIVE",
         "accountId": estado.codigo,
@@ -218,7 +225,10 @@ def enlace_guardar(cfg: ConfigWallet, estado: EstadoTarjeta, origenes: list[str]
 
 def enlace_guardar_existente(cfg: ConfigWallet, codigo: str, origenes: list[str] | None = None,
                              ahora: int | None = None) -> str:
-    """Enlace corto a un pase que ya existe en Google (creado con ClienteWallet)."""
+    """Enlace corto a un pase que ya existe en Google (creado con ClienteWallet).
+
+    `codigo` es el identificador con el que se publicó el pase: su `pase_id` o, si no tiene, el código del QR.
+    """
     return _firmar(cfg, {"loyaltyObjects": [{"id": cfg.objeto_id(codigo), "classId": cfg.clase_id}]},
                    origenes, ahora)
 

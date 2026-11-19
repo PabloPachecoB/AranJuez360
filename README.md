@@ -16,7 +16,10 @@ Backend: **`feature/fidelizacion-backend`**. Los pull requests se dirigen a `int
 Leer la [guía de trabajo de fidelización](./docs/FIDELIZACION_EQUIPO.md) antes de empezar:
 incluye alcance, carpetas, tareas, integración y criterios de aceptación.
 Decisión vigente: **cada negocio escanea la Wallet, verifica y aprueba las compras de su local**;
-el admin del Paseo supervisa y audita. El flujo nuevo todavía está pendiente de implementación.
+el admin del Paseo supervisa y audita. La primera entrega (registro público de la tarjeta en `/tarjeta`, cuenta y
+código revocable) está implementada en `feature/wallet-registro-cuenta`; ver
+[`docs/fidelizacion/PLAN_ENTREGA_1_REGISTRO_Y_CUENTA.md`](./docs/fidelizacion/PLAN_ENTREGA_1_REGISTRO_Y_CUENTA.md).
+El registro y la aprobación de compras siguen pendientes.
 
 ## Estructura
 

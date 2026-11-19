@@ -19,6 +19,7 @@ import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
+const TarjetaApp = lazy(() => import("./fidelizacion/TarjetaApp"));
 
 function PanelAutenticado() {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -63,6 +64,12 @@ function Contenido() {
   }
   if (pathname.startsWith("/activar/")) {
     return <Paseo360><Routes><Route path="/activar/:token" element={<Activar />} /></Routes></Paseo360>;
+  }
+  // Tarjeta del Sorteo Paseo: registro público y vista de progreso del cliente (sesión propia, sin login de paneles).
+  // Sin distinguir mayúsculas: quien teclea «/Tarjeta» a mano también llega (las rutas internas ya son así).
+  const ruta = pathname.toLowerCase();
+  if (ruta === "/tarjeta" || ruta.startsWith("/tarjeta/")) {
+    return <Suspense fallback={null}><TarjetaApp /></Suspense>;
   }
 
   if (cargando) {

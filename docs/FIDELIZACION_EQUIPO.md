@@ -2,6 +2,15 @@
 
 Actualizado: 2026-11-17. Este documento define el trabajo pendiente; no certifica que el módulo ya funcione.
 
+## Estado de la primera entrega (cuenta y tarjeta)
+
+Implementada en la rama `feature/wallet-registro-cuenta` (2026-11-19), pendiente de PR hacia `integracion-equipo`:
+registro público en `/tarjeta`, verificación del contacto, recuperación, código opaco revocable, estado del pase y
+vista de progreso. Backend en la app Django `sorteo` (`/api/v1/sorteo/`), frontend en `web/src/fidelizacion/`.
+Plan, contrato de rutas, errores y pendientes: [`fidelizacion/PLAN_ENTREGA_1_REGISTRO_Y_CUENTA.md`](./fidelizacion/PLAN_ENTREGA_1_REGISTRO_Y_CUENTA.md).
+Falta probar el pase real en Google Wallet (Android físico), Apple Wallet, el envío por celular y el Caddy del VPS.
+Las entregas 2 a 4 (compras, supervisión y piloto) siguen pendientes: lo que este documento dice de ellas no cambia.
+
 ## Decisión vigente
 
 Trabajamos en el mismo repositorio AranJuez360 para compartir autenticación, permisos y panel de negocios.

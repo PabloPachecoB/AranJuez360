@@ -45,6 +45,7 @@ LOCAL_APPS = [
     "usuarios",
     "empresas",
     "fidelizacion",
+    "sorteo",
     "reportes",
     "entretenimiento",
     "oficinas",
@@ -137,9 +138,22 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
+    # Los mismos parsers por defecto de DRF, con un JSON que no responde 500 ante cuerpos anidados en exceso.
+    "DEFAULT_PARSER_CLASSES": [
+        "paseo_erp.parsers.JSONSeguroParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
+    ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_THROTTLE_RATES": {"auth": env("AUTH_THROTTLE_RATE", default="20/min")},
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": env("AUTH_THROTTLE_RATE", default="20/min"),
+        # Sorteo Paseo. Son por IP y el Wi-Fi del Paseo comparte una sola: por eso son holgados. El control fino
+        # (reenvío cada 60 s, tope diario por contacto, intentos por código) se guarda en la base de datos.
+        "sorteo_envio": env("SORTEO_ENVIO_THROTTLE", default="60/min"),
+        "sorteo_verificar": env("SORTEO_VERIFICAR_THROTTLE", default="120/min"),
+        "sorteo_resolver": env("SORTEO_RESOLVER_THROTTLE", default="60/min"),  # por usuario de caja
+    },
 }
 
 from datetime import timedelta  # noqa: E402
@@ -208,3 +222,38 @@ QR_CLIENTE_VIGENCIA_SEGUNDOS = env.int("QR_CLIENTE_VIGENCIA_SEGUNDOS", default=1
 # --- Códigos por correo (verificación y doble autenticación) ------------------
 CODIGO_VERIFICACION_MINUTOS = env.int("CODIGO_VERIFICACION_MINUTOS", default=10)
 CODIGO_VERIFICACION_INTENTOS = env.int("CODIGO_VERIFICACION_INTENTOS", default=5)
+
+# --- Cachés --------------------------------------------------------------------------
+# `default` (en memoria) sirve a lo existente. Los límites del Sorteo Paseo usan una caché de archivos para que
+# los 3 workers de gunicorn compartan el mismo contador (con la caché en memoria cada worker tendría el suyo).
+import tempfile  # noqa: E402
+
+CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    "sorteo_throttle": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": env(
+            "SORTEO_THROTTLE_CACHE_DIR", default=str(Path(tempfile.gettempdir()) / "paseo_sorteo_throttle"),
+        ),
+        # Una entrada por IP y tipo de ruta. Con el máximo por defecto (300) la caché borra contadores al azar
+        # en cuanto hay más visitantes que eso, y esos visitantes quedarían sin límite.
+        "OPTIONS": {"MAX_ENTRIES": 100_000},
+    },
+}
+
+# --- Sorteo Paseo (tarjeta en Wallet) -----------------------------------------------
+# Celular: "ninguno" (sin proveedor de SMS/WhatsApp: solo se ofrece el correo), "consola" (el código sale en
+# la terminal del backend; solo desarrollo) o el proveedor que se elija más adelante.
+SORTEO_CANAL_CELULAR = env("SORTEO_CANAL_CELULAR", default="consola" if DEBUG else "ninguno").strip().lower()
+SORTEO_SESION_DIAS = env.int("SORTEO_SESION_DIAS", default=30)
+# Códigos que se pueden pedir a un mismo contacto en 24 horas (el límite se guarda en la base de datos).
+SORTEO_ENVIOS_DIA = env.int("SORTEO_ENVIOS_DIA", default=10)
+# De esos, los que puede pedir una misma IP para un mismo contacto: así un tercero no agota el cupo de otra persona.
+SORTEO_ENVIOS_DIA_POR_IP = env.int("SORTEO_ENVIOS_DIA_POR_IP", default=5)
+# Cabecera donde el proxy deja la IP real del visitante (en el VPS: X-Client-IP, ver Caddyfile de la web).
+# Vacía: se usa la dirección de la conexión. Nunca se lee X-Forwarded-For (se puede falsificar).
+SORTEO_IP_HEADER = env("SORTEO_IP_HEADER", default="").strip()
+# Enlace público a los términos y condiciones. Solo https; vacío: el registro no muestra enlace.
+SORTEO_TERMINOS_URL = env("SORTEO_TERMINOS_URL", default="").strip()
+if SORTEO_TERMINOS_URL and not SORTEO_TERMINOS_URL.startswith("https://"):
+    SORTEO_TERMINOS_URL = ""

@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 cliente.publicar_clase()
                 cliente.publicar_pase(estado)
                 self.stdout.write("Clase y pase publicados en Google Wallet.")
-                enlace = enlace_guardar_existente(cfg, estado.codigo)
+                enlace = enlace_guardar_existente(cfg, estado.id_pase)
         except (WalletNoConfigurado, WalletErrorAPI, ValueError) as e:
             raise CommandError(str(e)) from e
         self.stdout.write("Enlace para guardar el pase:")

@@ -1,12 +1,27 @@
 # Este Caddy solo sirve internamente en la red Docker. El Caddy compartido
 # gestiona hostname, HTTPS y los puertos públicos del VPS.
+
+{
+	servers {
+		# El Caddy compartido está delante de este, en la red privada de Docker: se confía en su
+		# X-Forwarded-For para conocer la IP real del visitante ({client_ip}). Sin esto, todos los
+		# visitantes parecerían venir de la IP del Caddy compartido y los límites del Sorteo Paseo
+		# (por IP) serían un solo contador para todo el Paseo.
+		trusted_proxies static private_ranges
+	}
+}
+
 :80 {
 	encode gzip
 
 	# Backend Django: API, refresh de tokens, admin e invitaciones con QR.
 	@backend path /api/* /auth/* /admin/* /invitacion/*
 	handle @backend {
-		reverse_proxy backend:8000
+		reverse_proxy backend:8000 {
+			# IP real del visitante para los límites del Sorteo Paseo (SORTEO_IP_HEADER=X-Client-IP).
+			# header_up reemplaza cualquier valor que mande el cliente: no se puede falsificar.
+			header_up X-Client-IP {client_ip}
+		}
 	}
 
 	# Estáticos del admin e imágenes subidas (logos, fotos, pósters).
