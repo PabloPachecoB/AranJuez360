@@ -19,6 +19,7 @@ import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
 import { RegistroPage } from "./fidelizacion/RegistroPage";
 import { MiTarjetaPage } from "./fidelizacion/MiTarjetaPage";
+import { EscanearPage } from "./fidelizacion/negocio/EscanearPage";
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
 
@@ -46,6 +47,8 @@ function PanelAutenticado() {
                 <Route path="/ofertas" element={<OfertasNegocio />} />
                 <Route path="/fotos" element={<FotosNegocio />} />
                 <Route path="/ficha" element={<FichaNegocio />} />
+                {/* Sorteo Paseo (Wallet): escanear y aprobar compras de clientes */}
+                <Route path="/fidelizacion/escanear" element={<EscanearPage />} />
               </Routes>
             </main>
           </div>
@@ -95,7 +98,25 @@ function Contenido() {
   // Oficinas: ficha, horario de atención, servicios, fotos y visitas (Paseo 360).
   if (usuario.rol === "OFICINA") return <Paseo360><EmpresaApp /></Paseo360>;
   // Cajeros: aprueban o rechazan las compras que los clientes registran con el QR de caja.
-  if (usuario.rol === "CAJERO") return <CajeroApp />;
+  if (usuario.rol === "CAJERO") {
+    if (pathname === "/fidelizacion/escanear") {
+      return (
+        <Paseo360>
+          <div className="cajero">
+            <header className="cajero-barra">
+              <div>
+                <strong>{usuario.empresa_nombre || "Mi negocio"}</strong>
+                <span className="muted"> · Fidelización (Wallet)</span>
+              </div>
+              <a className="btn ghost small" href="/">Volver a Caja</a>
+            </header>
+            <main className="main"><EscanearPage /></main>
+          </div>
+        </Paseo360>
+      );
+    }
+    return <CajeroApp />;
+  }
   if (usuario.rol === "CLIENTE") return <ClienteApp />;
 
   return (
