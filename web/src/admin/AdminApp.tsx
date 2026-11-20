@@ -20,6 +20,9 @@ import Configuracion from "../paseo360/pages/Configuracion";
 import Equipo from "../paseo360/pages/Equipo";
 import Reportes from "../paseo360/pages/Reportes";
 import Representantes from "../paseo360/pages/Representantes";
+import ParticipantesPage from "../fidelizacion/administracion/pages/ParticipantesPage";
+import ParticipanteDetallePage from "../fidelizacion/administracion/pages/ParticipanteDetallePage";
+import ComprobantePage from "../fidelizacion/administracion/pages/ComprobantePage";
 
 function Layout() {
   return (
@@ -57,6 +60,9 @@ export default function AdminApp() {
         <Route path="asistente" element={<Paseo360><AsistenteAdmin /></Paseo360>} />
         <Route path="auditoria" element={<Paseo360><Auditoria /></Paseo360>} />
         <Route path="configuracion" element={<Paseo360><Configuracion /></Paseo360>} />
+        <Route path="fidelizacion" element={<ParticipantesPage />} />
+        <Route path="fidelizacion/participantes/:id" element={<ParticipanteDetallePage />} />
+        <Route path="fidelizacion/participantes/:id/compras/:compraId" element={<ComprobantePage />} />
         <Route path="clientes/:id" element={<ClienteHistorial />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

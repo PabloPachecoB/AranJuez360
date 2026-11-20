@@ -13,6 +13,7 @@ export default function CajeroApp() {
             <strong>{user?.empresa_nombre || "Mi negocio"}</strong>
             <span className="muted"> · Caja · {user?.first_name || user?.email}</span>
           </div>
+          <a className="btn ghost small" href="/fidelizacion/escanear">Fidelización (Wallet)</a>
           <button className="btn ghost small" onClick={salir}>Cerrar sesión</button>
         </header>
         <main className="main"><Caja /></main>

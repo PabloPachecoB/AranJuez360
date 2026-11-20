@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from . import views
+from . import wallet_android_views
 
 router = DefaultRouter()
 # App del cliente
@@ -32,4 +33,6 @@ urlpatterns = [
     path("billetera/cotizaciones/", views.cotizaciones_dolar, name="billetera-cotizaciones"),
     path("canjes/validar/<str:codigo>/", views.validar_canje, name="validar-canje"),
     path("admin/configuracion-puntos/", views.configuracion_puntos, name="admin-configuracion-puntos"),
+    # Sorteo Paseo (Wallet Android, issue #42): puente mínimo hacia Google Wallet real.
+    path("sorteo-paseo/wallet/publicar/", wallet_android_views.publicar_tarjeta, name="sorteo-paseo-wallet-publicar"),
 ] + router.urls

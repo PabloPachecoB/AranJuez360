@@ -32,6 +32,7 @@ const GRUPOS: GrupoNavegacion[] = [
       { label: "Promociones y eventos", icono: "confirmation_number", to: "/diversion" },
       { label: "Escenario abierto", icono: "mic_external_on", to: "/escenario" },
       { label: "Paseo Points", icono: "stars", to: "/monedas" },
+      { label: "Fidelización", icono: "card_giftcard", to: "/fidelizacion" },
     ],
   },
   {
