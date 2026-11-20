@@ -8,6 +8,7 @@ import logging
 from decimal import ROUND_CEILING, Decimal
 
 from django.utils import timezone
+from requests import RequestException
 
 from fidelizacion.wallet_google import (
     ClienteWallet,
@@ -64,21 +65,21 @@ def publicar_google(cuenta: CuentaFidelizacion) -> tuple[PaseWallet, str]:
         raise SorteoError("campania_inactiva", "El sorteo aún no está activo.", 409)
     cfg = _config()
 
-    pase, nuevo = PaseWallet.objects.get_or_create(
+    pase, _ = PaseWallet.objects.get_or_create(
         cuenta=cuenta, plataforma=PaseWallet.Plataforma.GOOGLE, defaults={"pase_id": nuevo_pase_id()},
     )
     estado = estado_tarjeta(cuenta, campania, pase.pase_id)
     try:
         cliente = ClienteWallet(cfg)
-        if nuevo:
-            cliente.publicar_clase()  # una sola vez: cada publicación de la clase la reenvía a revisión
+        if pase.sincronizado_en is None:
+            cliente.publicar_clase()  # reintentar también si la primera publicación no se completó
         cliente.publicar_pase(estado)
-    except (WalletErrorAPI, ValueError) as exc:
+    except (WalletErrorAPI, RequestException, ValueError) as exc:
         pase.estado_sync = PaseWallet.Sync.ERROR
-        pase.ultimo_error = str(exc)[:300]
+        pase.ultimo_error = "Error de conexión con Google Wallet." if isinstance(exc, RequestException) else str(exc)[:300]
         pase.intentos += 1
         pase.save(update_fields=["estado_sync", "ultimo_error", "intentos"])
-        services._auditar(cuenta, EventoAuditoria.Tipo.WALLET_ERROR, detalle=str(exc))
+        services._auditar(cuenta, EventoAuditoria.Tipo.WALLET_ERROR, detalle=pase.ultimo_error)
         raise SorteoError("wallet_error", "No pudimos preparar tu tarjeta. Prueba de nuevo.", 503) from exc
 
     pase.estado_sync = PaseWallet.Sync.SINCRONIZADO

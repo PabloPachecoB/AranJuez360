@@ -3,6 +3,7 @@ from unittest import mock
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import SimpleTestCase
+from requests import Timeout
 
 from fidelizacion.wallet_google import EstadoTarjeta, ConfigWallet, WalletErrorAPI, WalletNoConfigurado, objeto_lealtad
 from sorteo import pase, services
@@ -83,6 +84,20 @@ class PaseGoogleTests(SorteoBase):
         self.google()
         self.assertEqual([c.clase for c in _ClienteFalso.instancias], [1, 0])
         self.assertEqual(PaseWallet.objects.count(), 1)  # el mismo pase se actualiza, no se duplica
+
+    def test_reintenta_la_clase_tras_un_corte_de_red_en_la_primera_emision(self):
+        with mock.patch.object(_ClienteFalso, "publicar_clase", side_effect=Timeout):
+            respuesta = self.google()
+        self.assertEqual((respuesta.status_code, respuesta.data["codigo"]), (503, "wallet_error"))
+        registro = PaseWallet.objects.get()
+        self.assertEqual(registro.estado_sync, PaseWallet.Sync.ERROR)
+        self.assertEqual(_ClienteFalso.publicados, [])
+
+        self.assertEqual(self.google().status_code, 200)
+        self.assertEqual(_ClienteFalso.instancias[-1].clase, 1)
+        self.assertEqual(_ClienteFalso.publicados[-1].pase_id, registro.pase_id)
+        registro.refresh_from_db()
+        self.assertEqual((registro.estado_sync, registro.intentos), (PaseWallet.Sync.SINCRONIZADO, 2))
 
     def test_revocar_conserva_el_pase_id_y_cambia_solo_el_qr(self):
         self.google()
