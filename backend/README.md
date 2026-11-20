@@ -4,4 +4,4 @@ API y base de datos compartida por los 3 módulos. Tecnología todavía **por de
 
 Modelo de datos y rutas exactas (nombres de tablas/campos/estados a respetar tal cual) en la sección 4-6 del documento base.
 
-Pendiente de scaffolding — depende de la decisión de stack del equipo.
+Implementado con **Django + Django REST Framework** (JWT, SQLite en local / PostgreSQL en producción). Arranque, apps y rutas en el [README principal](../README.md).

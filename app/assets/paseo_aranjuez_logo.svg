@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1004 444" width="1004" height="444" role="img" aria-label="Paseo Aranjuez 360">
+  <title>Paseo Aranjuez 360</title>
+  <style>
+    .marca { font-family: Inter, "Helvetica Neue", Arial, sans-serif; font-weight: 700; }
+  </style>
+
+  <defs>
+    <!-- ===== PIEZAS DEL SELLO (sistema de 200 × 200, centro 100,100) ===== -->
+    <path id="hoja" d="M0 0 Q6.5 -4.6 13 0 Q6.5 4.6 0 0 Z"/>
+    <g id="par">
+      <use href="#hoja" transform="translate(100 26) rotate(206.6)"/>
+      <use href="#hoja" transform="translate(100 26) rotate(153.4)"/>
+    </g>
+    <g id="rama">
+      <path d="M147.57 43.31 A74 74 0 0 1 141.38 161.35" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+      <use href="#hoja" transform="rotate(37 100 100) translate(100 26) scale(.8) rotate(180)"/>
+      <use href="#par" transform="rotate(45 100 100) translate(100 26) scale(.78) translate(-100 -26)"/>
+      <use href="#par" transform="rotate(57 100 100) translate(100 26) scale(.9) translate(-100 -26)"/>
+      <use href="#par" transform="rotate(69 100 100)"/>
+      <use href="#par" transform="rotate(81 100 100)"/>
+      <use href="#par" transform="rotate(93 100 100)"/>
+      <use href="#par" transform="rotate(105 100 100)"/>
+      <use href="#par" transform="rotate(117 100 100)"/>
+      <use href="#par" transform="rotate(129 100 100)"/>
+      <use href="#par" transform="rotate(141 100 100) translate(100 26) scale(.9) translate(-100 -26)"/>
+    </g>
+    <polygon id="estrella" points="0,-7 1.646,-2.265 6.657,-2.163 2.663,0.865 4.114,5.663 0,2.8 -4.114,5.663 -2.663,0.865 -6.657,-2.163 -1.646,-2.265"/>
+    <polygon id="rayo" points="98.4,88 101.6,88 100,44"/>
+
+    <!-- Franja (y 140–292): el 3 y el 6 ya terminan en sus bordes; el sello se recorta con esta máscara -->
+    <mask id="franja" maskUnits="userSpaceOnUse" x="0" y="0" width="1004" height="444">
+      <rect x="0" y="0" width="1004" height="444" fill="#fff"/>
+      <rect x="0" y="140" width="1004" height="152" fill="#000"/>
+    </mask>
+  </defs>
+
+  <g fill="#000">
+    <!-- ===== 1. NÚMERO 3 ===== -->
+    <!-- Arriba: barra con el borde derecho en diagonal y trazo diagonal hacia abajo -->
+    <polygon id="tres-arriba" points="4,0 310,0 212,140 87,140 128,75 4,75"/>
+    <!-- Abajo: U gruesa (elipse exterior menos contraforma) -->
+    <path id="tres-abajo" d="M0 292 A154 150 0 0 0 308 292 L230 292 A76 65 0 0 1 78 292 Z"/>
+
+    <!-- ===== 2. NÚMERO 6 ===== -->
+    <polygon id="seis-arriba" points="446,0 566,0 462,140 342,140"/>
+    <path id="seis-abajo" d="M292 292 A146 150 0 0 0 584 292 L516 292 A84 55 0 0 1 348 292 Z"/>
+
+    <!-- ===== 3. SELLO = el "0" (centro 790,222 · radio 210) ===== -->
+    <g mask="url(#franja)">
+    <g id="sello" transform="translate(579 11) scale(2.11)">
+      <circle cx="100" cy="100" r="95" fill="none" stroke="#000" stroke-width="9"/>
+      <circle cx="100" cy="100" r="86" fill="none" stroke="#000" stroke-width="2"/>
+      <circle cx="100" cy="100" r="62" fill="none" stroke="#000" stroke-width="1.5"/>
+      <use href="#rama"/>
+      <use href="#rama" transform="matrix(-1 0 0 1 200 0)"/>
+      <use href="#estrella" transform="translate(100 26)"/>
+      <use href="#estrella" transform="translate(100 174) rotate(180)"/>
+      <circle cx="100" cy="100" r="48" fill="none" stroke="#000" stroke-width="1"/>
+      <circle cx="100" cy="100" r="38" fill="none" stroke="#000" stroke-width="3.5"/>
+      <circle cx="100" cy="100" r="28" fill="none" stroke="#000" stroke-width="3" stroke-dasharray="7.33 3.67" transform="rotate(-82 100 100)"/>
+      <circle cx="100" cy="100" r="19" fill="none" stroke="#000" stroke-width="1"/>
+      <circle cx="100" cy="100" r="12"/>
+      <use href="#rayo"/>
+      <use href="#rayo" transform="rotate(90 100 100)"/>
+      <use href="#rayo" transform="rotate(180 100 100)"/>
+      <use href="#rayo" transform="rotate(270 100 100)"/>
+    </g>
+    </g>
+  </g>
+
+  <!-- ===== 4. TEXTO dentro de la franja ===== -->
+  <text class="marca" x="40" y="250" font-size="100" textLength="880" lengthAdjust="spacingAndGlyphs" fill="#000">Paseo Aranjuez</text>
+</svg>
