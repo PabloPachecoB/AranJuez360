@@ -11,6 +11,7 @@ const ENLACES = [
   { to: "/caja", etiqueta: "Caja", icono: "point_of_sale" },
   { to: "/mi-qr", etiqueta: "Mi QR de caja", icono: "qr_code_2" },
   { to: "/recompensas", etiqueta: "Recompensas", icono: "redeem" },
+  { to: "/fidelizacion", etiqueta: "Fidelización", icono: "loyalty" },
   { to: "/ficha", etiqueta: "Ficha pública", icono: "badge" },
   { to: "/horarios", etiqueta: "Horarios", icono: "schedule" },
   { to: "/ofertas", etiqueta: "Ofertas", icono: "sell" },

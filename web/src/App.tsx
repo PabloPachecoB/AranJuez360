@@ -19,6 +19,7 @@ import CajeroApp from "./paseo360/empresa/CajeroApp";
 import { CajaNegocio, FichaNegocio, FotosNegocio, HorariosNegocio, OfertasNegocio, QRNegocio, RecompensasNegocio } from "./paseo360/empresa/ParaNegocio";
 import { RegistroPage } from "./fidelizacion/RegistroPage";
 import { MiTarjetaPage } from "./fidelizacion/MiTarjetaPage";
+import { CompraPage } from "./fidelizacion/CompraPage";
 
 const Recepcion = lazy(() => import("./recepcion/Recepcion"));
 
@@ -46,6 +47,7 @@ function PanelAutenticado() {
                 <Route path="/ofertas" element={<OfertasNegocio />} />
                 <Route path="/fotos" element={<FotosNegocio />} />
                 <Route path="/ficha" element={<FichaNegocio />} />
+                <Route path="/fidelizacion" element={<CompraPage />} />
               </Routes>
             </main>
           </div>
