@@ -112,6 +112,83 @@ class PanelEmpresaTests(APITestCase):
         self.assertNotEqual(nuevo, resp.data["codigo"])
 
 
+class CajerosTests(APITestCase):
+    def setUp(self):
+        self.empresa = Empresa.objects.create(nombre="Tienda A", email_contacto="a@a.com")
+        self.otra = Empresa.objects.create(nombre="Tienda B", email_contacto="b@b.com")
+        self.usuario = Usuario.objects.create_user(
+            "a@a.com", password="x", rol=Usuario.Rol.NEGOCIO, empresa=self.empresa
+        )
+        self.client.force_authenticate(self.usuario)
+
+    def test_negocio_crea_cajero_con_acceso_por_correo(self):
+        mail.outbox.clear()
+        resp = self.client.post(
+            "/api/v1/mi-empresa/cajeros/",
+            {"first_name": "Juan", "last_name": "Pérez", "email": "juan@a.com"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        cajero = Usuario.objects.get(username="juan@a.com")
+        self.assertEqual(cajero.rol, Usuario.Rol.CAJERO)
+        self.assertEqual(cajero.empresa, self.empresa)
+        self.assertTrue(cajero.debe_cambiar_password)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["juan@a.com"])
+
+    def test_correo_duplicado_rechazado(self):
+        Usuario.objects.create_user("juan@a.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.empresa)
+        resp = self.client.post(
+            "/api/v1/mi-empresa/cajeros/",
+            {"first_name": "Juan", "last_name": "Pérez", "email": "juan@a.com"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_lista_aislada_por_empresa_y_sin_al_propio_negocio(self):
+        propio = Usuario.objects.create_user(
+            "cajero1@a.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.empresa
+        )
+        Usuario.objects.create_user("ajeno@b.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.otra)
+        listado = self.client.get("/api/v1/mi-empresa/cajeros/").data["results"]
+        self.assertEqual([c["email"] for c in listado], [propio.email])
+
+    def test_desactiva_cajero_sin_borrarlo(self):
+        cajero = Usuario.objects.create_user(
+            "cajero1@a.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.empresa
+        )
+        resp = self.client.patch(
+            f"/api/v1/mi-empresa/cajeros/{cajero.id}/", {"is_active": False}, format="json"
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        cajero.refresh_from_db()
+        self.assertFalse(cajero.is_active)
+
+    def test_no_se_puede_borrar_un_cajero(self):
+        cajero = Usuario.objects.create_user(
+            "cajero1@a.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.empresa
+        )
+        resp = self.client.delete(f"/api/v1/mi-empresa/cajeros/{cajero.id}/")
+        self.assertEqual(resp.status_code, 405)
+        self.assertTrue(Usuario.objects.filter(pk=cajero.pk).exists())
+
+    def test_oficina_no_gestiona_cajeros(self):
+        oficina = Usuario.objects.create_user(
+            "oficina@a.com", password="x", rol=Usuario.Rol.OFICINA, empresa=self.empresa
+        )
+        self.client.force_authenticate(oficina)
+        resp = self.client.get("/api/v1/mi-empresa/cajeros/")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_cajero_no_gestiona_cajeros(self):
+        cajero = Usuario.objects.create_user(
+            "cajero1@a.com", password="x", rol=Usuario.Rol.CAJERO, empresa=self.empresa
+        )
+        self.client.force_authenticate(cajero)
+        resp = self.client.get("/api/v1/mi-empresa/cajeros/")
+        self.assertEqual(resp.status_code, 403)
+
+
 class OficinaTests(APITestCase):
     def setUp(self):
         self.oficina = Empresa.objects.create(nombre="Estudio", tipo="OFICINA", email_contacto="o@o.com")

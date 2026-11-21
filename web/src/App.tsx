@@ -5,6 +5,7 @@ import { Header } from "./empleado/components/Header";
 import { ProductosPage } from "./empleado/pages/ProductosPage";
 import { PedidosPage } from "./empleado/pages/PedidosPage";
 import { NegocioPage } from "./empleado/pages/NegocioPage";
+import { CajerosPage } from "./empleado/pages/CajerosPage";
 import { LoginPage } from "./auth/LoginPage";
 import { PedidosProvider } from "./empleado/context/PedidosContext";
 import { NegocioProvider } from "./empleado/context/NegocioContext";
@@ -36,6 +37,7 @@ function PanelAutenticado() {
                 <Route path="/productos" element={<ProductosPage />} />
                 <Route path="/pedidos" element={<PedidosPage />} />
                 <Route path="/negocio" element={<NegocioPage />} />
+                <Route path="/cajeros" element={<CajerosPage />} />
                 {/* Paseo 360: lo que se ve en la app del Paseo y en la página pública del negocio */}
                 <Route path="/caja" element={<CajaNegocio />} />
                 <Route path="/mi-qr" element={<QRNegocio />} />
