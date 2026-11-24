@@ -57,7 +57,8 @@ export function useEscanerQR(activo: boolean, onDetectado: (valor: string) => vo
             const codigos = await detector.detect(videoRef.current);
             if (codigos[0]?.rawValue) {
               onDetectadoRef.current(codigos[0].rawValue);
-              return; // el caller decide si reiniciar
+              // seguimos escaneando: si el código resulta inválido, el caller vuelve
+              // a poner su bandera de "ya detectado" en false y debe poder reintentar.
             }
           } catch {
             // frame no decodificable; seguimos intentando
