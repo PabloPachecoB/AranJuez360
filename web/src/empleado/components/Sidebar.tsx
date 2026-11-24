@@ -7,6 +7,7 @@ const ENLACES = [
   { to: "/productos", etiqueta: "Productos", icono: "inventory_2" },
   { to: "/pedidos", etiqueta: "Pedidos (Comer)", icono: "receipt_long" },
   { to: "/negocio", etiqueta: "Mi negocio", icono: "storefront" },
+  { to: "/cajeros", etiqueta: "Cajeros", icono: "badge" },
   // Paseo 360: monedas (caja y QR) y lo que ven los clientes en la app y en la página del negocio.
   { to: "/caja", etiqueta: "Caja", icono: "point_of_sale" },
   { to: "/mi-qr", etiqueta: "Mi QR de caja", icono: "qr_code_2" },

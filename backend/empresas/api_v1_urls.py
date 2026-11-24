@@ -9,6 +9,7 @@ router.register(r"admin/empresas", views.EmpresaAdminViewSet, basename="admin-em
 router.register(r"admin/categorias", views.CategoriaAdminViewSet, basename="admin-categorias")
 router.register(r"admin/invitaciones-empresa", views.InvitacionesEmpresaAdminViewSet, basename="admin-invitaciones-empresa")
 # Panel de la empresa
+router.register(r"mi-empresa/cajeros", views.MisCajerosViewSet, basename="mis-cajeros")
 router.register(r"mi-empresa/productos", views.MisProductosViewSet, basename="mis-productos")
 router.register(r"mi-empresa/ofertas", views.MisOfertasViewSet, basename="mis-ofertas")
 router.register(r"mi-empresa/fotos", views.MisFotosViewSet, basename="mis-fotos")

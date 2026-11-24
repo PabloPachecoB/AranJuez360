@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
+from usuarios import services as cuentas
 from usuarios.models import Usuario
 
 from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
@@ -168,6 +169,37 @@ class EmpresaPerfilSerializer(serializers.ModelSerializer):
             "lema", "portada", "whatsapp", "facebook", "instagram", "sitio_web", "fotos",
         ]
         read_only_fields = ["nombre", "tipo", "email_contacto"]
+
+
+class CajeroSerializer(serializers.ModelSerializer):
+    """Cajero de la empresa logueada. Lo crea y desactiva la propia empresa, sin pasar
+    por el admin de Django: la contraseña temporal se genera y se envía por correo
+    (mismo mecanismo que usan las empresas al recibir su acceso, ver usuarios.services)."""
+
+    class Meta:
+        model = Usuario
+        fields = ["id", "first_name", "last_name", "email", "is_active"]
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if self.instance is None and Usuario.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return value
+
+    def create(self, validated_data):
+        empresa = validated_data["empresa"]
+        return cuentas.crear_cuenta_con_acceso(
+            validated_data["email"],
+            Usuario.Rol.CAJERO,
+            empresa.nombre,
+            empresa=empresa,
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+        )
+
+    def update(self, instance, validated_data):
+        validated_data.pop("email", None)  # cambiarlo desincronizaría el username; no se permite por ahora
+        return super().update(instance, validated_data)
 
 
 # --- Público (app y web) --------------------------------------------------------

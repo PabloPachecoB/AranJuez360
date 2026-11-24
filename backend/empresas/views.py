@@ -12,8 +12,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from usuarios import verificacion
-from usuarios.models import CodigoVerificacion
-from usuarios.permissions import EsAdmin, EsEmpresa
+from usuarios.models import CodigoVerificacion, Usuario
+from usuarios.permissions import EsAdmin, EsEmpresa, EsNegocio
 
 from . import services
 from .models import Categoria, Empresa, FotoEmpresa, Horario, InvitacionEmpresa, Oferta, Producto
@@ -21,6 +21,7 @@ from .rubros import ALIAS, RUBROS, normalizar
 from .serializers import (
     RegistroEmpresaSerializer,
     AceptarInvitacionSerializer,
+    CajeroSerializer,
     CrearInvitacionSerializer,
     InvitacionEmpresaSerializer,
     FotoEmpresaSerializer,
@@ -170,6 +171,23 @@ class MisFotosViewSet(_DeMiEmpresaViewSet):
 class MisOfertasViewSet(_DeMiEmpresaViewSet):
     model = Oferta
     serializer_class = OfertaSerializer
+
+
+class MisCajerosViewSet(viewsets.ModelViewSet):
+    """Cajeros de mi negocio: se crean y se desactivan, nunca se borran (conserva su historial de caja)."""
+
+    permission_classes = [EsNegocio]
+    serializer_class = CajeroSerializer
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def get_queryset(self):
+        return Usuario.objects.filter(
+            empresa=self.request.user.empresa, rol=Usuario.Rol.CAJERO
+        ).order_by("first_name", "last_name")
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        serializer.save(empresa=self.request.user.empresa)
 
 
 # --- Público (app y web) --------------------------------------------------------
