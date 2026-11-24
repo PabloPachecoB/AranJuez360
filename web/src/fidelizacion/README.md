@@ -33,6 +33,12 @@ guarda en Google Wallet.
 2. Reemplazar `datosSimulados.ts` por esas llamadas reales (el publicado a
    Wallet, en `api.ts`, ya es real).
 3. Probar todo en un Android físico — Wallet no se comporta bien en emulador.
+4. **Importante:** cuando el punto 1 exista, `wallet_android_views.py` debe
+   dejar de confiar en los puntos/participaciones que manda el cliente y leer
+   el estado real de la cuenta en el servidor (el cliente solo pasaría el
+   código). Ahora mismo el endpoint es público y confía en esos montos —
+   aceptable solo porque todavía no hay cuentas ni compras reales detrás; ver
+   la advertencia en el docstring de ese archivo.
 
 ## Configuración local para probar el publicado real
 

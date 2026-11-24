@@ -27,7 +27,10 @@ export function MiTarjetaPage() {
     setErrorWallet(null);
     try {
       const { enlace_wallet } = await publicarEnWallet(tarjeta);
-      window.open(enlace_wallet, "_blank");
+      // Navegación directa, no window.open: después de un await ya no cuenta
+      // como clic del usuario y varios navegadores (sobre todo en Android) lo
+      // bloquean como pop-up sin avisar.
+      window.location.href = enlace_wallet;
     } catch {
       setErrorWallet("No se pudo conectar con Google Wallet. Intenta de nuevo.");
     } finally {

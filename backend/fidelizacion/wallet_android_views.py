@@ -5,6 +5,18 @@ Wallet". No guarda nada en base de datos: la persistencia de cuentas, compras
 y puntos es tarea de "Backend compartido de fidelización" (sin asignar, ver
 docs/FIDELIZACION_EQUIPO.md). Esto solo conecta el botón con la cuenta real,
 que es el criterio de aceptación de "Completar Google Wallet en Android".
+
+ADVERTENCIA DE SEGURIDAD (temporal, a propósito):
+Este endpoint es público (AllowAny) y confía en los montos que le manda el
+cliente — no hay todavía una cuenta real ni un historial de compras contra
+los cuales validar `puntos`/`participaciones`/`faltan_bs`. Hoy eso es
+aceptable porque el botón del cliente (`MiTarjetaPage`) tampoco tiene sesión
+y los datos que muestra son simulados. **En cuanto el "Backend compartido de
+fidelización" exista y los códigos correspondan a cuentas reales, este
+endpoint debe dejar de aceptar los montos del cliente** y en su lugar leer el
+estado real de la cuenta en el servidor (el cliente solo pasaría el código).
+De lo contrario cualquiera que conozca un código real podría forjar puntos
+falsos y sobreescribir el pase real de otra persona en Google Wallet.
 """
 
 from rest_framework.decorators import api_view, permission_classes
